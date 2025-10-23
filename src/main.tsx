@@ -149,9 +149,14 @@ function GlobalHeader() {
                 marginRight: '0.5vw',
                 alignItems: "center",
                 justifyContent: "center",
-                display: "flex"
+                display: "flex",
+                boxShadow: `
+                0 0 6px rgba(0, 180, 255, 0.4),
+                0 0 12px rgba(0, 180, 255, 0.3),
+                0 0 24px rgba(0, 180, 255, 0.2)
+            `
             }}>
-                {isDark ? <span style={{ fontSize: '1.5vw' }}>🌙</span> : <span style={{ fontSize: '1.5vw' }}>☀️</span>}
+                {isDark ? <span style={{ fontSize: '1.5vw' }}>☀️</span> : <span style={{ fontSize: '1.5vw' }}>🌙</span>}
             </button>
         </div>
     )
