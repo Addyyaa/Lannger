@@ -1,14 +1,16 @@
-import { StrictMode, createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect } from 'react'
 import { createRoot } from 'react-dom/client'
+import { RouterProvider, createBrowserRouter, Outlet } from 'react-router-dom'
 import './index.css'
 import './i18n/i18n'
 
 import Home from './pages/Home'
-import { withLayout } from './components/Layout'
+import Study from './pages/Study'
+import Manage from './pages/Manage'
+import Layout from './components/Layout'
 import { useTranslation } from 'react-i18next'
 import i18n from './i18n/i18n'
 import languages from './i18n/languages.json'
-
 
 // 创建主题上下文
 const ThemeContext = createContext<{
@@ -28,6 +30,11 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 
         // 设置初始状态
         setIsDark(mediaQuery.matches)
+        if (mediaQuery.matches) {
+            document.body.classList.add('dark')
+        } else {
+            document.body.classList.remove('dark')
+        }
 
         // 监听系统主题变化
         const handleChange = (e: MediaQueryListEvent) => {
@@ -162,8 +169,41 @@ function GlobalHeader() {
     )
 }
 
-// 通过通用包装器生成“全局组件版本”的页面
-const HomeWithLayout = withLayout(Home, { globalComponents: <GlobalHeader /> })
+// 根布局：统一包裹主题、全局头部与侧边栏，并承载子路由
+function RootLayout() {
+    return (
+        <ThemeProvider>
+            <Layout globalComponents={<GlobalHeader />}> 
+                <Outlet />
+            </Layout>
+        </ThemeProvider>
+    )
+}
+
+function ErrorElement() {
+    const { t } = useTranslation()
+    return <h2>{t('error')}</h2>
+}
+
+// 定义路由表（根布局 + 子路由）并确保 Router 单例
+function createRoutes() {
+    return [
+        {
+            path: '/',
+            element: <RootLayout />,
+            errorElement: <ErrorElement />,
+            children: [
+                { index: true, element: <Home /> },
+                { path: 'study', element: <Study /> },
+                { path: 'manage', element: <Manage /> }
+            ]
+        }
+    ]
+}
+
+const existingRouter = (window as any).__lanngerRouter
+const router = existingRouter || createBrowserRouter(createRoutes())
+;(window as any).__lanngerRouter = router
 
 const rootElement = document.getElementById('root')
 
@@ -172,12 +212,20 @@ if (!rootElement) {
     throw new Error('Root element #root not found')
 }
 
-createRoot(rootElement).render(
-    <StrictMode>
-        <ThemeProvider>
-            <HomeWithLayout />
-        </ThemeProvider>
-    </StrictMode>,
+// 在开发环境中保持单例 Root，避免 HMR 多次创建导致容器不一致
+const existingRoot = (window as any).__lanngerRoot
+const root = existingRoot || createRoot(rootElement)
+;(window as any).__lanngerRoot = root
+root.render(
+    <RouterProvider router={router} />
 )
+
+// 开发模式兜底：若入口变更导致 React Refresh 与 DOM 不一致，执行整页刷新
+if (import.meta && (import.meta as any).hot) {
+    ;(import.meta as any).hot.accept(() => {
+        // 避免复杂边界问题造成的 removeChild 报错
+        window.location.reload()
+    })
+}
 
 

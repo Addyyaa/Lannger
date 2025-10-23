@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../main'
 import { useTranslation } from 'react-i18next'
 import { db } from '../db'
+import { RouterProvider, createBrowserRouter,  } from 'react-router-dom'
 
 export default function Home() {
     const [learnningProgress, setLearnningProgress] = useState<{ totalVocabulary: number, masteredVocabulary: number, totalSentences: number, masteredSentences: number }>({ totalVocabulary: 0, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
@@ -18,6 +19,7 @@ export default function Home() {
         })
     }, [])
     return (
+        
         <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             <h1 className={styles.title1} data-testid="today-progress-title">{t('title1')}</h1>
             <div data-testid="today-progress-vocabulary-containner" className={styles.todayProgress}>
