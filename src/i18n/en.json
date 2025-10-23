@@ -1,0 +1,8 @@
+{
+    "title1": "Today Progress",
+    "todayLearningPlan": "Today Learning Plan: {{totalVocabulary}} / {{masteredVocabulary}}",
+    "currentTheme": "Current Theme: {{theme}}",
+    "toggleTheme": "Toggle Theme",
+    "darkMode": "Dark Mode",
+    "lightMode": "Light Mode"
+}

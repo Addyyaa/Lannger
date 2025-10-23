@@ -1,0 +1,22 @@
+import styles from './Home.module.css'
+import { useState } from 'react'
+import { useTheme } from '../main'
+import { useTranslation } from 'react-i18next'
+
+export default function Home() {
+    const [learnningProgress, setLearnningProgress] = useState<{ totalVocabulary: number, masteredVocabulary: number, totalSentences: number, masteredSentences: number }>({ totalVocabulary: 0, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
+    const [dailyLearningPlan, setDailyLearningPlan] = useState<{ totalVocabulary: number, masteredVocabulary: number, totalSentences: number, masteredSentences: number }>({ totalVocabulary: 0, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
+
+    // 使用主题上下文
+    const { isDark, toggleTheme } = useTheme()
+    const { t } = useTranslation()
+    return (
+        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            <h1 className={styles.title1} data-testid="today-progress-title">{t('title1')}</h1>
+            <div data-testid="today-progress-vocabulary-containner" className={styles.todayProgress}>
+                <p>{t('todayLearningPlan', { totalVocabulary: learnningProgress.totalVocabulary, masteredVocabulary: dailyLearningPlan.masteredVocabulary })}</p>
+                <p>{t('currentTheme', { theme: isDark ? t('darkMode') : t('lightMode') })}</p>
+            </div>
+        </div>
+    )
+}
