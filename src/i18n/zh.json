@@ -4,5 +4,6 @@
     "currentTheme": "当前主题：{{theme}}",
     "toggleTheme": "切换主题",
     "darkMode": "暗色模式",
-    "lightMode": "亮色模式"
+    "lightMode": "亮色模式",
+    "language": "语言"
 }

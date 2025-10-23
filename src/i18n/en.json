@@ -4,5 +4,6 @@
     "currentTheme": "Current Theme: {{theme}}",
     "toggleTheme": "Toggle Theme",
     "darkMode": "Dark Mode",
-    "lightMode": "Light Mode"
+    "lightMode": "Light Mode",
+    "language": "Language"
 }

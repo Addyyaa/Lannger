@@ -69,7 +69,7 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 export const useTheme = () => useContext(ThemeContext)
 
 // 语言菜单组件
-function LanguageMenu() {
+function LanguageMenu({ setLanguageClicked }: { setLanguageClicked: (language: string) => void }) {
     return (
         <ul style={{
             listStyle: 'none',
@@ -80,12 +80,14 @@ function LanguageMenu() {
             left: 0,
             minWidth: '100%',  // 至少与按钮同宽
             width: 'max-content',  // 但可以根据内容扩展
-            backgroundColor: 'blue'
         }}>
             {Object.entries(languages).map(([keyFromSelector, value]) => (
                 <li key={keyFromSelector} style={{ marginBottom: '1px' }}>
                     <button
-                        onClick={() => i18n.changeLanguage(keyFromSelector)}
+                        onClick={() => {
+                            i18n.changeLanguage(keyFromSelector)
+                            setLanguageClicked(keyFromSelector)
+                        }}
                         style={{ width: '100%', textAlign: 'left' }}
                     >
                         {value}
@@ -105,6 +107,9 @@ function GlobalHeader() {
     const handleLg_clicked = () => {
         setLg_clicked(!lg_clicked)
     }
+    const handleLanguageClicked = () => {
+        setLg_clicked(false)
+    }
     return (
         <div style={{
             width: '100%',
@@ -114,7 +119,7 @@ function GlobalHeader() {
             alignItems: "center",
             paddingTop: '1vh'
         }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 'auto', backgroundColor: 'red', position: 'relative' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 'auto', position: 'relative' }}>
                 <button onClick={handleLg_clicked} style={{
                     width: 'auto',
                     fontWeight: 700,
@@ -122,6 +127,7 @@ function GlobalHeader() {
                     alignItems: "center",
                     justifyContent: "center",
                     padding: "8px 16px",
+                    marginBottom: '3px',
                     borderRadius: "8px",
                     background: "transparent",
                     color: "#00b4ff", // 主体颜色
@@ -134,7 +140,7 @@ function GlobalHeader() {
 
 
                 }}>{t('language')}</button>
-                {lg_clicked && <LanguageMenu />}
+                {lg_clicked && <LanguageMenu setLanguageClicked={handleLanguageClicked} />}
             </div>
             <button onClick={toggleTheme} aria-label="toggle-theme" style={{
                 width: 'auto',
