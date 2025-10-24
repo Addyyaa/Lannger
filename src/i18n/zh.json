@@ -46,5 +46,15 @@
     "testMode": "测试模式",
     "testDesc": "检验您的学习成果",
     "reviewMode": "复习模式",
-    "reviewDesc": "巩固已学过的单词"
+    "reviewDesc": "巩固已学过的单词",
+    "addWordSetTitle": "单词集添加",
+    "word": "单词",
+    "kana": "假名",
+    "meaning": "意思",
+    "type": "类型",
+    "example": "例句",
+    "review": "复习",
+    "setName": "名称",
+    "setMark": "备注",
+    "wordSet": "单词集"
 }

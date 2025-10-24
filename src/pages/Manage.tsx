@@ -1,13 +1,64 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useReducer } from 'react'
 import { useTranslation } from 'react-i18next'
 import { useTheme } from '../main'
 import { db } from '../db'
+import ComponentAsModel from '../utils/componentAsModel'
+
+
+import AddWordSets from '../components/AddWordSets'
+
+interface ManageState {
+    popup: Action['type'];
+}
+
+type Action =
+    | { type: 'SET_ADD_WORD_SETS', payload: Object }
+    | { type: 'SET_ADD_WORDS', payload: Object }
+    | { type: 'SET_EXPORT_WORDS', payload: any }
+    | { type: 'SET_DATA_BACKUP', payload: any }
+    | { type: 'SET_DATA_RESTORE', payload: any }
+    | { type: 'SET_DATA_CLEAR', payload: any }
+    | { type: 'SET_EDIT_WORD_SET', payload: any }
+    | { type: 'CLOSE_POPUP' }
+    | { type: 'SET_DELETE_WORD_SET', payload: any }
+
+function AddWordSetsAction(dispatch: (action: Action) => void) {
+    return ComponentAsModel(
+        <AddWordSets closePopup={() => dispatch({ type: 'CLOSE_POPUP' })} />
+    )
+}
+
+function manageReducer(state: ManageState, action: Action): ManageState {
+    switch (action.type) {
+        case 'SET_ADD_WORD_SETS':
+            return { ...state, popup: action.type }
+        case 'SET_ADD_WORDS':
+            return { ...state, popup: action.type }
+        case 'SET_EXPORT_WORDS':
+            return { ...state, popup: action.type }
+        case 'SET_DATA_BACKUP':
+            return { ...state, popup: action.type }
+        case 'SET_DATA_RESTORE':
+            return { ...state, popup: action.type }
+        case 'SET_DATA_CLEAR':
+            return { ...state, popup: action.type }
+        case 'SET_EDIT_WORD_SET':
+            return { ...state, popup: action.type }
+        case 'SET_DELETE_WORD_SET':
+            return { ...state, popup: action.type }
+        case 'CLOSE_POPUP':
+            return { ...state, popup: 'CLOSE_POPUP' }
+        default:
+            return state
+    }
+}
 
 export default function Manage() {
     const { t } = useTranslation()
     const { isDark } = useTheme()
     const [wordSets, setWordSets] = useState<any[]>([])
     const [loading, setLoading] = useState(true)
+    const [state, dispatch] = useReducer(manageReducer, { popup: 'CLOSE_POPUP' })
 
     useEffect(() => {
         loadWordSets()
@@ -32,7 +83,7 @@ export default function Manage() {
     }
 
     const cardStyle: React.CSSProperties = {
-        background: isDark 
+        background: isDark
             ? 'linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)'
             : 'linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)',
         borderRadius: '12px',
@@ -104,17 +155,23 @@ export default function Manage() {
         color: isDark ? '#888' : '#999'
     }
 
+    const handleAddWordSet = async () => {
+        dispatch({ type: 'SET_ADD_WORD_SETS', payload: {} })
+    }
+
     return (
         <div style={containerStyle}>
             <h1 style={titleStyle}>{t('manage')}</h1>
-            
+
+            {state.popup === 'SET_ADD_WORD_SETS' && AddWordSetsAction(dispatch as (action: Action) => void)}
+
             <div style={cardStyle}>
                 <h2 style={{ marginBottom: '20px', color: isDark ? '#fff' : '#333' }}>
                     {t('wordSetManagement')}
                 </h2>
-                
+
                 <div style={actionButtonsStyle}>
-                    <button 
+                    <button
                         style={buttonStyle}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'translateY(-2px)'
@@ -124,11 +181,12 @@ export default function Manage() {
                             e.currentTarget.style.transform = 'translateY(0)'
                             e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 180, 255, 0.3)'
                         }}
-                        // TODO 添加单词集，添加到数据库
+                        onClick={handleAddWordSet}
+                    // TODO 添加单词集，添加到数据库
                     >
                         {t('addWordSet')}
                     </button>
-                    <button 
+                    <button
                         style={buttonStyle}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'translateY(-2px)'
@@ -138,10 +196,11 @@ export default function Manage() {
                             e.currentTarget.style.transform = 'translateY(0)'
                             e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 180, 255, 0.3)'
                         }}
+                        data-testid="import-words-button"
                     >
                         {t('importWords')}
                     </button>
-                    <button 
+                    <button
                         style={buttonStyle}
                         onMouseEnter={(e) => {
                             e.currentTarget.style.transform = 'translateY(-2px)'
@@ -151,6 +210,7 @@ export default function Manage() {
                             e.currentTarget.style.transform = 'translateY(0)'
                             e.currentTarget.style.boxShadow = '0 4px 15px rgba(0, 180, 255, 0.3)'
                         }}
+                        data-testid="export-data-button"
                     >
                         {t('exportData')}
                     </button>
@@ -217,7 +277,7 @@ export default function Manage() {
                 <h2 style={{ marginBottom: '20px', color: isDark ? '#fff' : '#333' }}>
                     {t('systemSettings')}
                 </h2>
-                
+
                 <div style={{
                     display: 'grid',
                     gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
@@ -229,8 +289,8 @@ export default function Manage() {
                         borderRadius: '8px',
                         border: isDark ? '1px solid #555' : '1px solid #e0e0e0'
                     }}>
-                        <h3 style={{ 
-                            margin: '0 0 16px 0', 
+                        <h3 style={{
+                            margin: '0 0 16px 0',
                             color: isDark ? '#fff' : '#333',
                             fontSize: '18px',
                             display: 'flex',
@@ -240,15 +300,15 @@ export default function Manage() {
                             {t('studySettings')}
                         </h3>
                         <div style={{ marginBottom: '12px' }}>
-                            <label style={{ 
-                                display: 'block', 
+                            <label style={{
+                                display: 'block',
                                 marginBottom: '4px',
                                 color: isDark ? '#ccc' : '#666',
                                 fontSize: '14px'
                             }}>
                                 {t('dailyGoal')}
                             </label>
-                            <input 
+                            <input
                                 type="number"
                                 defaultValue="20"
                                 style={{
@@ -269,8 +329,8 @@ export default function Manage() {
                         borderRadius: '8px',
                         border: isDark ? '1px solid #555' : '1px solid #e0e0e0'
                     }}>
-                        <h3 style={{ 
-                            margin: '0 0 16px 0', 
+                        <h3 style={{
+                            margin: '0 0 16px 0',
                             color: isDark ? '#fff' : '#333',
                             fontSize: '18px',
                             display: 'flex',

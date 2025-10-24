@@ -46,5 +46,15 @@
     "testMode": "Test Mode",
     "testDesc": "Check your learning results",
     "reviewMode": "Review Mode",
-    "reviewDesc": "Reinforce learned words"
+    "reviewDesc": "Reinforce learned words",
+    "addWordSetTitle": "Add Word Set",
+    "word": "Word",
+    "kana": "Kana",
+    "meaning": "Meaning",
+    "type": "Type",
+    "example": "Example",
+    "review": "Review",
+    "setName": "Name",
+    "setMark": "Mark",
+    "wordSet": "Word Set"
 }
