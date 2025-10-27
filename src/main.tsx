@@ -121,15 +121,18 @@ function GlobalHeader() {
         <div style={{
             width: '100%',
             display: 'flex',
-            gap: '1vw',
+            height: '100%',
+            columnGap: '1vw',
             justifyContent: "flex-end",
             alignItems: "center",
-            paddingTop: '1vh'
+            position: 'absolute',
+            top: '4vh',
         }}>
             <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 'auto', position: 'relative' }}>
                 <button onClick={handleLg_clicked} style={{
                     width: 'auto',
                     fontWeight: 700,
+
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -173,7 +176,7 @@ function GlobalHeader() {
 function RootLayout() {
     return (
         <ThemeProvider>
-            <Layout globalComponents={<GlobalHeader />}> 
+            <Layout globalComponents={<GlobalHeader />}>
                 <Outlet />
             </Layout>
         </ThemeProvider>
@@ -203,7 +206,7 @@ function createRoutes() {
 
 const existingRouter = (window as any).__lanngerRouter
 const router = existingRouter || createBrowserRouter(createRoutes())
-;(window as any).__lanngerRouter = router
+    ; (window as any).__lanngerRouter = router
 
 const rootElement = document.getElementById('root')
 
@@ -215,14 +218,14 @@ if (!rootElement) {
 // 在开发环境中保持单例 Root，避免 HMR 多次创建导致容器不一致
 const existingRoot = (window as any).__lanngerRoot
 const root = existingRoot || createRoot(rootElement)
-;(window as any).__lanngerRoot = root
+    ; (window as any).__lanngerRoot = root
 root.render(
     <RouterProvider router={router} />
 )
 
 // 开发模式兜底：若入口变更导致 React Refresh 与 DOM 不一致，执行整页刷新
 if (import.meta && (import.meta as any).hot) {
-    ;(import.meta as any).hot.accept(() => {
+    ; (import.meta as any).hot.accept(() => {
         // 避免复杂边界问题造成的 removeChild 报错
         window.location.reload()
     })

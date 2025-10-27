@@ -56,5 +56,9 @@
     "review": "复习",
     "setName": "名称",
     "setMark": "备注",
-    "wordSet": "单词集"
+    "wordSet": "单词集",
+    "confirm": "确认",
+    "cancel": "取消",
+    "deleteWordSet": "删除单词集",
+    "deleteWordSetMessage": "确定要删除该单词集吗？"
 }

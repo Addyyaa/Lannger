@@ -56,5 +56,9 @@
     "review": "Review",
     "setName": "Name",
     "setMark": "Mark",
-    "wordSet": "Word Set"
+    "wordSet": "Word Set",
+    "confirm": "Confirm",
+    "cancel": "Cancel",
+    "deleteWordSet": "Delete Word Set",
+    "deleteWordSetMessage": "Are you sure you want to delete this word set?"
 }

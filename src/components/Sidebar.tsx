@@ -20,19 +20,18 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     ]
 
     const sidebarStyle: React.CSSProperties = {
-        width: isCollapsed ? '3vw' : '7vw',
-        minWidth: '100px',
-        height: '1vw',
-        background: isDark 
+        position: 'relative',
+        width: isCollapsed ? '6%' : '8%',
+        minWidth: isCollapsed ? '60px' : '120px',
+        height: '100%',
+        boxSizing: 'border-box',
+        background: isDark
             ? 'linear-gradient(180deg, #1a1a1a 0%, #2d2d2d 100%)'
             : 'linear-gradient(180deg, #ffffff 0%, #f8f9fa 100%)',
-        borderRight: isDark 
+        borderRight: isDark
             ? '1px solid #333'
             : '1px solid #e0e0e0',
         transition: 'width 0.3s ease',
-        position: 'fixed',
-        left: 0,
-        top: 0,
         zIndex: 1000,
         display: 'flex',
         flexDirection: 'column',
@@ -45,7 +44,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     const toggleButtonStyle: React.CSSProperties = {
         position: 'absolute',
         top: '10px',
-        right: '-15px',
+        right: '-12px',
         width: '30px',
         height: '30px',
         borderRadius: '50%',
@@ -77,7 +76,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         padding: isCollapsed ? '0.4vw 0' : '0.4vw 0.5vw',
         textDecoration: 'none',
         color: isDark ? '#fff' : '#333',
-        background: isActive 
+        background: isActive
             ? (isDark ? 'rgba(0, 180, 255, 0.2)' : 'rgba(0, 180, 255, 0.1)')
             : 'transparent',
         borderLeft: isActive ? '3px solid #00b4ff' : '3px solid transparent',
@@ -113,8 +112,8 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
             </button>
 
             <div style={logoStyle}>
-                <h2 data-testid="sidebar-logo" style={{ 
-                    margin: 0, 
+                <h2 data-testid="sidebar-logo" style={{
+                    margin: 0,
                     padding: 0,
                     fontSize: isCollapsed ? '0' : 'clamp(18px, 1vw, 1vw)',
                     color: '#00b4ff',

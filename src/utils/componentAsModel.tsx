@@ -15,8 +15,9 @@ export default function ComponentAsModel(Component: React.ReactNode) {
         alignItems: "center",
         zIndex: 9999,
       }}
+      data-testid="component-as-model"
     >
-      <div onClick={(e) => e.stopPropagation()}>{Component}</div>
+      <div onClick={(e) => e.stopPropagation()} data-testid="component-as-model-content">{Component}</div>
     </div>,
     document.body
   );

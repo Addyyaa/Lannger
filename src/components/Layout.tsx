@@ -30,13 +30,22 @@ export default function Layout({ globalComponents, children, showSidebar = true 
         setIsSidebarCollapsed(!isSidebarCollapsed)
     }
 
-    const mainContentStyle: React.CSSProperties = {
-        marginLeft: showSidebar ? (isSidebarCollapsed ? '3vw' : '7vw') : '0',
-        width: '100%',
-        transition: 'margin-left 0.3s ease',
-        minHeight: '100vh',
+    const layoutStyle: React.CSSProperties = {
         display: 'flex',
-        flexDirection: 'column'
+        width: '100%',
+        height: '100vh',
+        overflow: 'hidden',
+    }
+
+    const mainContentStyle: React.CSSProperties = {
+        flex: 1,
+        minHeight: '100vh',
+        position: "relative",
+        display: 'flex',
+        flexDirection: 'column',
+        transition: 'all 0.3s ease',
+        overflowY: 'auto',
+        overflowX: 'hidden',
     }
 
     const headerStyle: React.CSSProperties = {
@@ -48,24 +57,27 @@ export default function Layout({ globalComponents, children, showSidebar = true 
 
     const contentStyle: React.CSSProperties = {
         flex: 1,
-        padding: '20px'
+        display: 'flex',
+        flexDirection: 'column',
+        justifyContent: 'flex-start',
+        alignItems: 'stretch',
     }
 
     return (
-        <div style={{ display: 'flex', minHeight: '100vh', width: '100vw'}}>
+        <div style={layoutStyle} data-testid="layout">
             {showSidebar && (
-                <Sidebar 
-                    isCollapsed={isSidebarCollapsed} 
-                    onToggle={handleSidebarToggle} 
+                <Sidebar
+                    isCollapsed={isSidebarCollapsed}
+                    onToggle={handleSidebarToggle}
                 />
             )}
-            <div style={mainContentStyle}>
+            <div style={mainContentStyle} data-testid="layout-content1">
                 {globalComponents && (
-                    <div style={headerStyle}>
+                    <div style={headerStyle} data-testid="layout-header">
                         {globalComponents}
                     </div>
                 )}
-                <div style={contentStyle}>
+                <div style={contentStyle} data-testid="layout-content2">
                     {children}
                 </div>
             </div>

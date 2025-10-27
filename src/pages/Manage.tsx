@@ -1,17 +1,16 @@
-import React, { useState, useEffect, useReducer } from "react";
+import React, { useState, useReducer } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
 import ComponentAsModel from "../utils/componentAsModel";
 import * as dbOperator from "../store/wordStore";
-import WordSetsTable from "../components/WordSetsTable";
-
+import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
 
-interface ManageState {
+export interface ManageState {
   popup: Action["type"];
 }
 
-type Action =
+export type Action =
   | { type: "SET_ADD_WORD_SETS"; payload: Object }
   | { type: "SET_ADD_WORDS"; payload: Object }
   | { type: "SET_EXPORT_WORDS"; payload: any }
@@ -24,7 +23,7 @@ type Action =
 
 function AddWordSetsAction(
   dispatch: (action: Action) => void,
-  setWordSets: (wordSets: any[]) => void
+  setWordSets: React.Dispatch<React.SetStateAction<any[]>>
 ) {
   return ComponentAsModel(
     <AddWordSets
@@ -63,37 +62,27 @@ export default function Manage() {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const [wordSets, setWordSets] = useState<any[]>([]);
-  const [loading, setLoading] = useState(true);
   const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
 
-  useEffect(() => {
-    loadWordSets();
-  }, []);
-
-  const loadWordSets = async () => {
-    try {
-      const sets = await dbOperator.getAllWordSets();
-      setWordSets(sets);
-    } catch (error) {
-      console.error("加载单词集失败:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const containerStyle: React.CSSProperties = {
+    display: "flex",
+    flexDirection: "column",
+    overflowY: "auto",
+    height: "100%",
     width: "100%",
-    maxWidth: "1200px",
-    margin: "0 auto",
-    padding: "20px",
+    padding: "0 2vw",
+    boxSizing: "border-box",
+    scrollbarWidth: "thin", // Firefox：设置滚动条为细样式
+    scrollbarColor: "transparent transparent", // Firefox：默认滑块和轨道透明
   };
 
   const cardStyle: React.CSSProperties = {
+    width: "100%",
     background: isDark
       ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
       : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-    borderRadius: "12px",
-    padding: "24px",
+    borderRadius: "0.7vw",
     marginBottom: "20px",
     boxShadow: isDark
       ? "0 4px 20px rgba(0, 0, 0, 0.3)"
@@ -105,8 +94,8 @@ export default function Manage() {
     fontSize: "28px",
     fontWeight: "bold",
     color: "#00b4ff",
-    marginBottom: "30px",
     textAlign: "center",
+    margin: 0
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -122,115 +111,24 @@ export default function Manage() {
     boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
   };
 
-  const actionButtonsStyle: React.CSSProperties = {
-    display: "flex",
-    gap: "16px",
-    marginBottom: "30px",
-    flexWrap: "wrap",
-  };
-
-  const tableStyle: React.CSSProperties = {
+  const senction1Style: React.CSSProperties = {
     width: "100%",
-    borderCollapse: "collapse",
-    background: isDark ? "#2d2d2d" : "#fff",
-    borderRadius: "8px",
-    overflow: "hidden",
-    boxShadow: isDark
-      ? "0 2px 10px rgba(0, 0, 0, 0.3)"
-      : "0 2px 10px rgba(0, 0, 0, 0.1)",
-  };
-
-  const thStyle: React.CSSProperties = {
-    background: isDark ? "#3a3a3a" : "#f8f9fa",
-    color: isDark ? "#fff" : "#333",
-    padding: "16px",
-    textAlign: "left",
-    borderBottom: isDark ? "1px solid #555" : "1px solid #e0e0e0",
-    fontWeight: "bold",
-  };
-
-  const tdStyle: React.CSSProperties = {
-    padding: "16px",
-    borderBottom: isDark ? "1px solid #444" : "1px solid #e0e0e0",
-    color: isDark ? "#ccc" : "#666",
-  };
-
-  const emptyStateStyle: React.CSSProperties = {
-    textAlign: "center",
-    padding: "60px 20px",
-    color: isDark ? "#888" : "#999",
-  };
-
-  const handleAddWordSet = async () => {
-    dispatch({ type: "SET_ADD_WORD_SETS", payload: {} });
+    display: "flex",
+    flex: 1,
+    flexDirection: "column",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   return (
     <div style={containerStyle}>
-      <h1 style={titleStyle}>{t("manage")}</h1>
+      <div style={senction1Style}>
+        <h1 style={titleStyle}>{t("manage")}</h1>
 
-      {state.popup === "SET_ADD_WORD_SETS" &&
-        AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
-
-      <div style={cardStyle}>
-        <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
-          {t("wordSetManagement")}
-        </h2>
-
-        <div style={actionButtonsStyle}>
-          <button
-            style={buttonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 20px rgba(0, 180, 255, 0.4)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 4px 15px rgba(0, 180, 255, 0.3)";
-            }}
-            onClick={handleAddWordSet}
-            data-testid="add-word-set-button"
-          >
-            {t("addWordSet")}
-          </button>
-          <button
-            style={buttonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 20px rgba(0, 180, 255, 0.4)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 4px 15px rgba(0, 180, 255, 0.3)";
-            }}
-            data-testid="import-words-button"
-          >
-            {t("importWords")}
-          </button>
-          <button
-            style={buttonStyle}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.transform = "translateY(-2px)";
-              e.currentTarget.style.boxShadow =
-                "0 6px 20px rgba(0, 180, 255, 0.4)";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.transform = "translateY(0)";
-              e.currentTarget.style.boxShadow =
-                "0 4px 15px rgba(0, 180, 255, 0.3)";
-            }}
-            data-testid="export-data-button"
-          >
-            {t("exportData")}
-          </button>
-        </div>
-        <WordSetsTable wordSets={wordSets} loading={loading} />
+        {state.popup === "SET_ADD_WORD_SETS" &&
+          AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
+        <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
       </div>
-
       <div style={cardStyle}>
         <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
           {t("systemSettings")}
