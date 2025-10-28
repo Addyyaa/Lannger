@@ -178,3 +178,28 @@ export async function getWordsByTime(startTime: string, endTime: string) {
 export async function deleteDatabase() {
   await resetDB();
 }
+
+
+// 备份数据库
+export async function backupDatabase() {
+  const wordSets = await db.wordSets.toArray();
+  const words = await db.words.toArray();
+  const langggerDB = {
+    wordSets,
+    words,
+  }
+  const langggerDBString = JSON.stringify(langggerDB, null, 2);
+  const blob = new Blob([langggerDBString], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "langggerDB.json";
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+
+// 恢复数据库
+export async function restoreDatabase(langggerDB: Object) {
+  // TODO 完成数据库导入功能。 注意需要先删除原先的id，防止已有id冲突
+}

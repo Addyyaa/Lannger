@@ -52,6 +52,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
 
     const cardStyle: React.CSSProperties = {
         width: "100%",
+        position: "relative",
         marginTop: "3vh",
         // background: isDark
         //     ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"

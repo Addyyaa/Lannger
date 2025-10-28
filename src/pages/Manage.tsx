@@ -1,4 +1,4 @@
-import React, { useState, useReducer } from "react";
+import React, { useState, useReducer, useContext, createContext } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
 import ComponentAsModel from "../utils/componentAsModel";
@@ -6,7 +6,6 @@ import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
 import ConfirmWidget from "../components/ConfirmWidget";
-import { todo } from "node:test";
 
 export interface ManageState {
   popup: Action["type"];
@@ -22,7 +21,23 @@ export type Action =
   | { type: "SET_EDIT_WORD_SET"; payload: any }
   | { type: "CLOSE_POPUP" }
   | { type: "SET_DELETE_WORD_SET"; payload: any }
+  | { type: "CLOSE_EDIT_WORD_SET"; payload: any }
   | { type: "SET_CLEAR_DATA"; payload: any };
+
+type ManageContextValue = {
+  state: ManageState;
+  dispatch: React.Dispatch<Action>;
+};
+
+export const ManageContext = createContext<ManageContextValue>({
+  state: { popup: "CLOSE_POPUP" },
+  // eslint-disable-next-line @typescript-eslint/no-empty-function
+  dispatch: () => { },
+});
+
+export function useManageContext(): ManageContextValue {
+  return useContext(ManageContext);
+}
 
 function AddWordSetsAction(
   dispatch: (action: Action) => void,
@@ -58,6 +73,8 @@ function manageReducer(state: ManageState, action: Action): ManageState {
       return { ...state, popup: "CLOSE_POPUP" };
     case "SET_CLEAR_DATA":
       return { ...state, popup: "SET_CLEAR_DATA" };
+    case "CLOSE_EDIT_WORD_SET":
+      return { ...state, popup: "CLOSE_EDIT_WORD_SET" };
     default:
       return state;
   }
@@ -86,7 +103,6 @@ export default function Manage() {
   const { isDark } = useTheme();
   const [wordSets, setWordSets] = useState<any[]>([]);
   const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
-
 
   const containerStyle: React.CSSProperties = {
     display: "flex",
@@ -144,140 +160,145 @@ export default function Manage() {
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={senction1Style}>
-        <h1 style={titleStyle}>{t("manage")}</h1>
+    <ManageContext.Provider value={{ state, dispatch }}>
+      <div style={containerStyle}>
+        <div style={senction1Style}>
+          <h1 style={titleStyle}>{t("manage")}</h1>
 
-        {state.popup === "SET_ADD_WORD_SETS" &&
-          AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
-        <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
-      </div>
-      <div style={cardStyle}>
-        <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
-          {t("systemSettings")}
-        </h2>
-
-        <div
-          style={{
-            display: "grid",
-            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-            gap: "20px",
-          }}
-        >
-          <div
-            style={{
-              padding: "20px",
-              background: isDark
-                ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(0, 0, 0, 0.02)",
-              borderRadius: "8px",
-              border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
-            }}
-          >
-            <h3
-              style={{
-                margin: "0 0 16px 0",
-                color: isDark ? "#fff" : "#333",
-                fontSize: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              {t("studySettings")}
-            </h3>
-            <div style={{ marginBottom: "12px" }}>
-              <label
-                style={{
-                  display: "block",
-                  marginBottom: "4px",
-                  color: isDark ? "#ccc" : "#666",
-                  fontSize: "14px",
-                }}
-              >
-                {t("dailyGoal")}
-              </label>
-              <input
-                type="number"
-                defaultValue="20"
-                style={{
-                  width: "100%",
-                  padding: "8px",
-                  border: isDark ? "1px solid #555" : "1px solid #ddd",
-                  borderRadius: "4px",
-                  background: isDark ? "#3a3a3a" : "#fff",
-                  color: isDark ? "#fff" : "#333",
-                }}
-              />
-            </div>
-          </div>
+          {state.popup === "SET_ADD_WORD_SETS" &&
+            AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
+          <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
+        </div>
+        <div style={cardStyle}>
+          <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
+            {t("systemSettings")}
+          </h2>
 
           <div
             style={{
-              padding: "20px",
-              background: isDark
-                ? "rgba(255, 255, 255, 0.05)"
-                : "rgba(0, 0, 0, 0.02)",
-              borderRadius: "8px",
-              border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+              gap: "20px",
             }}
           >
-            <h3
-              style={{
-                margin: "0 0 16px 0",
-                color: isDark ? "#fff" : "#333",
-                fontSize: "18px",
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-              }}
-            >
-              💾 {t("backupData")}
-            </h3>
             <div
-              style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+              style={{
+                padding: "20px",
+                background: isDark
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "rgba(0, 0, 0, 0.02)",
+                borderRadius: "8px",
+                border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+              }}
             >
-              <button
+              <h3
                 style={{
-                  ...buttonStyle,
-                  width: "100%",
-                  fontSize: "14px",
+                  margin: "0 0 16px 0",
+                  color: isDark ? "#fff" : "#333",
+                  fontSize: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                {t("backupData")}
-              </button>
-              <button
+                {t("studySettings")}
+              </h3>
+              <div style={{ marginBottom: "12px" }}>
+                <label
+                  style={{
+                    display: "block",
+                    marginBottom: "4px",
+                    color: isDark ? "#ccc" : "#666",
+                    fontSize: "14px",
+                  }}
+                >
+                  {t("dailyGoal")}
+                </label>
+                <input
+                  type="number"
+                  defaultValue="20"
+                  style={{
+                    width: "100%",
+                    padding: "8px",
+                    border: isDark ? "1px solid #555" : "1px solid #ddd",
+                    borderRadius: "4px",
+                    background: isDark ? "#3a3a3a" : "#fff",
+                    color: isDark ? "#fff" : "#333",
+                  }}
+                />
+              </div>
+            </div>
+
+            <div
+              style={{
+                padding: "20px",
+                background: isDark
+                  ? "rgba(255, 255, 255, 0.05)"
+                  : "rgba(0, 0, 0, 0.02)",
+                borderRadius: "8px",
+                border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+              }}
+            >
+              <h3
                 style={{
-                  ...buttonStyle,
-                  width: "100%",
-                  background:
-                    "linear-gradient(135deg, #ffa502 0%, #ff9500 100%)",
-                  fontSize: "14px",
+                  margin: "0 0 16px 0",
+                  color: isDark ? "#fff" : "#333",
+                  fontSize: "18px",
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
                 }}
               >
-                {t("restoreData")}
-              </button>
-              <button
-                style={{
-                  ...buttonStyle,
-                  width: "100%",
-                  background:
-                    "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
-                  fontSize: "14px",
-                }}
-                onClick={() => {
-                  dispatch({ type: "SET_CLEAR_DATA", payload: {} });
-                }}
+                💾 {t("backupData")}
+              </h3>
+              <div
+                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
               >
-                {t("clearData")}
-              </button>
-              {state.popup === "SET_CLEAR_DATA" &&
-                <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
-              }
+                <button
+                  style={{
+                    ...buttonStyle,
+                    width: "100%",
+                    fontSize: "14px",
+                  }}
+                  onClick={async () => {
+                    await dbOperator.backupDatabase();
+                  }}
+                >
+                  {t("backupData")}
+                </button>
+                <button
+                  style={{
+                    ...buttonStyle,
+                    width: "100%",
+                    background:
+                      "linear-gradient(135deg, #ffa502 0%, #ff9500 100%)",
+                    fontSize: "14px",
+                  }}
+                >
+                  {t("restoreData")}
+                </button>
+                <button
+                  style={{
+                    ...buttonStyle,
+                    width: "100%",
+                    background:
+                      "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
+                    fontSize: "14px",
+                  }}
+                  onClick={() => {
+                    dispatch({ type: "SET_CLEAR_DATA", payload: {} });
+                  }}
+                >
+                  {t("clearData")}
+                </button>
+                {state.popup === "SET_CLEAR_DATA" &&
+                  <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
+                }
+              </div>
             </div>
           </div>
         </div>
       </div>
-    </div>
+    </ManageContext.Provider>
   );
 }

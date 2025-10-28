@@ -61,5 +61,11 @@
     "cancel": "取消",
     "deleteWordSet": "删除单词集",
     "deleteWordSetMessage": "确定要删除该单词集吗？",
-    "clearDataMessage": "确定要清空所有数据吗？此操作无法撤销。"
+    "clearDataMessage": "确定要清空所有数据吗？此操作无法撤销。",
+    "noMark": "无备注",
+    "noName": "无名称",
+    "tableMark": "备注",
+    "updateWordSetFailed": "更新单词集失败",
+    "noUpdate": "没有更新",
+    "submitModify": "提交修改"
 }

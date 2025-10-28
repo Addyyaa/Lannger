@@ -57,7 +57,7 @@ export default function AddWordSets({
                         <input
                             type="text"
                             data-testid="AddWordSets-setName-input"
-                            style={nameInputStyle}
+                            style={nameInputStyle(isDark)}
                             value={wordSet.name}
                             onChange={(e) => setWordSet({ ...wordSet, name: e.target.value })}
                         />
@@ -66,7 +66,7 @@ export default function AddWordSets({
                         <label style={setMarkLabelStyle}>{t("setMark")}</label>
                         <textarea
                             data-testid="AddWordSets-setMark-input"
-                            style={setMarkInputStyle}
+                            style={setMarkInputStyle(isDark)}
                             value={wordSet.mark}
                             onChange={(e) => setWordSet({ ...wordSet, mark: e.target.value })}
                         />
@@ -148,15 +148,17 @@ const nameLabelStyle: React.CSSProperties = {
     fontWeight: "bold",
 };
 
-const nameInputStyle: React.CSSProperties = {
+const nameInputStyle = (isDark: boolean): React.CSSProperties => ({
     width: "80%",
     height: "100%",
     borderRadius: "0.8vw",
-    border: "1px solid #ccc",
+    border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
     outline: "none",
     fontSize: "1.2vw",
     boxSizing: "border-box",
-};
+    backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
+    color: isDark ? "#eee" : "#333",
+});
 
 const nameInputContainerStyle: React.CSSProperties = {
     display: "flex",
@@ -186,11 +188,11 @@ const setMarkInputContainerStyle: React.CSSProperties = {
     marginTop: "5%",
 };
 
-const setMarkInputStyle: React.CSSProperties = {
+const setMarkInputStyle = (isDark: boolean): React.CSSProperties => ({
     width: "80%",
     height: "100%",
     borderRadius: "0.8vw",
-    border: "1px solid #ccc",
+    border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
     outline: "none",
     textAlign: "left",
     padding: "2% 0 2% 0",
@@ -198,7 +200,9 @@ const setMarkInputStyle: React.CSSProperties = {
     fontSize: "1.2vw",
     maxWidth: "80%",
     resize: "none",
-};
+    backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
+    color: isDark ? "#eee" : "#333",
+});
 
 const submitButtonStyle: React.CSSProperties = {
     minWidth: "33%",

@@ -61,5 +61,11 @@
     "cancel": "Cancel",
     "deleteWordSet": "Delete Word Set",
     "deleteWordSetMessage": "Are you sure you want to delete this word set?",
-    "clearDataMessage": "Are you sure you want to clear all data? This action cannot be undone."
+    "clearDataMessage": "Are you sure you want to clear all data? This action cannot be undone.",
+    "noMark": "No Mark",
+    "noName": "No Name",
+    "tableMark": "Mark",
+    "updateWordSetFailed": "Update word set failed",
+    "noUpdate": "There is no update yet.",
+    "submitModify": "Submit Modify"
 }

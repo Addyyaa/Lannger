@@ -1,25 +1,32 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState, useContext } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
 import * as dbOperator from "../store/wordStore";
 import ConfirmWidget from "./ConfirmWidget";
 import { Tooltip } from "antd";
 import { List, RowComponentProps } from "react-window";
+import type { PointerEvent as ReactPointerEvent } from "react";
+import EditWordSets from "./EditWordSets";
+import { ManageContext } from "../pages/Manage";
 
 export default function WordSetsTable({
   wordSets,
   loading,
-  setLoading,
+  setLoading
+
 }: {
   wordSets: any[];
   loading: boolean;
   setLoading: (loading: boolean) => void;
+
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const [popup, setPopup] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
-  const COLUMN_TEMPLATE = "2fr 1fr 1fr 1.2fr";
+  const [editIndex, setEditIndex] = useState<number | null>(null);
+  const { state, dispatch } = useContext(ManageContext);
+  const COLUMN_TEMPLATE = "1fr 2fr 1fr 1fr 1fr 1.5fr";
   const ROW_HEIGHT = 72;
   const MAX_LIST_HEIGHT = 320;
   const emptyStateStyle: React.CSSProperties = {
@@ -36,6 +43,7 @@ export default function WordSetsTable({
     width: "auto",
     height: "auto",
     minWidth: "1vw",
+    color: "#fff",
     cursor: "pointer",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
@@ -72,8 +80,13 @@ export default function WordSetsTable({
     display: "grid",
     gridTemplateColumns: COLUMN_TEMPLATE,
     alignItems: "center",
-    borderRadius: "1.5vw",
+    borderRadius: "1.5vw 1.5vw 0 0",
     minHeight: "56px",
+  };
+  const markHeaderStyle: React.CSSProperties = {
+    textAlign: "center",
+    fontWeight: "bold",
+    paddingLeft: "1vw",
   };
 
   async function deleteWordSet(id: number) {
@@ -119,16 +132,78 @@ export default function WordSetsTable({
     getWordSet: getSet,
   }: RowComponentProps<VirtualRowExtraProps>) => {
     const currentSet = getSet(index);
+    const markPointerIdRef = useRef<number | null>(null);
+    const markDragStartXRef = useRef(0);
+    const markScrollLeftRef = useRef(0);
+    const markElementRef = useRef<HTMLDivElement | null>(null);
+
     const baseCellStyle: React.CSSProperties = {
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
       textAlign: "center",
-      padding: "0 8px",
-      fontSize: "14px",
+      fontSize: "0.9rem",
+      padding: "0 1vw",
+      color: isDark ? "#f5f5f5" : "#333",
+      overflow: "hidden",
+    };
+    const markCellStyle = useMemo<React.CSSProperties>(() => ({
+      display: "flex",
+      alignItems: "center",
+      width: "100%",
+      height: "100%",
+      padding: "0.4rem 1vw",
+      color: isDark ? "#f5f5f5" : "#333",
+      textAlign: "left",
+      whiteSpace: "nowrap",
+      overflowX: "auto",
+      overflowY: "hidden",
+      cursor: "grab",
+      userSelect: "none",
+      WebkitUserSelect: "none",
+      MozUserSelect: "none",
+      msUserSelect: "none",
+      scrollbarWidth: "thin",
+    }), [isDark]);
+    const handleMarkPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+      markPointerIdRef.current = event.pointerId;
+      markDragStartXRef.current = event.clientX;
+      if (markElementRef.current) {
+        markScrollLeftRef.current = markElementRef.current.scrollLeft;
+        markElementRef.current.setPointerCapture?.(event.pointerId);
+        markElementRef.current.style.cursor = "grabbing";
+      }
     };
 
-    const rowBackground = 'rgb(41, 40, 40)'
+    const handleMarkPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (markPointerIdRef.current === null || !markElementRef.current) return;
+      const deltaX = event.clientX - markDragStartXRef.current;
+      markElementRef.current.scrollLeft = markScrollLeftRef.current - deltaX;
+    };
+
+    const finalizeMarkDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+      if (markPointerIdRef.current === null || !markElementRef.current) return;
+      if (markElementRef.current.hasPointerCapture?.(event.pointerId)) {
+        markElementRef.current.releasePointerCapture(event.pointerId);
+      }
+      markPointerIdRef.current = null;
+      markElementRef.current.style.cursor = "grab";
+    };
+
+    const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+      if (!markElementRef.current) return;
+      const isHorizontalGesture = Math.abs(event.deltaX) > Math.abs(event.deltaY);
+      if (!isHorizontalGesture) return;
+      event.preventDefault();
+      markElementRef.current.scrollLeft += event.deltaX;
+    };
+    const actionCellStyle: React.CSSProperties = {
+      ...baseCellStyle,
+      justifyContent: "center",
+      gap: "0.8vw",
+    };
+
+    const rowBackground = isDark ? "rgb(41, 40, 40)" : "rgb(243, 240, 240)";
 
     // 使用虚拟列表渲染，避免在大数据量时一次性渲染所有行导致卡顿
     return (
@@ -138,9 +213,10 @@ export default function WordSetsTable({
         aria-rowindex={index + 2}
         style={{
           ...style,
+          width: "100%",
           display: "grid",
           gridTemplateColumns: COLUMN_TEMPLATE,
-          alignItems: "center",
+          alignItems: "stretch",
           boxSizing: "border-box",
           padding: "0 16px",
           height: ROW_HEIGHT,
@@ -150,14 +226,93 @@ export default function WordSetsTable({
             : "1px solid rgba(0,0,0,0.05)",
         }}
       >
-        <div style={baseCellStyle}>{currentSet?.name || t("unnamed")}</div>
+        <Tooltip
+          title={
+            <div>
+              {currentSet?.name
+                ? currentSet.name
+                : t("noMark")
+              }
+            </div>
+          }
+
+          placement="right"
+          styles={{
+            body: {
+              backgroundColor: isDark ? "black" : "pink",
+              color: isDark ? "white" : "black",
+              maxHeight: "30vh",
+              width: "100%",
+              overflow: "auto",
+              scrollbarWidth: "thin",
+            },
+          }}
+
+        >
+          <div style={{ ...baseCellStyle, justifyContent: "center", overflow: "hidden" }}>
+            {currentSet?.name ?? t("noName")}
+          </div>
+        </Tooltip>
+        <Tooltip
+          title={
+            <div>
+              {currentSet?.mark
+                ? currentSet.mark
+                : t("noMark")
+              }
+            </div>
+          }
+
+          placement="right"
+          styles={{
+            body: {
+              backgroundColor: isDark ? "black" : "pink",
+              color: isDark ? "white" : "black",
+              maxHeight: "30vh",
+              width: "100%",
+              overflow: "auto",
+              scrollbarWidth: "thin",
+            },
+          }}
+
+        >
+          <div
+            style={markCellStyle}
+            data-testid="word-set-mark"
+            ref={markElementRef}
+            onPointerDown={handleMarkPointerDown}
+            onPointerMove={handleMarkPointerMove}
+            onPointerUp={finalizeMarkDrag}
+            onPointerCancel={finalizeMarkDrag}
+            onPointerLeave={finalizeMarkDrag}
+            onWheel={handleWheel}
+          >
+            {currentSet?.mark ?? t("noMark")}
+          </div>
+        </Tooltip>
         <div style={baseCellStyle}>{currentSet?.words?.length || 0}</div>
         <Tooltip
           title={
-            currentSet?.createdAt
-              ? new Date(currentSet.createdAt).toLocaleString()
-              : t("unknown")
+            <div>
+              {currentSet?.createdAt
+                ? new Date(currentSet.createdAt).toLocaleDateString()
+                : t("unknown")
+              }
+            </div>
           }
+
+          placement="right"
+          styles={{
+            body: {
+              backgroundColor: isDark ? "black" : "pink",
+              color: isDark ? "white" : "black",
+              maxHeight: "30vh",
+              width: "100%",
+              overflow: "auto",
+              scrollbarWidth: "thin",
+            },
+          }}
+
         >
           <div style={baseCellStyle}>
             {currentSet?.createdAt
@@ -165,16 +320,43 @@ export default function WordSetsTable({
               : t("unknown")}
           </div>
         </Tooltip>
-        <div
-          style={{
-            ...baseCellStyle,
-            gap: "0.4vw",
+        <Tooltip
+          title={
+            <div>
+              {currentSet?.updatedAt
+                ? new Date(currentSet.updatedAt).toLocaleDateString()
+                : t("noUpdate")
+              }
+            </div>
+          }
+          placement="right"
+          styles={{
+            body: {
+              backgroundColor: isDark ? "black" : "pink",
+              color: isDark ? "white" : "black",
+              maxHeight: "30vh",
+              width: "100%",
+              overflow: "auto",
+              scrollbarWidth: "thin",
+            },
           }}
         >
+          <div style={baseCellStyle}>
+            {currentSet?.updatedAt
+              ? new Date(currentSet.updatedAt).toLocaleDateString()
+              : t("noUpdate")}
+          </div>
+
+        </Tooltip>
+        <div style={actionCellStyle}>
           <button
             style={{
               ...buttonStyle,
-              fontSize: "0.8vw",
+              fontSize: "0.9rem",
+            }}
+            onClick={() => {
+              setEditIndex(index);
+              dispatch({ type: "SET_EDIT_WORD_SET", payload: {} });
             }}
           >
             {t("edit")}
@@ -183,7 +365,7 @@ export default function WordSetsTable({
             style={{
               ...buttonStyle,
               background: "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
-              fontSize: "0.8vw",
+              fontSize: "0.9rem",
             }}
             onClick={() => {
               setDeleteId(currentSet?.id ?? null);
@@ -214,11 +396,19 @@ export default function WordSetsTable({
         </div>
       ) : (
         <div style={listContainerStyle} role="table" aria-label={t("wordSetManagement")}>
-          <div style={stickyThStyle} role="row">
-            <span role="columnheader">{t("tableName")}</span>
-            <span role="columnheader">{t("tableWordCount")}</span>
-            <span role="columnheader">{t("tableCreatedAt")}</span>
-            <span role="columnheader">{t("tableActions")}</span>
+          <div style={stickyThStyle} role="row" data-testid="word-sets-table-header">
+            <span role="columnheader" data-testid="word-sets-table-header-name">{t("tableName")}</span>
+            <span
+              role="columnheader"
+              data-testid="word-sets-table-header-mark"
+              style={markHeaderStyle}
+            >
+              {t("tableMark")}
+            </span>
+            <span role="columnheader" data-testid="word-sets-table-header-word-count">{t("tableWordCount")}</span>
+            <span role="columnheader" data-testid="word-sets-table-header-created-at">{t("tableCreatedAt")}</span>
+            <span role="columnheader" data-testid="word-sets-table-header-updated-at">{t("tableUpdatedAt")}</span>
+            <span role="columnheader" data-testid="word-sets-table-header-actions">{t("tableActions")}</span>
           </div>
           <List
             style={listStyle}
@@ -243,6 +433,13 @@ export default function WordSetsTable({
           onCancel={() => {
             setPopup(false);
           }}
+        />
+      )}
+      {state.popup === "SET_EDIT_WORD_SET" && (
+        <EditWordSets
+          setLoading={setLoading}
+          outterWordSetList={wordSets}
+          index={editIndex as number}
         />
       )}
     </>
