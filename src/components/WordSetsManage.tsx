@@ -52,6 +52,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
 
     const cardStyle: React.CSSProperties = {
         width: "100%",
+        marginTop: "3vh",
         // background: isDark
         //     ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
         //     : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
@@ -59,12 +60,14 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
         boxShadow: isDark
             ? "0 4px 20px rgba(0, 0, 0, 0.3)"
             : "0 4px 20px rgba(0, 0, 0, 0.1)",
+        border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
         // border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
     };
 
     const actionButtonsStyle: React.CSSProperties = {
         display: "flex",
         gap: "16px",
+        paddingLeft: "1vw",
         marginBottom: "30px",
         flexWrap: "wrap",
     };
@@ -89,7 +92,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                 AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
 
             <div style={cardStyle} data-testid="word-sets-manage-card">
-                <h2 style={{ marginBottom: "20px" }}>
+                <h2 style={{ marginBottom: "1.5vh", paddingLeft: "1vw" }}>
                     {t("wordSetManagement")}
                 </h2>
 

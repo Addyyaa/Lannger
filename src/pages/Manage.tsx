@@ -5,6 +5,8 @@ import ComponentAsModel from "../utils/componentAsModel";
 import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
+import ConfirmWidget from "../components/ConfirmWidget";
+import { todo } from "node:test";
 
 export interface ManageState {
   popup: Action["type"];
@@ -19,7 +21,8 @@ export type Action =
   | { type: "SET_DATA_CLEAR"; payload: any }
   | { type: "SET_EDIT_WORD_SET"; payload: any }
   | { type: "CLOSE_POPUP" }
-  | { type: "SET_DELETE_WORD_SET"; payload: any };
+  | { type: "SET_DELETE_WORD_SET"; payload: any }
+  | { type: "SET_CLEAR_DATA"; payload: any };
 
 function AddWordSetsAction(
   dispatch: (action: Action) => void,
@@ -53,9 +56,29 @@ function manageReducer(state: ManageState, action: Action): ManageState {
       return { ...state, popup: action.type };
     case "CLOSE_POPUP":
       return { ...state, popup: "CLOSE_POPUP" };
+    case "SET_CLEAR_DATA":
+      return { ...state, popup: "SET_CLEAR_DATA" };
     default:
       return state;
   }
+}
+
+const ClearDataConfirmWidget = ({ dispatch, setWordSets }: { dispatch: (action: Action) => void, setWordSets: React.Dispatch<React.SetStateAction<any[]>> }) => {
+  const { t } = useTranslation();
+  return (
+    <ConfirmWidget
+      title={t("clearData")}
+      message={t("clearDataMessage")}
+      onConfirm={async () => {
+        dbOperator.deleteDatabase();
+        setWordSets([]);
+        dispatch({ type: "CLOSE_POPUP" });
+      }}
+      onCancel={() => {
+        dispatch({ type: "CLOSE_POPUP" });
+      }}
+    />
+  );
 }
 
 export default function Manage() {
@@ -243,12 +266,14 @@ export default function Manage() {
                   fontSize: "14px",
                 }}
                 onClick={() => {
-                  dbOperator.deleteDatabase();
-                  setWordSets([]);
+                  dispatch({ type: "SET_CLEAR_DATA", payload: {} });
                 }}
               >
                 {t("clearData")}
               </button>
+              {state.popup === "SET_CLEAR_DATA" &&
+                <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
+              }
             </div>
           </div>
         </div>

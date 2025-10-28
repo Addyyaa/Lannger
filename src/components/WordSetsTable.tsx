@@ -30,11 +30,12 @@ export default function WordSetsTable({
 
   const buttonStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
-    color: "white",
     border: "none",
     borderRadius: "0.3vw",
     fontSize: "1vw",
-    fontWeight: "bold",
+    width: "auto",
+    height: "auto",
+    minWidth: "1vw",
     cursor: "pointer",
     transition: "all 0.3s ease",
     boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
@@ -167,14 +168,13 @@ export default function WordSetsTable({
         <div
           style={{
             ...baseCellStyle,
-            gap: "8px",
+            gap: "0.4vw",
           }}
         >
           <button
             style={{
               ...buttonStyle,
-              fontSize: "14px",
-              padding: "6px 12px",
+              fontSize: "0.8vw",
             }}
           >
             {t("edit")}
@@ -183,8 +183,7 @@ export default function WordSetsTable({
             style={{
               ...buttonStyle,
               background: "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
-              fontSize: "14px",
-              padding: "6px 12px",
+              fontSize: "0.8vw",
             }}
             onClick={() => {
               setDeleteId(currentSet?.id ?? null);
