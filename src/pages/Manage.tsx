@@ -6,6 +6,7 @@ import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
 import ConfirmWidget from "../components/ConfirmWidget";
+import RestoreData from "../components/RestoreData";
 
 export interface ManageState {
   popup: Action["type"];
@@ -22,6 +23,7 @@ export type Action =
   | { type: "CLOSE_POPUP" }
   | { type: "SET_DELETE_WORD_SET"; payload: any }
   | { type: "CLOSE_EDIT_WORD_SET"; payload: any }
+  | { type: "SET_DATA_RESTORE_CONFIRM"; payload: any }
   | { type: "SET_CLEAR_DATA"; payload: any };
 
 type ManageContextValue = {
@@ -73,6 +75,8 @@ function manageReducer(state: ManageState, action: Action): ManageState {
       return { ...state, popup: "CLOSE_POPUP" };
     case "SET_CLEAR_DATA":
       return { ...state, popup: "SET_CLEAR_DATA" };
+    case "SET_DATA_RESTORE_CONFIRM":
+      return { ...state, popup: "SET_DATA_RESTORE_CONFIRM" };
     case "CLOSE_EDIT_WORD_SET":
       return { ...state, popup: "CLOSE_EDIT_WORD_SET" };
     default:
@@ -274,6 +278,9 @@ export default function Manage() {
                       "linear-gradient(135deg, #ffa502 0%, #ff9500 100%)",
                     fontSize: "14px",
                   }}
+                  onClick={() => {
+                    dispatch({ type: "SET_DATA_RESTORE_CONFIRM", payload: {} });
+                  }}
                 >
                   {t("restoreData")}
                 </button>
@@ -294,6 +301,9 @@ export default function Manage() {
                 {state.popup === "SET_CLEAR_DATA" &&
                   <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
                 }
+                {state.popup === "SET_DATA_RESTORE_CONFIRM" &&
+                  <RestoreData close={() => dispatch({ type: "CLOSE_POPUP" } as Action)} setPopup={dispatch} setWordSets={setWordSets} wordSets={wordSets} />
+                }
               </div>
             </div>
           </div>
@@ -301,4 +311,4 @@ export default function Manage() {
       </div>
     </ManageContext.Provider>
   );
-}
+} 

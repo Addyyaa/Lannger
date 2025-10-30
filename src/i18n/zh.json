@@ -22,6 +22,7 @@
     "tableName": "名称",
     "tableWordCount": "单词数量",
     "tableCreatedAt": "创建时间",
+    "tableUpdatedAt": "更新时间",
     "tableActions": "操作",
     "unnamed": "未命名",
     "unknown": "未知",
@@ -67,5 +68,7 @@
     "tableMark": "备注",
     "updateWordSetFailed": "更新单词集失败",
     "noUpdate": "没有更新",
-    "submitModify": "提交修改"
+    "submitModify": "提交修改",
+    "restoreDataMessage": "请点击左下角【导入数据】按钮选择要恢复的json数据文件：<highlight>{{fileName}}</highlight>",
+    "importData": "📂 导入数据"
 }

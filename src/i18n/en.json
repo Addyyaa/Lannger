@@ -22,6 +22,7 @@
     "tableName": "Name",
     "tableWordCount": "Word Count",
     "tableCreatedAt": "Created At",
+    "tableUpdatedAt": "Updated At",
     "tableActions": "Actions",
     "unnamed": "Untitled",
     "unknown": "Unknown",
@@ -67,5 +68,7 @@
     "tableMark": "Mark",
     "updateWordSetFailed": "Update word set failed",
     "noUpdate": "There is no update yet.",
-    "submitModify": "Submit Modify"
+    "submitModify": "Submit Modify",
+    "restoreDataMessage": "Click the \"Import Data\" button to select the json data file to restore: <highlight>{{fileName}}</highlight>",
+    "importData": "📂 Import Data"
 }

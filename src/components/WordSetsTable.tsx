@@ -235,7 +235,7 @@ export default function WordSetsTable({
               }
             </div>
           }
-
+          mouseEnterDelay={0.5}
           placement="right"
           styles={{
             body: {
@@ -262,7 +262,7 @@ export default function WordSetsTable({
               }
             </div>
           }
-
+          mouseEnterDelay={0.5}
           placement="right"
           styles={{
             body: {
@@ -300,7 +300,7 @@ export default function WordSetsTable({
               }
             </div>
           }
-
+          mouseEnterDelay={0.5}
           placement="right"
           styles={{
             body: {
@@ -329,6 +329,7 @@ export default function WordSetsTable({
               }
             </div>
           }
+          mouseEnterDelay={0.5}
           placement="right"
           styles={{
             body: {

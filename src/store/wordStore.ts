@@ -200,6 +200,25 @@ export async function backupDatabase() {
 
 
 // 恢复数据库
-export async function restoreDatabase(langggerDB: Object) {
-  // TODO 完成数据库导入功能。 注意需要先删除原先的id，防止已有id冲突
+export async function restoreDatabase(langggerDB: { wordSets: WordSet[], words: Word[] }) {
+  // 完成数据库导入功能。 注意需要先删除原先的id，防止已有id冲突
+  const wordSets = langggerDB.wordSets;
+  for (const wordSet of wordSets) {
+    if ('id' in wordSet) {
+      delete (wordSet as any).id;
+    }
+  }
+  if (wordSets.length <= 0) { return false; }
+
+  await db.wordSets.bulkPut(wordSets as WordSet[]);
+
+  const words = langggerDB.words;
+  for (const word of words) {
+    if ('id' in word) {
+      delete (word as any).id;
+    }
+  }
+  if (words.length <= 0) { return false; }
+  await db.words.bulkPut(words as Word[]);
+  return true;
 }

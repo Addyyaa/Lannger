@@ -2,7 +2,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
 interface ConfirmWidgetProps {
     title: string;
-    message: string;
+    message: React.ReactNode;
     confirmText?: string;
     cancelText?: string;
     onConfirm: () => Promise<void>;
@@ -12,6 +12,8 @@ interface ConfirmWidgetProps {
     messageStyle?: React.CSSProperties;
     confirmButtonStyle?: React.CSSProperties;
     cancelButtonStyle?: React.CSSProperties;
+    showCloseButton?: boolean;
+    close?: () => void;
 }
 
 /**
@@ -30,12 +32,13 @@ interface ConfirmWidgetProps {
  * @returns 
  */
 
-export default function ConfirmWidget({ title, message, confirmText, cancelText, onConfirm, onCancel, containerStyle, titleStyle, messageStyle, confirmButtonStyle, cancelButtonStyle }: ConfirmWidgetProps) {
+export default function ConfirmWidget({ title, message, confirmText, cancelText, onConfirm, onCancel, containerStyle, titleStyle, messageStyle, confirmButtonStyle, cancelButtonStyle, showCloseButton = false, close }: ConfirmWidgetProps) {
     const { t } = useTranslation();
     const { isDark } = useTheme();
     return (
         <div style={Container}>
             <div style={{ ...confirmWidgetStyle(isDark), ...containerStyle }} data-testid="confirm-widget">
+                {showCloseButton && <button style={closeButtonStyleInner(isDark)} onClick={close}>X</button>}
                 <h1 style={{ ...titleStyleInner(isDark), ...titleStyle }} data-testid="confirm-widget-title">{title}</h1>
                 <p style={{ ...messageStyleInner, ...messageStyle }} data-testid="confirm-widget-message">{message}</p>
                 <button
@@ -115,6 +118,9 @@ const confirmButtonStyleInner = (isDark: boolean): React.CSSProperties => ({
     position: "absolute",
     width: "20%",
     bottom: '6%',
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     right: '8%',
     background: "rgb(87, 152, 236)",
     color: "rgba(0, 0, 0, 1)",
@@ -132,6 +138,9 @@ const cancelButtonStyleInner = (isDark: boolean): React.CSSProperties => ({
     bottom: '6%',
     left: '8%',
     position: "absolute",
+    display: "flex",
+    justifyContent: "center",
+    alignItems: "center",
     background: "rgb(233, 231, 231)",
     color: "rgb(104, 95, 95)",
     border: "none",
@@ -155,3 +164,14 @@ const Container: React.CSSProperties = {
     alignItems: "center",
     zIndex: 9999,
 };
+
+const closeButtonStyleInner = (isDark: boolean): React.CSSProperties => ({
+    position: "absolute",
+    display: "flex",
+    top: '2%',
+    right: "2%",
+    width: "auto",
+    height: "auto",
+    backgroundColor: "transparent",
+    color: "black",
+});
