@@ -137,6 +137,12 @@ export async function updateWord(word: Word) {
 // 删除单词集
 export async function deleteWordSet(id: number) {
   try {
+    // 将该词集下的单词对应的setId设置为undefined
+    const words = await db.words.where("setId").equals(id).toArray();
+    for (const word of words) {
+      word.setId = undefined;
+      await db.words.put(word);
+    }
     return await db.wordSets.delete(id);
   } catch (error) {
     console.error(error);
