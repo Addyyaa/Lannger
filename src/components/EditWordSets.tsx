@@ -58,7 +58,7 @@ export default function EditWordSets({
                 <label
                     style={{ ...AddWordSetTitleStyle, color: isDark ? "#eee" : "#333" }}
                 >
-                    {t("addWordSetTitle")}
+                    {t("editWordSet")}
                 </label>
                 <button
                     onClick={() => dispatch({ type: "CLOSE_EDIT_WORD_SET", payload: {} })}

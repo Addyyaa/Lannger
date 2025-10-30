@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react'
+import { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { createRoot } from 'react-dom/client'
 import { RouterProvider, createBrowserRouter, Outlet } from 'react-router-dom'
 import './index.css'
@@ -76,7 +76,33 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 export const useTheme = () => useContext(ThemeContext)
 
 // 语言菜单组件
-function LanguageMenu({ setLanguageClicked }: { setLanguageClicked: (language: string) => void }) {
+function LanguageMenu({ setLanguageClicked }: { setLanguageClicked: () => void }) {
+    const languageMenuRef = useRef<HTMLUListElement>(null)
+    const hideTimerRef = useRef<NodeJS.Timeout | null>(null)
+
+    function handleMouseEnter() {
+        if (hideTimerRef.current) {
+            clearTimeout(hideTimerRef.current)
+            hideTimerRef.current = null
+        }
+    }
+
+    function handleMouseLeave() {
+        hideTimerRef.current = setTimeout(() => {
+            setLanguageClicked()
+        }, 500)
+    }
+
+    // 组件卸载时清理定时器
+    useEffect(() => {
+        handleMouseLeave()
+        return () => {
+            if (hideTimerRef.current) {
+                clearTimeout(hideTimerRef.current)
+            }
+        }
+    }, [])
+
     return (
         <ul style={{
             listStyle: 'none',
@@ -87,13 +113,21 @@ function LanguageMenu({ setLanguageClicked }: { setLanguageClicked: (language: s
             left: 0,
             minWidth: '100%',  // 至少与按钮同宽
             width: 'max-content',  // 但可以根据内容扩展
-        }}>
+        }}
+            ref={languageMenuRef}
+            onMouseLeave={handleMouseLeave}
+            onMouseEnter={handleMouseEnter}
+        >
             {Object.entries(languages).map(([keyFromSelector, value]) => (
-                <li key={keyFromSelector} style={{ marginBottom: '1px' }}>
+                <li
+                    key={keyFromSelector}
+                    style={{ marginBottom: '1px' }}
+                    onMouseEnter={handleMouseEnter}
+                >
                     <button
                         onClick={() => {
                             i18n.changeLanguage(keyFromSelector)
-                            setLanguageClicked(keyFromSelector)
+                            setLanguageClicked()
                         }}
                         style={{ width: '100%', textAlign: 'left' }}
                     >
