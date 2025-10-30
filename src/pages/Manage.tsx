@@ -98,6 +98,8 @@ const ClearDataConfirmWidget = ({ dispatch, setWordSets }: { dispatch: (action: 
       onCancel={() => {
         dispatch({ type: "CLOSE_POPUP" });
       }}
+      cancelButtonStyle={{ backgroundColor: "rgb(88, 130, 206)", color: "rgb(255, 255, 255)" }}
+      confirmButtonStyle={{ backgroundColor: "rgb(193, 198, 206)", color: "rgb(0, 0, 0)" }}
     />
   );
 }
