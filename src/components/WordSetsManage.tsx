@@ -6,6 +6,7 @@ import AddWordSets from "../components/AddWordSets";
 import { useTheme } from "../main";
 import WordSetsTable from "../components/WordSetsTable";
 import * as dbOperator from "../store/wordStore";
+import AddWord from "../components/AddWord";
 
 interface WordSetsManageProps {
     manageReducer: (state: ManageState, action: Action) => ManageState;
@@ -18,6 +19,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
     const { isDark } = useTheme();
     const [loading, setLoading] = useState(true);
+
 
     useEffect(() => {
         loadWordSets();
@@ -48,6 +50,10 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
 
     const handleAddWordSet = async () => {
         dispatch({ type: "SET_ADD_WORD_SETS", payload: {} });
+    };
+
+    const handleAddWords = async () => {
+        dispatch({ type: "SET_ADD_WORDS", payload: {} });
     };
 
     const cardStyle: React.CSSProperties = {
@@ -128,6 +134,23 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                                 "0 4px 15px rgba(0, 180, 255, 0.3)";
                         }}
                         data-testid="import-words-button"
+                        onClick={handleAddWords}
+                    >
+                        {'➕ ' + t("addWords")}
+                    </button>
+                    <button
+                        style={buttonStyle}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.boxShadow =
+                                "0 6px 20px rgba(0, 180, 255, 0.4)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow =
+                                "0 4px 15px rgba(0, 180, 255, 0.3)";
+                        }}
+                        data-testid="import-words-button"
                     >
                         {t("importWords")}
                     </button>
@@ -148,8 +171,12 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                         {t("exportData")}
                     </button>
                 </div>
-                <WordSetsTable wordSets={wordSets} loading={loading} setLoading={setLoading} />
+
             </div>
+            <WordSetsTable wordSets={wordSets} loading={loading} setLoading={setLoading} />
+            {state.popup === "SET_ADD_WORDS" &&
+                <AddWord closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
+            }
         </>
     );
 }

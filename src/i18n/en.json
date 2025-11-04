@@ -71,5 +71,16 @@
     "noUpdate": "There is no update yet.",
     "submitModify": "Submit Modify",
     "restoreDataMessage": "Click the \"Import Data\" button to select the json data file to restore: <highlight>{{fileName}}</highlight>",
-    "importData": "📂 Import Data"
+    "importData": "📂 Import Data",
+    "addWords": "Add Words",
+    "n1": "N1 Level",
+    "n2": "N2 Level",
+    "n3": "N3 Level",
+    "n4": "N4 Level",
+    "n5": "N5 Level",
+    "kanji": "Kanji",
+    "difficultyCoefficient": "Difficulty Coefficient",
+    "kana": "Kana",
+    "meaning": "Meaning",
+    "example": "Example"
 }

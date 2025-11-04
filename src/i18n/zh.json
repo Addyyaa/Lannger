@@ -71,5 +71,16 @@
     "noUpdate": "没有更新",
     "submitModify": "提交修改",
     "restoreDataMessage": "请点击左下角【导入数据】按钮选择要恢复的json数据文件：<highlight>{{fileName}}</highlight>",
-    "importData": "📂 导入数据"
+    "importData": "📂 导入数据",
+    "addWords": "添加单词",
+    "n1": "N1 等级",
+    "n2": "N2 等级",
+    "n3": "N3 等级",
+    "n4": "N4 等级",
+    "n5": "N5 等级",
+    "kanji": "汉字",
+    "difficultyCoefficient": "难度系数",
+    "kana": "假名",
+    "meaning": "意思",
+    "example": "例句"
 }

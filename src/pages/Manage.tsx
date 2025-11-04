@@ -168,14 +168,14 @@ export default function Manage() {
   return (
     <ManageContext.Provider value={{ state, dispatch }}>
       <div style={containerStyle}>
-        <div style={senction1Style}>
+        <section style={senction1Style} data-testid="word-sets-manage-section">
           <h1 style={titleStyle}>{t("manage")}</h1>
 
           {state.popup === "SET_ADD_WORD_SETS" &&
             AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
           <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
-        </div>
-        <div style={cardStyle}>
+        </section>
+        <section style={cardStyle} data-testid="system-settings-section">
           <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
             {t("systemSettings")}
           </h2>
@@ -309,7 +309,7 @@ export default function Manage() {
               </div>
             </div>
           </div>
-        </div>
+        </section>
       </div>
     </ManageContext.Provider>
   );
