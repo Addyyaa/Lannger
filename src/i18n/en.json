@@ -80,7 +80,9 @@
     "n5": "N5 Level",
     "kanji": "Kanji",
     "difficultyCoefficient": "Difficulty Coefficient",
-    "kana": "Kana",
-    "meaning": "Meaning",
-    "example": "Example"
+    "examplePlaceholder": "Please enter the example",
+    "markPlaceholder": "Optional",
+    "addWordFailed": "Word addition failed.",
+    "isRequired": "is required",
+    "defaultWordSetMark": "All uncategorized words are in this set"
 }

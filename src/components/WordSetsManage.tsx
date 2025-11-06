@@ -25,6 +25,11 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
         loadWordSets();
     }, [loading]);
 
+
+    const tmpWidget = async () => {
+        const allWords = await dbOperator.getAllWords();
+        console.log(allWords);
+    }
     const loadWordSets = async () => {
         try {
             const sets = await dbOperator.getAllWordSets();
@@ -151,6 +156,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                                 "0 4px 15px rgba(0, 180, 255, 0.3)";
                         }}
                         data-testid="import-words-button"
+                        onClick={tmpWidget}
                     >
                         {t("importWords")}
                     </button>
@@ -177,6 +183,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
             {state.popup === "SET_ADD_WORDS" &&
                 <AddWord closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
             }
+
         </>
     );
 }

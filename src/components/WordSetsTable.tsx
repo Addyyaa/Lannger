@@ -8,6 +8,7 @@ import { List, RowComponentProps } from "react-window";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import EditWordSets from "./EditWordSets";
 import { ManageContext } from "../pages/Manage";
+import { DEFAULT_WORD_SET_ID } from "../db";
 
 export default function WordSetsTable({
   wordSets,
@@ -256,9 +257,11 @@ export default function WordSetsTable({
         <Tooltip
           title={
             <div>
-              {currentSet?.mark
-                ? currentSet.mark
-                : t("noMark")
+              {currentSet?.id === DEFAULT_WORD_SET_ID
+                ? t("defaultWordSetMark")
+                : currentSet?.mark
+                  ? currentSet.mark
+                  : t("noMark")
               }
             </div>
           }
@@ -287,7 +290,9 @@ export default function WordSetsTable({
             onPointerLeave={finalizeMarkDrag}
             onWheel={handleWheel}
           >
-            {currentSet?.mark ?? t("noMark")}
+            {currentSet?.id === DEFAULT_WORD_SET_ID
+              ? t("defaultWordSetMark")
+              : currentSet?.mark ?? t("noMark")}
           </div>
         </Tooltip>
         <div style={baseCellStyle}>{currentSet?.words?.length || 0}</div>

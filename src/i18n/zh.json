@@ -80,7 +80,9 @@
     "n5": "N5 等级",
     "kanji": "汉字",
     "difficultyCoefficient": "难度系数",
-    "kana": "假名",
-    "meaning": "意思",
-    "example": "例句"
+    "examplePlaceholder": "请输入例句",
+    "markPlaceholder": "备注（可选）",
+    "addWordFailed": "单词添加失败：",
+    "isRequired": "是必填项",
+    "defaultWordSetMark": "所有未分类的单词都在该集合中"
 }

@@ -1,5 +1,5 @@
 import dataVerify from "../utils/dataVerify";
-import { db, WordSet, Word, resetDB, ensureDBOpen } from "../db";
+import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID } from "../db";
 
 /**
  * 创建单词集
@@ -22,10 +22,10 @@ export async function createWordSet(
 /**
  * 创建单词
  * @param kanji 可选
- * @param setId 可选
+ * @param setId 可选，未设置时使用默认单词集
  * @param kana 必填
  * @param meaning 必填
- * @param type 可选
+ * @param type 可选，未设置时使用默认类型
  * @param example 可选
  * @param review 可选
  * @param mark 可选
@@ -35,8 +35,20 @@ export async function createWord(
   word: Omit<Word, "id" | "createdAt" | "updatedAt">
 ) {
   await ensureDBOpen();
+
+  // 如果没有设置 setId，使用默认单词集
+  let finalSetId = word.setId;
+  if (finalSetId === undefined || finalSetId === null) {
+    finalSetId = await getOrCreateDefaultWordSet();
+  }
+
+  // 如果没有设置 type，使用默认类型
+  const finalType = word.type ?? DEFAULT_WORD_TYPE;
+
   const newWord = {
     ...word,
+    setId: finalSetId,
+    type: finalType,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
@@ -44,6 +56,7 @@ export async function createWord(
 }
 
 export async function getAllWordSets() {
+  await ensureDBOpen(); // 确保数据库打开且默认单词集存在
   return await db.wordSets.toArray();
 }
 
@@ -137,10 +150,15 @@ export async function updateWord(word: Word) {
 // 删除单词集
 export async function deleteWordSet(id: number) {
   try {
-    // 将该词集下的单词对应的setId设置为undefined
+    // 不允许删除默认单词集（ID 为 0）
+    if (id === DEFAULT_WORD_SET_ID) {
+      throw new Error("Cannot delete the default word set");
+    }
+
+    // 将该词集下的单词对应的setId设置为默认单词集ID
     const words = await db.words.where("setId").equals(id).toArray();
     for (const word of words) {
-      word.setId = undefined;
+      word.setId = DEFAULT_WORD_SET_ID;
       await db.words.put(word);
     }
     return await db.wordSets.delete(id);
