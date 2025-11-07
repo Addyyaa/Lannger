@@ -61,16 +61,19 @@ export async function getAllWordSets() {
 }
 
 export async function getAllWords() {
+  await ensureDBOpen();
   return await db.words.toArray();
 }
 
 // 模糊查询
 export async function fuzzySearchWordSets(query: string) {
+  await ensureDBOpen();
   return await db.wordSets
     .filter((wordSet) => wordSet.name.includes(query))
     .toArray();
 }
 export async function fuzzySearchWords(query: string) {
+  await ensureDBOpen();
   return await db.words
     .filter(
       (word) =>
@@ -82,15 +85,18 @@ export async function fuzzySearchWords(query: string) {
 }
 
 export async function getWordSet(id: number) {
+  await ensureDBOpen();
   return db.wordSets.get(id);
 }
 
 export async function getWord(id: number) {
+  await ensureDBOpen();
   return await db.words.get(id);
 }
 
 // 按照普通字段查询
 export async function getWordSetByCommon(keyword: string) {
+  await ensureDBOpen();
   const sets = await db.words.where("kana").startsWith(keyword).toArray();
   if (sets.length > 0) {
     return sets;
@@ -121,6 +127,7 @@ export async function getWordSetByCommon(keyword: string) {
 
 // 按词组查询单词
 export async function getWordsByWordSet(wordSet: number) {
+  await ensureDBOpen();
   return await db.words.where("setId").equals(wordSet).toArray();
 }
 
@@ -131,6 +138,7 @@ export async function getWordsByWordSet(wordSet: number) {
  * @returns
  */
 export async function getWordByIndex(setId: number, kanaPrefix: string) {
+  await ensureDBOpen();
   return await db.words
     .where("[setId+kana]")
     .between([setId, kanaPrefix], [setId, kanaPrefix + "\uffff"])
@@ -138,11 +146,13 @@ export async function getWordByIndex(setId: number, kanaPrefix: string) {
 }
 
 export async function updateWordSet(wordSet: WordSet) {
+  await ensureDBOpen();
   wordSet.updatedAt = new Date().toISOString();
   return await db.wordSets.put(wordSet);
 }
 
 export async function updateWord(word: Word) {
+  await ensureDBOpen();
   word.updatedAt = new Date().toISOString();
   return await db.words.put(word);
 }
@@ -150,6 +160,7 @@ export async function updateWord(word: Word) {
 // 删除单词集
 export async function deleteWordSet(id: number) {
   try {
+    await ensureDBOpen();
     // 不允许删除默认单词集（ID 为 0）
     if (id === DEFAULT_WORD_SET_ID) {
       throw new Error("Cannot delete the default word set");
@@ -171,6 +182,7 @@ export async function deleteWordSet(id: number) {
 // 删除单词
 export async function deleteWord(id: number) {
   try {
+    await ensureDBOpen();
     return await db.words.delete(id);
   } catch (error) {
     console.error(error);

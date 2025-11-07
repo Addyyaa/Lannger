@@ -12,6 +12,7 @@ import Layout from './components/Layout'
 import { useTranslation } from 'react-i18next'
 import i18n from './i18n/i18n'
 import languages from './i18n/languages.json'
+import { ensureDBOpen } from './db'
 
 // 创建主题上下文
 const ThemeContext = createContext<{
@@ -251,6 +252,11 @@ const rootElement = document.getElementById('root')
 if (!rootElement) {
     throw new Error('Root element #root not found')
 }
+
+// 在应用启动时初始化数据库
+ensureDBOpen().catch((error) => {
+    console.error('数据库初始化失败:', error);
+});
 
 // 在开发环境中保持单例 Root，避免 HMR 多次创建导致容器不一致
 const existingRoot = (window as any).__lanngerRoot

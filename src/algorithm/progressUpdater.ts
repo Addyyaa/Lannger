@@ -1,4 +1,4 @@
-import { db, WordProgress, ReviewLog, StudyMode } from "../db";
+import { db, WordProgress, ReviewLog, StudyMode, ensureDBOpen } from "../db";
 import { calculateSM2, calculateNextReviewDate, adjustGradeBySpeed, Grade } from "./spacedRepetition";
 
 /**
@@ -28,6 +28,8 @@ export async function updateWordProgress(
     responseTime?: number
 ): Promise<UpdateProgressResult> {
     try {
+        // 确保数据库已打开
+        await ensureDBOpen();
         // 获取当前进度
         let progress = await db.wordProgress.get(wordId);
 
@@ -211,6 +213,7 @@ export async function batchUpdateWordProgress(
  * @returns 单词进度
  */
 export async function ensureWordProgressExists(wordId: number): Promise<WordProgress | null> {
+    await ensureDBOpen();
     let progress = await db.wordProgress.get(wordId);
 
     if (!progress) {

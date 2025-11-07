@@ -1,4 +1,4 @@
-import { db, WordProgress } from "../db";
+import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight, calculateMastery } from "./weightCalculator";
 import { ensureWordProgressExists } from "./progressUpdater";
 
@@ -47,6 +47,9 @@ export async function scheduleTestWords(
         excludeTooEasy = true,
         excludeTooHard = false,
     } = options;
+
+    // 确保数据库已打开
+    await ensureDBOpen();
 
     // 获取单词列表
     let wordIds: number[];

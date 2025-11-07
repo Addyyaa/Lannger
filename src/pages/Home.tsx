@@ -2,7 +2,7 @@ import styles from './Home.module.css'
 import { useState, useEffect } from 'react'
 import { useTheme } from '../main'
 import { useTranslation } from 'react-i18next'
-import { db } from '../db'
+import { db, ensureDBOpen } from '../db'
 import { RouterProvider, createBrowserRouter, } from 'react-router-dom'
 
 export default function Home() {
@@ -14,9 +14,13 @@ export default function Home() {
     const { t } = useTranslation()
     useEffect(() => {
         // TODO 从数据库获取进度
-        db.wordSets.count().then((count) => {
+        ensureDBOpen().then(() => {
+            return db.wordSets.count();
+        }).then((count) => {
             setLearnningProgress({ totalVocabulary: count, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
-        })
+        }).catch((error) => {
+            console.error("加载进度失败:", error);
+        });
     }, [])
     return (
 
