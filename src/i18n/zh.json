@@ -95,5 +95,16 @@
     "noWords": "暂无单词",
     "difficulty": "难度系数",
     "fetchWordsError": "获取单词列表失败",
-    "close": "关闭"
+    "close": "关闭",
+    "fetchWordSetsError": "获取单词集失败",
+    "downloadTemplate": "📥 下载模板",
+    "selectFile": "📁 选择文件",
+    "import": "📤 导入",
+    "selectedFile": "已选择文件",
+    "pleaseSelectFile": "请先选择文件",
+    "invalidFileFormat": "文件格式错误：必须是JSON数组",
+    "importComplete": "导入完成",
+    "success": "成功",
+    "failed": "失败",
+    "importFailed": "导入失败"
 }

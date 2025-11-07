@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next";
 import React, { useState, useEffect, useReducer } from "react";
-import { Action, ManageState } from "../pages/Manage";
+import { Action, ManageState, useManageContext } from "../pages/Manage";
 import ComponentAsModel from "../utils/componentAsModel";
 import AddWordSets from "../components/AddWordSets";
 import { useTheme } from "../main";
@@ -17,6 +17,7 @@ interface WordSetsManageProps {
 export default function WordSetsManage({ manageReducer, setWordSets, wordSets }: WordSetsManageProps) {
     const { t } = useTranslation();
     const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
+    const { dispatch: manageDispatch } = useManageContext();
     const { isDark } = useTheme();
     const [loading, setLoading] = useState(true);
 
@@ -26,10 +27,9 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     }, [loading]);
 
 
-    const tmpWidget = async () => {
-        const allWords = await dbOperator.getAllWords();
-        console.log(allWords);
-    }
+    const handleImportWords = () => {
+        manageDispatch({ type: "SET_IMPORT_WORDS", payload: {} });
+    };
     const loadWordSets = async () => {
         try {
             const sets = await dbOperator.getAllWordSets();
@@ -156,7 +156,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                                 "0 4px 15px rgba(0, 180, 255, 0.3)";
                         }}
                         data-testid="import-words-button"
-                        onClick={tmpWidget}
+                        onClick={handleImportWords}
                     >
                         {t("importWords")}
                     </button>

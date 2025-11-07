@@ -95,5 +95,16 @@
     "noWords": "No words",
     "difficulty": "Difficulty",
     "fetchWordsError": "Failed to fetch word list",
-    "close": "Close"
+    "close": "Close",
+    "fetchWordSetsError": "Failed to fetch word sets",
+    "downloadTemplate": "📥 Download Template",
+    "selectFile": "📁 Select File",
+    "import": "📤 Import",
+    "selectedFile": "Selected File",
+    "pleaseSelectFile": "Please select a file first",
+    "invalidFileFormat": "Invalid file format: must be a JSON array",
+    "importComplete": "Import Complete",
+    "success": "Success",
+    "failed": "Failed",
+    "importFailed": "Import Failed"
 }

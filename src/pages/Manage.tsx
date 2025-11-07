@@ -5,6 +5,7 @@ import ComponentAsModel from "../utils/componentAsModel";
 import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
+import ImportDialog from "../components/ImportDialog";
 import ConfirmWidget from "../components/ConfirmWidget";
 import RestoreData from "../components/RestoreData";
 
@@ -15,6 +16,7 @@ export interface ManageState {
 export type Action =
   | { type: "SET_ADD_WORD_SETS"; payload: Object }
   | { type: "SET_ADD_WORDS"; payload: Object }
+  | { type: "SET_IMPORT_WORDS"; payload: Object }
   | { type: "SET_EXPORT_WORDS"; payload: any }
   | { type: "SET_DATA_BACKUP"; payload: any }
   | { type: "SET_DATA_RESTORE"; payload: any }
@@ -53,11 +55,19 @@ function AddWordSetsAction(
   );
 }
 
+function ImportWordsAction(dispatch: (action: Action) => void) {
+  return ComponentAsModel(
+    <ImportDialog closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
+  );
+}
+
 function manageReducer(state: ManageState, action: Action): ManageState {
   switch (action.type) {
     case "SET_ADD_WORD_SETS":
       return { ...state, popup: action.type };
     case "SET_ADD_WORDS":
+      return { ...state, popup: action.type };
+    case "SET_IMPORT_WORDS":
       return { ...state, popup: action.type };
     case "SET_EXPORT_WORDS":
       return { ...state, popup: action.type };
@@ -173,6 +183,8 @@ export default function Manage() {
 
           {state.popup === "SET_ADD_WORD_SETS" &&
             AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
+          {state.popup === "SET_IMPORT_WORDS" &&
+            ImportWordsAction(dispatch as (action: Action) => void)}
           <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
         </section>
         <section style={cardStyle} data-testid="system-settings-section">

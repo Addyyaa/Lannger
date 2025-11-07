@@ -1,15 +1,19 @@
 import { useTheme } from "../main";
 import { useTranslation } from "react-i18next";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Form } from "antd";
 import TextArea from "antd/es/input/TextArea";
 import Submmit from "./Submmit";
-import * as dbOperator from "../store/wordStore"
+import CloseButton from "./CloseButton";
+import * as dbOperator from "../store/wordStore";
+import { WordSet } from "../db";
+import { DEFAULT_WORD_SET_ID } from "../db";
 export default function AddWord({ closePopup }: { closePopup: () => void }) {
   const { isDark } = useTheme();
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const [wordSets, setWordSets] = useState<WordSet[]>([]);
   const [word, setWord] = useState({
     kana: "",
     kanji: "",
@@ -17,7 +21,21 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     example: "",
     mark: "",
     difficultyCoefficient: "5",
+    setId: undefined as number | undefined,
   });
+
+  // 获取所有单词集
+  useEffect(() => {
+    const fetchWordSets = async () => {
+      try {
+        const sets = await dbOperator.getAllWordSets();
+        setWordSets(sets);
+      } catch (error) {
+        console.error(t("fetchWordSetsError"), error);
+      }
+    };
+    fetchWordSets();
+  }, [t]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -41,8 +59,12 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     }
 
     // 将 difficultyCoefficient 转换为 review.difficulty
+    // 处理 setId：如果未选择，则使用默认单词集ID
+    const finalSetId = word.setId !== undefined ? word.setId : DEFAULT_WORD_SET_ID;
+
     const wordToSave = {
       ...word,
+      setId: finalSetId,
       review: {
         times: 0,
         difficulty: parseInt(word.difficultyCoefficient, 10),
@@ -63,9 +85,11 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
   return (
     <div style={AddWordStyle}>
       <div style={FormContainer(isDark)}>
-        <button onClick={closePopup} style={CloseButtonStyle} aria-label={t("close")}>
-          {t("close")}
-        </button>
+        <CloseButton
+          onClick={closePopup}
+          ariaLabel={t("close")}
+          iconColor="#333333"
+        />
         <Form style={FormStyle} data-testid="word-info-form">
           <fieldset style={{ ...fieldsetStyle, height: "65%" }} data-testid="word-info-must">
             <legend style={{ color: isDark ? "black" : "black", borderColor: "rgb(177, 169, 169)", padding: "1% 0 0 1.5%", boxSizing: "border-box" }}>{t('word')}</legend>
@@ -88,11 +112,29 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             </section>
           </fieldset>
           <fieldset style={{ ...fieldsetStyle, height: "35%" }} data-testid="word-info-optional">
-            <section style={{ ...sectionStyle, height: "70%" }}>
+            <section style={{ ...sectionStyle, height: "33%" }}>
+              <label style={labelStyle(isDark)}>{t('wordSet')}</label>
+              <select
+                id="wordSet"
+                style={selectStyle}
+                value={word.setId !== undefined ? word.setId.toString() : DEFAULT_WORD_SET_ID.toString()}
+                onChange={(e) => {
+                  const setId = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+                  setWord({ ...word, setId });
+                }}
+              >
+                {wordSets.map((set) => (
+                  <option key={set.id} value={set.id.toString()}>
+                    {set.name}
+                  </option>
+                ))}
+              </select>
+            </section>
+            <section style={{ ...sectionStyle, height: "33%" }}>
               <label style={labelStyle(isDark)}>{t('mark')}</label>
               <TextArea style={{ ...inputStyle, height: "100%" }} placeholder={t('markPlaceholder')} value={word.mark} onChange={(e) => setWord({ ...word, mark: e.target.value })} />
             </section>
-            <section style={{ ...sectionStyle, height: "30%" }}>
+            <section style={{ ...sectionStyle, height: "34%" }}>
               <label style={labelStyle(isDark)}>{t('difficultyCoefficient')}</label>
               <select id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => setWord({ ...word, difficultyCoefficient: e.target.value })}>
                 <option value="1">{t('n1')}</option>
@@ -200,18 +242,6 @@ const sectionStyle: React.CSSProperties = {
   paddingLeft: "8%",
 }
 
-const CloseButtonStyle: React.CSSProperties = {
-  position: "absolute",
-  width: "3%",
-  aspectRatio: "1.7/1",
-  padding: 0,
-  margin: 0,
-  borderRadius: "0.3vw",
-  backgroundColor: "rgb(63 59 59)",
-  top: "1.5%",
-  right: "1.2%",
-}
-
 const inputStyle: React.CSSProperties = {
   width: "70%",
   height: "60%",
@@ -226,7 +256,16 @@ const inputStyle: React.CSSProperties = {
 }
 
 const selectStyle: React.CSSProperties = {
+  width: "70%",
+  height: "60%",
+  borderRadius: "0.4vw",
   marginRight: "10%",
+  border: "1px solid #e0e0e0",
+  outline: "none",
+  fontSize: "1.2vw",
+  boxSizing: "border-box",
+  color: "black",
+  backgroundColor: "white",
 }
 
 // 按钮容器样式：完全透明，只负责定位和点击区域

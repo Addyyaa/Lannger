@@ -6,6 +6,7 @@ import { List, RowComponentProps } from "react-window";
 import { Word, WordSet } from "../db";
 import * as dbOperator from "../store/wordStore";
 import { useTheme } from "../main";
+import BackButton from "../components/BackButton";
 
 /**
  * 单词列表页面组件
@@ -59,20 +60,6 @@ export default function WordsList() {
         };
         fetchData();
     }, [wordSetId]);
-    // 返回按钮样式
-    const backButtonStyle: React.CSSProperties = {
-        background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
-        color: "white",
-        border: "none",
-        borderRadius: "8px",
-        padding: "12px 24px",
-        fontSize: "16px",
-        fontWeight: "bold",
-        cursor: "pointer",
-        transition: "all 0.3s ease",
-        boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
-        marginBottom: "20px",
-    };
 
     // 页面容器样式
     const containerStyle: React.CSSProperties = {
@@ -309,23 +296,9 @@ export default function WordsList() {
     return (
         <div style={containerStyle}>
             <div style={headerStyle}>
-                <button
-                    onClick={handleBack}
-                    style={backButtonStyle}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.transform = "translateY(-2px)";
-                        e.currentTarget.style.boxShadow = "0 6px 20px rgba(0, 180, 255, 0.4)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.transform = "translateY(0)";
-                        e.currentTarget.style.boxShadow = "0 4px 15px rgba(0, 180, 255, 0.3)";
-                    }}
-                    aria-label={t("back")}
-                >
-                    ← {t("back")}
-                </button>
+                <BackButton onClick={handleBack} />
                 <h1 style={titleStyle}>
-                    {t("wordListTitle")} {wordSetId ? `(${t("wordListWordSetId")}: ${wordSetId})` : `(${t("wordListAllWords")})`}
+                    {t("wordListTitle")} {wordSetId ? `(${wordSetMap.get(wordSetId) || t("unknown")})` : `(${t("wordListAllWords")})`}
                 </h1>
             </div>
             {words.length === 0 ? (
