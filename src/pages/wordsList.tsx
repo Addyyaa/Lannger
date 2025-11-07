@@ -413,7 +413,51 @@ export default function WordsList() {
                     </div>
                 </Tooltip>
                 <div style={baseCellStyle}>{word.kanji || "-"}</div>
-                <div style={baseCellStyle}>{word.meaning || "-"}</div>
+                <Tooltip
+                    title={
+                        <div
+                            style={{
+                                maxHeight: "300px",
+                                overflowY: "auto",
+                                wordBreak: "break-word",
+                                whiteSpace: "pre-wrap",
+                            }}
+                        >
+                            {word.meaning || "-"}
+                        </div>
+                    }
+                    mouseEnterDelay={0.3}
+                    placement="top"
+                    styles={{
+                        body: {
+                            backgroundColor: isDark ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)",
+                            color: isDark ? "#f5f5f5" : "#333",
+                            maxWidth: "500px",
+                            maxHeight: "400px",
+                            overflow: "auto",
+                            scrollbarWidth: "thin",
+                            padding: "12px",
+                            borderRadius: "8px",
+                            boxShadow: isDark
+                                ? "0 4px 20px rgba(0, 0, 0, 0.5)"
+                                : "0 4px 20px rgba(0, 0, 0, 0.2)",
+                        },
+                    }}
+                >
+                    <div
+                        style={clickableCellStyle}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark
+                                ? "rgba(255, 255, 255, 0.1)"
+                                : "rgba(0, 180, 255, 0.1)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "transparent";
+                        }}
+                    >
+                        {word.meaning || "-"}
+                    </div>
+                </Tooltip>
                 <div style={baseCellStyle}>{getSetName(word.setId)}</div>
                 <div style={baseCellStyle}>{word.mark || "-"}</div>
                 <div style={baseCellStyle}>{getDiff(word)}</div>

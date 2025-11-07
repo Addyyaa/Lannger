@@ -7,6 +7,7 @@ import { useTheme } from "../main";
 import WordSetsTable from "../components/WordSetsTable";
 import * as dbOperator from "../store/wordStore";
 import AddWord from "../components/AddWord";
+import { useNavigate } from "react-router-dom";
 
 interface WordSetsManageProps {
     manageReducer: (state: ManageState, action: Action) => ManageState;
@@ -20,6 +21,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const { dispatch: manageDispatch } = useManageContext();
     const { isDark } = useTheme();
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
 
     useEffect(() => {
@@ -29,6 +31,10 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
 
     const handleImportWords = () => {
         manageDispatch({ type: "SET_IMPORT_WORDS", payload: {} });
+    };
+
+    const handleShowAllWords = () => {
+        navigate("/wordsList");
     };
     const loadWordSets = async () => {
         try {
@@ -179,9 +185,10 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                             e.currentTarget.style.boxShadow =
                                 "0 4px 15px rgba(0, 180, 255, 0.3)";
                         }}
-                        data-testid="export-data-button"
+                        onClick={handleShowAllWords}
+                        data-testid="show-all-words-button"
                     >
-                        {t("exportData")}
+                        {'📖 ' + t("wordListAllWords")}
                     </button>
                 </div>
 

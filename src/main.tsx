@@ -234,7 +234,8 @@ function createRoutes() {
                 { index: true, element: <Home /> },
                 { path: 'study', element: <Study /> },
                 { path: 'manage', element: <Manage /> },
-                { path: 'wordsList/:id', element: <WordsList /> }
+                { path: 'wordsList/:id', element: <WordsList /> },
+                { path: 'wordsList', element: <WordsList /> }
             ]
         }
     ]
