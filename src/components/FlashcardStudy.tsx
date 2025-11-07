@@ -122,6 +122,7 @@ export default function FlashcardStudy({
         }
     };
 
+
     // 外层容器（不翻转，包含 perspective）
     const outerContainerStyle: React.CSSProperties = {
         background: isDark
@@ -158,8 +159,6 @@ export default function FlashcardStudy({
         height: "100%",
         top: 0,
         left: 0,
-        backfaceVisibility: "hidden",
-        WebkitBackfaceVisibility: "hidden",
         background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.02)",
         borderRadius: "1.4vw",
         border: isDark ? "0.12vw solid #555" : "0.12vw solid #e0e0e0",
@@ -181,17 +180,25 @@ export default function FlashcardStudy({
 
     const cardBackStyle: React.CSSProperties = {
         ...cardFaceBaseStyle,
-        transform: "rotateY(180deg)",
-        padding: "4vh 3vw",
-        overflowY: "auto",
+        display: "flex",
+        flexDirection: "column",
+        backgroundColor: "transparent",
+        boxShadow: "none",
+        padding: 0,
+        overflowY: "hidden",
         cursor: "default",
+        border: "none",
+        justifyContent: "center",
+        alignItems: "center",
+        height: "85%",
+        top: 0,
     };
 
     const labelStyle: React.CSSProperties = {
         fontSize: "calc(0.7vw + 0.7vh)",
         color: isDark ? "#999" : "#999",
         marginBottom: "0.8vh",
-        textAlign: "left",
+        textAlign: "center",
         width: "100%",
         fontWeight: "500",
         textTransform: "uppercase",
@@ -208,31 +215,33 @@ export default function FlashcardStudy({
 
     const buttonGroupStyle: React.CSSProperties = {
         display: "flex",
-        position: "absolute",   // TODO  调试样式
+        position: "absolute",
         width: "100%",
-        height: "auto",
-        bottom: "5%",
-        gap: "5%",
+        height: "15%",
+        bottom: 0,
+        gap: "2vw",
         justifyContent: "center",
         alignItems: "center",
+        padding: "0 5%",
+        zIndex: 20,
+        boxSizing: "border-box",
     };
 
     const buttonStyle: React.CSSProperties = {
-        borderRadius: "1vw",
-        position: "absolute",
-        bottom: "5",
-        left: "50%",
-        transform: "translateX(-50%)",
+        borderRadius: "1vh",
         border: "none",
-        fontSize: "calc(0.8vw + 0.8vh)",
-        fontWeight: "500",
+        fontSize: "clamp(0.8vw, 0.8rem, 1.2vw)",
+        fontWeight: 500,
         cursor: "pointer",
-        transition: "all 0.3s ease",
+        transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        padding: "1.2vh 2.4vw",
+        minHeight: "4.4vh",
+        flex: "0 1 auto",
     };
 
     const showAnswerButtonStyle: React.CSSProperties = {
         ...buttonStyle,
-        background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
+        background: "linear-gradient(135deg, #007AFF 0%, #0051D5 100%)",
         color: "white",
     };
 
@@ -252,6 +261,7 @@ export default function FlashcardStudy({
         ...buttonStyle,
         background: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
         color: isDark ? "#ccc" : "#666",
+        border: isDark ? "0.1vh solid rgba(255,255,255,0.2)" : "0.1vh solid rgba(0,0,0,0.15)",
     };
 
     const learnedButtonStyle: React.CSSProperties = {
@@ -266,6 +276,8 @@ export default function FlashcardStudy({
         textAlign: "center",
         marginBottom: "2vh",
     };
+
+    
 
     if (loading) {
         return (
@@ -297,94 +309,120 @@ export default function FlashcardStudy({
             <div style={{ position: "absolute", top: "2vh", left: "2vw", zIndex: 10, ...progressStyle }} data-testid="FlashcardStudy-2">
                 {currentIndex + 1} / {wordIds.length}
             </div>
-            <div style={cardWrapperStyle} data-testid="FlashcardStudy-cardWrapper">
-                {/* 卡片正面（问题面） */}
-                {!showAnswer && (
-                    <div
-                        style={cardFaceStyle}
-                        data-testid="FlashcardStudy-5"
-                    >
-                        <div style={wordTextStyle} data-testid="FlashcardStudy-6">
-                            {currentWord.kanji || currentWord.kana}
+                {/* 卡片容器包装 */}
+                <div style={cardWrapperStyle}>
+                    {/* 卡片正面（问题面） */}
+                    {!showAnswer && (
+                        <div
+                            style={cardFaceStyle}
+                            data-testid="FlashcardStudy-5"
+                        >
+                            <div style={wordTextStyle} data-testid="FlashcardStudy-6">
+                                {currentWord.kanji || currentWord.kana}
+                            </div>
                         </div>
-                        <div style={buttonGroupStyle}>
-                            <button
-                                style={learnedButtonStyle}
-                                onClick={() => handleResult("correct")}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-0.6vh)";
-                                    e.currentTarget.style.boxShadow = "0 1vw 3vw rgba(76, 175, 80, 0.4)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
-                                data-testid="FlashcardStudy-learned"
-                            >
-                                {t("learned")}
-                            </button>
-                            <button
-                                style={showAnswerButtonStyle}
-                                onClick={handleShowAnswer}
-                                onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-0.6vh)";
-                                    e.currentTarget.style.boxShadow = "0 1vw 3vw rgba(0, 180, 255, 0.4)";
-                                }}
-                                onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = "none";
-                                }}
-                                data-testid="FlashcardStudy-showAnswer"
-                            >
-                                {t("showAnswer")}
-                            </button>
-                        </div>
-                    </div>
-                )}
+                    )}
 
-                {/* 卡片背面（答案面） */}
-                {showAnswer && (
-                    <div style={cardBackStyle} data-testid="FlashcardStudy-answer">
-                        {currentWord.kanji && (
-                            <div style={{ marginBottom: "3vh" }}>
-                                <div style={labelStyle}>{t("kanji")}</div>
-                                <div style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
-                                    {currentWord.kanji}
+                    {/* 卡片背面（答案面） */}
+                    {showAnswer && (() => {
+                        // 计算内容项数量
+                        const contentItems = [
+                            currentWord.kanji && "kanji",
+                            "kana",
+                            "meaning",
+                            currentWord.example && "example"
+                        ].filter(Boolean);
+                        const itemCount = contentItems.length;
+                        const itemHeight = `${85 / itemCount}%`;
+                        
+                        const contentItemStyle: React.CSSProperties = {
+                            height: itemHeight,
+                            width: "100%",
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            boxSizing: "border-box",
+                        };
+
+                        return (
+                            <div style={cardBackStyle} data-testid="FlashcardStudy-answer">
+                                {currentWord.kanji && (
+                                    <div style={contentItemStyle}>
+                                        <div style={labelStyle}>{t("kanji")}</div>
+                                        <div style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
+                                            {currentWord.kanji}
+                                        </div>
+                                    </div>
+                                )}
+                                <div style={contentItemStyle}>
+                                    <div style={labelStyle}>{t("kana")}</div>
+                                    <div style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
+                                        {currentWord.kana}
+                                    </div>
                                 </div>
-                            </div>
-                        )}
-                        <div style={{ marginBottom: "3vh" }}>
-                            <div style={labelStyle}>{t("kana")}</div>
-                            <div style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
-                                {currentWord.kana}
-                            </div>
-                        </div>
-                        <div style={{ marginBottom: currentWord.example ? "3vh" : "0" }}>
-                            <div style={labelStyle}>{t("meaning")}</div>
-                            <div style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6" }}>
-                                {currentWord.meaning}
-                            </div>
-                        </div>
-                        {currentWord.example && (
-                            <div style={{ marginTop: "3vh" }}>
-                                <div style={labelStyle}>{t("example")}</div>
-                                <div style={{ fontSize: "calc(0.9vw + 0.9vh)", color: isDark ? "#ccc" : "#666", fontStyle: "italic", lineHeight: "1.6", marginTop: "1vh" }}>
-                                    {currentWord.example}
+                                <div style={contentItemStyle}>
+                                    <div style={labelStyle}>{t("meaning")}</div>
+                                    <div style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6", textAlign: "center", padding: "0 2vw" }}>
+                                        {currentWord.meaning}
+                                    </div>
                                 </div>
+                                {currentWord.example && (
+                                    <div style={contentItemStyle}>
+                                        <div style={labelStyle}>{t("example")}</div>
+                                        <div style={{ fontSize: "calc(0.9vw + 0.9vh)", color: isDark ? "#ccc" : "#666", fontStyle: "italic", lineHeight: "1.6", marginTop: "1vh", textAlign: "center", padding: "0 2vw" }}>
+                                            {currentWord.example}
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                )}
-            </div>
+                        );
+                    })()}
+                </div>
+
+            {/* 按钮组 - 根据 showAnswer 状态显示不同按钮 */}
             <div style={buttonGroupStyle} data-testid="FlashcardStudy-buttonGroup">
-                {showAnswer && (
+                {!showAnswer ? (
+                    <>
+                        <button
+                            style={learnedButtonStyle}
+                            onClick={() => handleResult("correct")}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateY(-0.2vh)";
+                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "none";
+                            }}
+                            data-testid="FlashcardStudy-learned"
+                        >
+                            {t("learned")}
+                        </button>
+                        <button
+                            style={showAnswerButtonStyle}
+                            onClick={handleShowAnswer}
+                            onMouseEnter={(e) => {
+                                e.currentTarget.style.transform = "translateY(-0.2vh)";
+                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
+                            }}
+                            onMouseLeave={(e) => {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = "none";
+                            }}
+                            data-testid="FlashcardStudy-showAnswer"
+                        >
+                            {t("showAnswer")}
+                        </button>
+                    </>
+                ) : (
                     <>
                         <button
                             style={correctButtonStyle}
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-0.6vh)";
-                                e.currentTarget.style.boxShadow = "0 1vw 3vw rgba(76, 175, 80, 0.4)";
+                                e.currentTarget.style.transform = "translateY(-0.2vh)";
+                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";
@@ -398,8 +436,8 @@ export default function FlashcardStudy({
                             style={wrongButtonStyle}
                             onClick={() => handleResult("wrong")}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-0.6vh)";
-                                e.currentTarget.style.boxShadow = "0 1vw 3vw rgba(244, 67, 54, 0.4)";
+                                e.currentTarget.style.transform = "translateY(-0.2vh)";
+                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";
@@ -413,10 +451,10 @@ export default function FlashcardStudy({
                             style={skipButtonStyle}
                             onClick={() => handleResult("skip")}
                             onMouseEnter={(e) => {
-                                e.currentTarget.style.transform = "translateY(-0.6vh)";
+                                e.currentTarget.style.transform = "translateY(-0.2vh)";
                                 e.currentTarget.style.boxShadow = isDark
-                                    ? "0 1vw 3vw rgba(0, 0, 0, 0.3)"
-                                    : "0 1vw 3vw rgba(0, 0, 0, 0.2)";
+                                    ? "0 0.4vh 1.2vh rgba(0, 0, 0, 0.3)"
+                                    : "0 0.4vh 1.2vh rgba(0, 0, 0, 0.2)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";

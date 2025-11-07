@@ -8,6 +8,7 @@ import * as dbOperator from "../store/wordStore";
 import { useTheme } from "../main";
 import BackButton from "../components/BackButton";
 import ConfirmWidget from "../components/ConfirmWidget";
+import EditWordDialog from "../components/EditWordDialog";
 
 /**
  * 单词列表页面组件
@@ -26,9 +27,10 @@ export default function WordsList() {
     const [deleteWordId, setDeleteWordId] = useState<number | null>(null);
     const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
     const [batchDeletePopup, setBatchDeletePopup] = useState<boolean>(false);
+    const [editingWord, setEditingWord] = useState<Word | null>(null);
 
     // 虚拟列表配置常量
-    const COLUMN_TEMPLATE = "0.5fr 1.5fr 1.5fr 2fr 1.5fr 1.5fr 1fr 0.8fr";
+    const COLUMN_TEMPLATE = "0.5fr 1.4fr 1.4fr 2fr 1.4fr 1.4fr 1fr 1.2fr";
     const ROW_HEIGHT = 60;
     const MAX_LIST_HEIGHT = 600;
 
@@ -317,16 +319,42 @@ export default function WordsList() {
         };
 
         // 删除按钮样式
-        const deleteButtonStyle: React.CSSProperties = {
+        const actionContainerStyle: React.CSSProperties = {
             ...baseCellStyle,
             justifyContent: "center",
+            gap: "12px",
+        };
+
+        const editButtonStyle: React.CSSProperties = {
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            border: "none",
             cursor: "pointer",
-            color: isDark ? "#ff6b6b" : "#ff4757",
-            fontSize: "16px",
-            fontWeight: "bold",
-            padding: "4px 8px",
-            borderRadius: "4px",
-            transition: "all 0.2s ease",
+            background: isDark ? "rgba(0, 180, 255, 0.18)" : "rgba(0, 180, 255, 0.12)",
+            color: isDark ? "#8dd9ff" : "#0096d4",
+            fontSize: "18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            boxShadow: isDark ? "0 4px 12px rgba(0,180,255,0.25)" : "0 4px 12px rgba(0,150,212,0.18)",
+        };
+
+        const deleteButtonStyle: React.CSSProperties = {
+            width: "36px",
+            height: "36px",
+            borderRadius: "10px",
+            border: "none",
+            cursor: "pointer",
+            background: isDark ? "rgba(255, 107, 107, 0.18)" : "rgba(255, 71, 87, 0.12)",
+            color: isDark ? "#ff8a8a" : "#ff4757",
+            fontSize: "18px",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            transition: "transform 0.2s ease, box-shadow 0.2s ease",
+            boxShadow: isDark ? "0 4px 12px rgba(255,107,107,0.25)" : "0 4px 12px rgba(255,71,87,0.18)",
         };
 
         return (
@@ -356,6 +384,7 @@ export default function WordsList() {
                 <div style={checkboxStyle}>
                     <input
                         type="checkbox"
+                        className="theme-checkbox"
                         checked={isSelected}
                         onChange={() => {
                             if (word.id !== undefined) {
@@ -366,6 +395,14 @@ export default function WordsList() {
                             width: "18px",
                             height: "18px",
                             cursor: "pointer",
+                            borderRadius: "4px",
+                            outline: "none",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.borderColor = isDark ? "rgba(0, 180, 255, 0.6)" : "rgba(0, 150, 212, 0.5)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.borderColor = isDark ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.25)";
                         }}
                         aria-label={t("selectWord")}
                     />
@@ -461,28 +498,42 @@ export default function WordsList() {
                 <div style={baseCellStyle}>{getSetName(word.setId)}</div>
                 <div style={baseCellStyle}>{word.mark || "-"}</div>
                 <div style={baseCellStyle}>{getDiff(word)}</div>
-                <div
-                    style={deleteButtonStyle}
-                    onClick={() => {
-                        if (word.id !== undefined) {
-                            setDeleteWordId(word.id);
-                            setDeletePopup(true);
-                        }
-                    }}
-                    onMouseEnter={(e) => {
-                        e.currentTarget.style.backgroundColor = isDark
-                            ? "rgba(255, 107, 107, 0.2)"
-                            : "rgba(255, 71, 87, 0.1)";
-                        e.currentTarget.style.transform = "scale(1.1)";
-                    }}
-                    onMouseLeave={(e) => {
-                        e.currentTarget.style.backgroundColor = "transparent";
-                        e.currentTarget.style.transform = "scale(1)";
-                    }}
-                    role="button"
-                    aria-label={t("delete")}
-                >
-                    🗑️
+                <div style={actionContainerStyle}>
+                    <button
+                        type="button"
+                        style={editButtonStyle}
+                        onClick={() => setEditingWord(word)}
+                        onMouseEnter={(event) => {
+                            event.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(event) => {
+                            event.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        aria-label={t("edit")}
+                        title={t("edit") || "edit"}
+                    >
+                        ✏️
+                    </button>
+                    <button
+                        type="button"
+                        style={deleteButtonStyle}
+                        onClick={() => {
+                            if (word.id !== undefined) {
+                                setDeleteWordId(word.id);
+                                setDeletePopup(true);
+                            }
+                        }}
+                        onMouseEnter={(event) => {
+                            event.currentTarget.style.transform = "translateY(-2px)";
+                        }}
+                        onMouseLeave={(event) => {
+                            event.currentTarget.style.transform = "translateY(0)";
+                        }}
+                        aria-label={t("delete")}
+                        title={t("delete") || "delete"}
+                    >
+                        🗑️
+                    </button>
                 </div>
             </div>
         );
@@ -549,12 +600,21 @@ export default function WordsList() {
                         <span role="columnheader" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
                             <input
                                 type="checkbox"
+                                className="theme-checkbox"
                                 checked={selectedWordIds.size === words.length && words.length > 0}
                                 onChange={toggleSelectAll}
                                 style={{
                                     width: "18px",
                                     height: "18px",
                                     cursor: "pointer",
+                                    borderRadius: "4px",
+                                    outline: "none",
+                                }}
+                                onMouseEnter={(e) => {
+                                    e.currentTarget.style.borderColor = isDark ? "rgba(0, 180, 255, 0.6)" : "rgba(0, 150, 212, 0.5)";
+                                }}
+                                onMouseLeave={(e) => {
+                                    e.currentTarget.style.borderColor = isDark ? "rgba(255, 255, 255, 0.4)" : "rgba(0, 0, 0, 0.25)";
                                 }}
                                 aria-label={t("selectAll")}
                             />
@@ -616,6 +676,14 @@ export default function WordsList() {
                         backgroundColor: "#ff4757",
                         color: "#fff",
                     }}
+                />
+            )}
+            {editingWord && (
+                <EditWordDialog
+                    word={editingWord}
+                    wordSets={wordSets}
+                    onClose={() => setEditingWord(null)}
+                    onSuccess={fetchData}
                 />
             )}
         </div>

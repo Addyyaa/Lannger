@@ -14,6 +14,7 @@ interface ConfirmWidgetProps {
     cancelButtonStyle?: React.CSSProperties;
     showCloseButton?: boolean;
     close?: () => void;
+    confirmDisabled?: boolean;
 }
 
 /**
@@ -32,9 +33,16 @@ interface ConfirmWidgetProps {
  * @returns 
  */
 
-export default function ConfirmWidget({ title, message, confirmText, cancelText, onConfirm, onCancel, containerStyle, titleStyle, messageStyle, confirmButtonStyle, cancelButtonStyle, showCloseButton = false, close }: ConfirmWidgetProps) {
+export default function ConfirmWidget({ title, message, confirmText, cancelText, onConfirm, onCancel, containerStyle, titleStyle, messageStyle, confirmButtonStyle, cancelButtonStyle, showCloseButton = false, close, confirmDisabled = false }: ConfirmWidgetProps) {
     const { t } = useTranslation();
     const { isDark } = useTheme();
+    const disabledStyles: React.CSSProperties = confirmDisabled
+        ? {
+            opacity: 0.5,
+            cursor: "not-allowed",
+            boxShadow: "none",
+        }
+        : {};
     return (
         <div style={Container}>
             <div style={{ ...confirmWidgetStyle(isDark), ...containerStyle }} data-testid="confirm-widget">
@@ -42,15 +50,21 @@ export default function ConfirmWidget({ title, message, confirmText, cancelText,
                 <h1 style={{ ...titleStyleInner(isDark), ...titleStyle }} data-testid="confirm-widget-title">{title}</h1>
                 <p style={{ ...messageStyleInner, ...messageStyle }} data-testid="confirm-widget-message">{message}</p>
                 <button
-                    style={{ ...confirmButtonStyleInner(isDark), ...confirmButtonStyle }}
-                    onClick={onConfirm}
+                    style={{ ...confirmButtonStyleInner(isDark), ...confirmButtonStyle, ...disabledStyles }}
+                    disabled={confirmDisabled}
+                    onClick={() => {
+                        if (confirmDisabled) return;
+                        void onConfirm();
+                    }}
                     onMouseEnter={(e) => {
+                        if (confirmDisabled) return;
                         e.currentTarget.style.transform = "translateY(-2px)";
                         e.currentTarget.style.boxShadow = isDark
                             ? "0 6px 20px rgba(0, 0, 0, 0.4)"
                             : "0 6px 20px rgba(0, 180, 255, 0.4)";
                     }}
                     onMouseLeave={(e) => {
+                        if (confirmDisabled) return;
                         e.currentTarget.style.transform = "translateY(0)";
                         e.currentTarget.style.boxShadow = isDark
                             ? "0 4px 15px rgba(0, 0, 0, 0.3)"
@@ -173,5 +187,5 @@ const closeButtonStyleInner = (isDark: boolean): React.CSSProperties => ({
     width: "auto",
     height: "auto",
     backgroundColor: "transparent",
-    color: "black",
+    color: isDark ? "#ffffff" : "#000000",
 });

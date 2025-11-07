@@ -1,5 +1,12 @@
 import dataVerify from "../utils/dataVerify";
-import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID } from "../db";
+import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME } from "../db";
+
+/**
+ * 生成导入时的临时词集名称，避免硬编码常量
+ */
+function generateFallbackWordSetName(): string {
+  return `imported_word_set_${Date.now()}`;
+}
 
 /**
  * 创建单词集
@@ -55,14 +62,33 @@ export async function createWord(
   return await db.words.add(newWord as Word);
 }
 
-export async function getAllWordSets() {
+export async function getAllWordSets(): Promise<WordSet[]> {
   await ensureDBOpen(); // 确保数据库打开且默认单词集存在
-  return await db.wordSets.toArray();
+  try {
+    const result = await db.wordSets.toArray();
+    // 确保返回的是数组
+    if (Array.isArray(result)) {
+      return result as WordSet[];
+    } else {
+      console.error("getAllWordSets: db.wordSets.toArray() 返回了非数组值:", result, typeof result);
+      return [];
+    }
+  } catch (error) {
+    console.error("获取单词集失败:", error);
+    return [];
+  }
 }
 
 export async function getAllWords() {
   await ensureDBOpen();
-  return await db.words.toArray();
+  try {
+    const result = await db.words.toArray();
+    // 确保返回的是数组
+    return Array.isArray(result) ? result : [];
+  } catch (error) {
+    console.error("获取单词列表失败:", error);
+    return [];
+  }
 }
 
 // 模糊查询
@@ -236,25 +262,155 @@ export async function backupDatabase() {
 
 
 // 恢复数据库
-export async function restoreDatabase(langggerDB: { wordSets: WordSet[], words: Word[] }) {
-  // 完成数据库导入功能。 注意需要先删除原先的id，防止已有id冲突
-  const wordSets = langggerDB.wordSets;
-  for (const wordSet of wordSets) {
-    if ('id' in wordSet) {
-      delete (wordSet as any).id;
+export async function restoreDatabase(payload: unknown) {
+  await ensureDBOpen();
+
+  // 场景一：直接提供单词数组（与导入功能相同的数据结构）
+  if (Array.isArray(payload)) {
+    return await restoreFromWordList(payload);
+  }
+
+  // 场景二：对象中包含 words / wordSets
+  if (payload && typeof payload === "object") {
+    const data = payload as { wordSets?: unknown; words?: unknown };
+
+    const wordSets = Array.isArray(data.wordSets) ? data.wordSets : undefined;
+    const words = Array.isArray(data.words) ? data.words : undefined;
+
+    if (wordSets && words) {
+      return await restoreFromBackupFormat(wordSets as WordSet[], words as Word[]);
+    }
+
+    if (words) {
+      return await restoreFromWordList(words);
     }
   }
-  if (wordSets.length <= 0) { return false; }
 
-  await db.wordSets.bulkPut(wordSets as WordSet[]);
+  console.error("restoreDatabase: 不支持的数据格式", payload);
+  throw new Error("恢复数据失败：文件格式不正确，请使用合法的备份文件或通过“导入单词”功能导入。");
+}
 
-  const words = langggerDB.words;
-  for (const word of words) {
-    if ('id' in word) {
-      delete (word as any).id;
+async function restoreFromBackupFormat(wordSets: WordSet[], words: Word[]): Promise<boolean> {
+  if (!Array.isArray(wordSets) || !Array.isArray(words)) {
+    console.error("restoreFromBackupFormat: 输入数据不是数组", wordSets, words);
+    return false;
+  }
+
+  // 重新初始化数据库，确保数据干净
+  await resetDB();
+  await ensureDBOpen();
+
+  const sanitizedWordSets = wordSets.map((set) => {
+    const cloned = { ...set } as any;
+    delete cloned.id;
+    if (typeof cloned.name !== "string" || cloned.name.trim() === "") {
+      cloned.name = generateFallbackWordSetName();
+    }
+    cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
+    cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
+    return cloned;
+  });
+
+  if (sanitizedWordSets.length > 0) {
+    await db.wordSets.bulkPut(sanitizedWordSets as any);
+  } else {
+    await getOrCreateDefaultWordSet();
+  }
+
+  const sanitizedWords = words.map((word) => {
+    const cloned = { ...word } as any;
+    delete cloned.id;
+    if (typeof cloned.setId !== "number") {
+      cloned.setId = DEFAULT_WORD_SET_ID;
+    }
+    cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
+    cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
+    return cloned;
+  });
+
+  if (sanitizedWords.length > 0) {
+    await db.words.bulkPut(sanitizedWords as any);
+  }
+
+  return true;
+}
+
+async function restoreFromWordList(words: unknown[]): Promise<boolean> {
+  if (!Array.isArray(words) || words.length === 0) {
+    console.error("restoreFromWordList: 输入为空或不是数组", words);
+    return false;
+  }
+
+  // 清空数据库并重新初始化默认单词集
+  await resetDB();
+  await ensureDBOpen();
+
+  const wordSetMap = new Map<string, number>();
+  wordSetMap.set(DEFAULT_WORD_SET_NAME, DEFAULT_WORD_SET_ID);
+
+  const existingSets = await db.wordSets.toArray();
+  existingSets.forEach((set) => {
+    wordSetMap.set(set.name, set.id);
+  });
+
+  for (const raw of words) {
+    try {
+      if (!raw || typeof raw !== "object") {
+        console.warn("restoreFromWordList: 跳过无效项", raw);
+        continue;
+      }
+
+      const wordData = raw as Record<string, unknown>;
+      const requiredFields = ["kana", "kanji", "meaning", "example"];
+      const missingFields = requiredFields.filter((field) => {
+        const value = wordData[field];
+        return typeof value !== "string" || value.trim() === "";
+      });
+
+      if (missingFields.length > 0) {
+        console.warn("restoreFromWordList: 缺少必填字段", missingFields, wordData);
+        continue;
+      }
+
+      let setId = DEFAULT_WORD_SET_ID;
+      if (typeof wordData.wordSet === "string" && wordData.wordSet.trim() !== "") {
+        const setName = wordData.wordSet.trim();
+        if (!wordSetMap.has(setName)) {
+          try {
+            const newSetId = await createWordSet({ name: setName, mark: "" });
+            wordSetMap.set(setName, newSetId);
+          } catch (error) {
+            console.error("restoreFromWordList: 创建单词集失败", setName, error);
+            continue;
+          }
+        }
+        setId = wordSetMap.get(setName) ?? DEFAULT_WORD_SET_ID;
+      }
+
+      const difficultyRaw = wordData.difficultyCoefficient ?? (wordData.review as any)?.difficulty ?? 5;
+      let difficulty = parseInt(String(difficultyRaw), 10);
+      if (Number.isNaN(difficulty)) {
+        difficulty = 5;
+      }
+      difficulty = Math.min(Math.max(difficulty, 1), 5);
+
+      await createWord({
+        kana: String(wordData.kana),
+        kanji: String(wordData.kanji),
+        meaning: String(wordData.meaning),
+        example: String(wordData.example),
+        mark: wordData.mark ? String(wordData.mark) : "",
+        setId,
+        type: typeof wordData.type === "string" ? String(wordData.type) : DEFAULT_WORD_TYPE,
+        review: {
+          times: typeof (wordData.review as any)?.times === "number" ? (wordData.review as any).times : 0,
+          difficulty,
+        },
+      });
+    } catch (error) {
+      console.error("restoreFromWordList: 导入单词失败", raw, error);
     }
   }
-  if (words.length <= 0) { return false; }
-  await db.words.bulkPut(words as Word[]);
+
   return true;
 }

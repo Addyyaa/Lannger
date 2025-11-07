@@ -1,0 +1,1037 @@
+[
+  {
+    "kana": "こんにちは",
+    "kanji": "今日は",
+    "meaning": "你好（白天问候）",
+    "example": "こんにちは、元気ですか？",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "Default"
+  },
+  {
+    "kana": "ありがとう",
+    "kanji": "有難う",
+    "meaning": "谢谢",
+    "example": "ありがとうございます。",
+    "mark": "",
+    "difficultyCoefficient": "1",
+    "wordSet": "Default"
+  },
+  {
+    "kana": "さようなら",
+    "kanji": "左様なら",
+    "meaning": "再见",
+    "example": "さようなら、また明日。",
+    "mark": "告别用语",
+    "difficultyCoefficient": "1",
+    "wordSet": "日常用语"
+  },
+  {
+    "kana": "いえ",
+    "kanji": "家",
+    "meaning": "家，房子",
+    "example": "私の家は大きいです。",
+    "mark": "",
+    "difficultyCoefficient": "2",
+    "wordSet": "日常用语"
+  },
+  {
+    "kana": "がっこう",
+    "kanji": "学校",
+    "meaning": "学校",
+    "example": "学校へ行きます。",
+    "mark": "",
+    "difficultyCoefficient": "2",
+    "wordSet": "日常用语"
+  },
+  {
+    "kana": "ともだち",
+    "kanji": "友達",
+    "meaning": "朋友",
+    "example": "友達と一緒に遊びます。",
+    "mark": "",
+    "difficultyCoefficient": "2",
+    "wordSet": "日常用语"
+  },
+  {
+    "kana": "たべる",
+    "kanji": "食べる",
+    "meaning": "吃",
+    "example": "ご飯を食べます。",
+    "mark": "一段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "のむ",
+    "kanji": "飲む",
+    "meaning": "喝，饮",
+    "example": "お茶を飲みます。",
+    "mark": "五段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "いく",
+    "kanji": "行く",
+    "meaning": "去",
+    "example": "学校へ行きます。",
+    "mark": "五段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "きれい",
+    "kanji": "綺麗",
+    "meaning": "漂亮，干净",
+    "example": "この花はとても綺麗です。",
+    "mark": "な形容词",
+    "difficultyCoefficient": "4",
+    "wordSet": "形容词"
+  },
+  {
+    "kana": "おもしろい",
+    "kanji": "面白い",
+    "meaning": "有趣的",
+    "example": "この本は面白いです。",
+    "mark": "い形容词",
+    "difficultyCoefficient": "4",
+    "wordSet": "形容词"
+  },
+  {
+    "kana": "むずかしい",
+    "kanji": "難しい",
+    "meaning": "困难的",
+    "example": "この問題は難しいです。",
+    "mark": "い形容词",
+    "difficultyCoefficient": "4",
+    "wordSet": "形容词"
+  },
+  {
+    "kana": "けんきゅう",
+    "kanji": "研究",
+    "meaning": "研究",
+    "example": "科学の研究をしています。",
+    "mark": "名词",
+    "difficultyCoefficient": "5",
+    "wordSet": "学术词汇"
+  },
+  {
+    "kana": "せつめい",
+    "kanji": "説明",
+    "meaning": "说明，解释",
+    "example": "詳しく説明してください。",
+    "mark": "名词/サ变动词",
+    "difficultyCoefficient": "5",
+    "wordSet": "学术词汇"
+  },
+  {
+    "kana": "かんがえる",
+    "kanji": "考える",
+    "meaning": "思考，考虑",
+    "example": "よく考えてから決めます。",
+    "mark": "一段动词",
+    "difficultyCoefficient": "5",
+    "wordSet": "学术词汇"
+  },
+  {
+    "kana": "おはよう",
+    "kanji": "お早う",
+    "meaning": "早上好",
+    "example": "おはよう、と家族に挨拶します。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "こんばんは",
+    "kanji": "今晩は",
+    "meaning": "晚上好",
+    "example": "夕方に友達へこんばんはと言いました。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "いらっしゃいませ",
+    "kanji": "いらっしゃいませ",
+    "meaning": "欢迎光临",
+    "example": "店員はいらっしゃいませと声をかけます。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "じゃあね",
+    "kanji": "じゃあね",
+    "meaning": "回头见",
+    "example": "友達にじゃあねと手を振りました。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "どうも",
+    "kanji": "どうも",
+    "meaning": "谢谢/你好",
+    "example": "どうも、と軽くお礼を言います。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "ごめんなさい",
+    "kanji": "御免なさい",
+    "meaning": "对不起",
+    "example": "失敗してごめんなさいと謝りました。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "すみません",
+    "kanji": "済みません",
+    "meaning": "不好意思/抱歉",
+    "example": "駅員さんにすみませんと声をかけました。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "おつかれさま",
+    "kanji": "お疲れ様",
+    "meaning": "辛苦了",
+    "example": "仕事終わりにおつかれさまと言います。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "よろしく",
+    "kanji": "宜しく",
+    "meaning": "请多关照",
+    "example": "新しい上司によろしくお願いしますと挨拶しました。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "もしもし",
+    "kanji": "もしもし",
+    "meaning": "喂（打电话用语）",
+    "example": "電話でもしもしと呼びかけます。",
+    "mark": "常用问候语",
+    "difficultyCoefficient": "1",
+    "wordSet": "基础问候"
+  },
+  {
+    "kana": "えんぴつ",
+    "kanji": "鉛筆",
+    "meaning": "铅笔",
+    "example": "えんぴつでメモを書きます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "けしごむ",
+    "kanji": "消しゴム",
+    "meaning": "橡皮",
+    "example": "けしごむで間違いを消しました。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "じしょ",
+    "kanji": "辞書",
+    "meaning": "词典",
+    "example": "新しい単語をじしょで調べます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "でんき",
+    "kanji": "電気",
+    "meaning": "电",
+    "example": "夜になったらでんきをつけます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "ひきだし",
+    "kanji": "引き出し",
+    "meaning": "抽屉",
+    "example": "手紙をひきだしにしまいました。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "まくら",
+    "kanji": "枕",
+    "meaning": "枕头",
+    "example": "柔らかいまくらで寝ます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "せんたくき",
+    "kanji": "洗濯機",
+    "meaning": "洗衣机",
+    "example": "せんたくきで服を洗います。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "そうじき",
+    "kanji": "掃除機",
+    "meaning": "吸尘器",
+    "example": "週末にそうじきをかけます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "かがみ",
+    "kanji": "鏡",
+    "meaning": "镜子",
+    "example": "朝、かがみで髪を整えます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "くつした",
+    "kanji": "靴下",
+    "meaning": "袜子",
+    "example": "あたたかいくつしたを履きます。",
+    "mark": "生活用品",
+    "difficultyCoefficient": "2",
+    "wordSet": "生活用品"
+  },
+  {
+    "kana": "じゅぎょう",
+    "kanji": "授業",
+    "meaning": "课程",
+    "example": "朝のじゅぎょうが始まります。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "きゅうしょく",
+    "kanji": "給食",
+    "meaning": "学校供餐",
+    "example": "きゅうしょくの時間が楽しみです。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "こうてい",
+    "kanji": "校庭",
+    "meaning": "操场",
+    "example": "こうていでサッカーをします。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "とうこう",
+    "kanji": "登校",
+    "meaning": "上学",
+    "example": "毎朝バスでとうこうします。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "しゅくだい",
+    "kanji": "宿題",
+    "meaning": "作业",
+    "example": "しゅくだいを忘れずに提出します。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "じゅけん",
+    "kanji": "受験",
+    "meaning": "应试",
+    "example": "大学のじゅけんを準備しています。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "4",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "ぶかつ",
+    "kanji": "部活",
+    "meaning": "社团活动",
+    "example": "放課後はぶかつに参加します。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "こうぎ",
+    "kanji": "講義",
+    "meaning": "讲座",
+    "example": "大学でこうぎを受けました。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "4",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "こうもく",
+    "kanji": "科目",
+    "meaning": "科目",
+    "example": "好きなこうもくは数学です。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "3",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "せんこう",
+    "kanji": "専攻",
+    "meaning": "专业",
+    "example": "経済学をせんこうしています。",
+    "mark": "校园词汇",
+    "difficultyCoefficient": "4",
+    "wordSet": "校园生活"
+  },
+  {
+    "kana": "かんこう",
+    "kanji": "観光",
+    "meaning": "观光",
+    "example": "京都でかんこうを楽しみました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "よやく",
+    "kanji": "予約",
+    "meaning": "预约",
+    "example": "ホテルをよやくしました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "とうちゃく",
+    "kanji": "到着",
+    "meaning": "到达",
+    "example": "飛行機がとうちゃくしました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "しゅっぱつ",
+    "kanji": "出発",
+    "meaning": "出发",
+    "example": "朝早くしゅっぱつします。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "てにもつ",
+    "kanji": "手荷物",
+    "meaning": "随身行李",
+    "example": "てにもつを検査に出しました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "りょこうしゃ",
+    "kanji": "旅行者",
+    "meaning": "旅行者",
+    "example": "りょこうしゃが案内所で質問しました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "くうこう",
+    "kanji": "空港",
+    "meaning": "机场",
+    "example": "くうこうで友人を迎えます。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "ちず",
+    "kanji": "地図",
+    "meaning": "地图",
+    "example": "ちずを見ながら目的地へ向かいます。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "あんないじょ",
+    "kanji": "案内所",
+    "meaning": "咨询处",
+    "example": "駅のあんないじょで情報を得ました。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "けいかく",
+    "kanji": "計画",
+    "meaning": "计划",
+    "example": "旅行のけいかくを立てます。",
+    "mark": "旅行用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "旅行用语"
+  },
+  {
+    "kana": "かいぎ",
+    "kanji": "会議",
+    "meaning": "会议",
+    "example": "朝九時からかいぎが始まります。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "けいやく",
+    "kanji": "契約",
+    "meaning": "合同",
+    "example": "新しいけいやくを締結しました。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "ほうこく",
+    "kanji": "報告",
+    "meaning": "报告",
+    "example": "週次ほうこくを提出します。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "ちょうせい",
+    "kanji": "調整",
+    "meaning": "调整",
+    "example": "日程をちょうせいしてください。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "しゅうぎょう",
+    "kanji": "就業",
+    "meaning": "就业",
+    "example": "九時にしゅうぎょうします。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "こうりゅう",
+    "kanji": "交流",
+    "meaning": "交流",
+    "example": "取引先とこうりゅう会を開きます。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "じょうほうこうかん",
+    "kanji": "情報交換",
+    "meaning": "信息交流",
+    "example": "会議後にじょうほうこうかんをしました。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "しゅっちょう",
+    "kanji": "出張",
+    "meaning": "出差",
+    "example": "大阪へしゅっちょうします。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "たいおう",
+    "kanji": "対応",
+    "meaning": "应对",
+    "example": "クレームに迅速にたいおうします。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "ぎょうせき",
+    "kanji": "業績",
+    "meaning": "业绩",
+    "example": "今期のぎょうせきが向上しました。",
+    "mark": "商务表达",
+    "difficultyCoefficient": "4",
+    "wordSet": "商务表达"
+  },
+  {
+    "kana": "じんこうちのう",
+    "kanji": "人工知能",
+    "meaning": "人工智能",
+    "example": "じんこうちのうの研究が進んでいます。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "でーたぶんせき",
+    "kanji": "データ分析",
+    "meaning": "数据分析",
+    "example": "マーケティングでーたぶんせきを行います。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "くらうどさーびす",
+    "kanji": "クラウドサービス",
+    "meaning": "云服务",
+    "example": "くらうどさーびすにデータを保存します。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "あいおーてぃー",
+    "kanji": "IoT",
+    "meaning": "物联网",
+    "example": "工場であいおーてぃーを導入しました。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "じどううんてん",
+    "kanji": "自動運転",
+    "meaning": "自动驾驶",
+    "example": "じどううんてんの車を試験します。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "こうそくつうしん",
+    "kanji": "高速通信",
+    "meaning": "高速通信",
+    "example": "こうそくつうしんで動画を配信します。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "ばーじょんかんり",
+    "kanji": "バージョン管理",
+    "meaning": "版本管理",
+    "example": "ソースコードをばーじょんかんりします。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "でんしけっさい",
+    "kanji": "電子決済",
+    "meaning": "电子支付",
+    "example": "スマホででんしけっさいを使います。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "すーぱーこんぴゅーたー",
+    "kanji": "スーパーコンピューター",
+    "meaning": "超级计算机",
+    "example": "研究所ですーぱーこんぴゅーたーを運用しています。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "ばーちゃるりありてぃー",
+    "kanji": "バーチャルリアリティー",
+    "meaning": "虚拟现实",
+    "example": "ばーちゃるりありてぃー体験をしました。",
+    "mark": "科技词汇",
+    "difficultyCoefficient": "5",
+    "wordSet": "科技词汇"
+  },
+  {
+    "kana": "うれしい",
+    "kanji": "嬉しい",
+    "meaning": "开心",
+    "example": "合格してとてもうれしいです。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "かなしい",
+    "kanji": "悲しい",
+    "meaning": "悲伤",
+    "example": "映画を見てかなしい気持ちになりました。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "くやしい",
+    "kanji": "悔しい",
+    "meaning": "懊恼",
+    "example": "負けてくやしい思いをしました。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "たのしい",
+    "kanji": "楽しい",
+    "meaning": "愉快",
+    "example": "旅行はとてもたのしいです。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "こわい",
+    "kanji": "怖い",
+    "meaning": "害怕",
+    "example": "暗い道はこわいです。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "びっくり",
+    "kanji": "びっくり",
+    "meaning": "吃惊",
+    "example": "突然の音にびっくりしました。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "さびしい",
+    "kanji": "寂しい",
+    "meaning": "寂寞",
+    "example": "一人の夜はさびしいです。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "あんしん",
+    "kanji": "安心",
+    "meaning": "安心",
+    "example": "連絡が来てあんしんしました。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "どきどき",
+    "kanji": "どきどき",
+    "meaning": "心跳加速",
+    "example": "試合前はどきどきします。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "まんぞく",
+    "kanji": "満足",
+    "meaning": "满足",
+    "example": "結果にまんぞくしています。",
+    "mark": "情感表达",
+    "difficultyCoefficient": "2",
+    "wordSet": "情感表达"
+  },
+  {
+    "kana": "らーめん",
+    "kanji": "拉麺",
+    "meaning": "拉面",
+    "example": "昼ごはんにらーめんを食べました。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "すし",
+    "kanji": "寿司",
+    "meaning": "寿司",
+    "example": "週末に家族ですしを食べます。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "てんぷら",
+    "kanji": "天ぷら",
+    "meaning": "天妇罗",
+    "example": "てんぷらはさくさくして美味しいです。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "おこのみやき",
+    "kanji": "お好み焼き",
+    "meaning": "大阪烧",
+    "example": "友達とおこのみやきを焼きました。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "すきやき",
+    "kanji": "すき焼き",
+    "meaning": "寿喜烧",
+    "example": "冬にすきやきを囲みます。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "おちゃ",
+    "kanji": "お茶",
+    "meaning": "茶",
+    "example": "食後におちゃを飲みます。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "みそしる",
+    "kanji": "味噌汁",
+    "meaning": "味噌汤",
+    "example": "朝はみそしるを飲む習慣です。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "ぎゅうにく",
+    "kanji": "牛肉",
+    "meaning": "牛肉",
+    "example": "ぎゅうにくのステーキを作ります。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "やさい",
+    "kanji": "野菜",
+    "meaning": "蔬菜",
+    "example": "やさいをたくさん摂りましょう。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "くだもの",
+    "kanji": "果物",
+    "meaning": "水果",
+    "example": "くだもののサラダを作りました。",
+    "mark": "饮食词汇",
+    "difficultyCoefficient": "2",
+    "wordSet": "饮食相关"
+  },
+  {
+    "kana": "どくしょ",
+    "kanji": "読書",
+    "meaning": "读书",
+    "example": "休日はどくしょを楽しみます。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "えいがかんしょう",
+    "kanji": "映画鑑賞",
+    "meaning": "观影",
+    "example": "趣味はえいがかんしょうです。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "りょこう",
+    "kanji": "旅行",
+    "meaning": "旅行",
+    "example": "夏に家族でりょこうします。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "りょうり",
+    "kanji": "料理",
+    "meaning": "烹饪",
+    "example": "新しいりょうりに挑戦します。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "さっかー",
+    "kanji": "サッカー",
+    "meaning": "足球",
+    "example": "友達とさっかーをします。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "つり",
+    "kanji": "釣り",
+    "meaning": "钓鱼",
+    "example": "父と川でつりをしました。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "しゃしん",
+    "kanji": "写真",
+    "meaning": "摄影",
+    "example": "旅行でしゃしんを撮ります。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "おんがく",
+    "kanji": "音楽",
+    "meaning": "音乐",
+    "example": "休日はおんがくを聴いて過ごします。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "え",
+    "kanji": "絵",
+    "meaning": "绘画",
+    "example": "時間があればえを描きます。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "まんが",
+    "kanji": "漫画",
+    "meaning": "漫画",
+    "example": "夜にまんがを読みます。",
+    "mark": "兴趣爱好",
+    "difficultyCoefficient": "2",
+    "wordSet": "兴趣爱好"
+  },
+  {
+    "kana": "いしゃ",
+    "kanji": "医者",
+    "meaning": "医生",
+    "example": "いしゃに相談しました。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "びょういん",
+    "kanji": "病院",
+    "meaning": "医院",
+    "example": "びょういんで検査を受けます。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "くすり",
+    "kanji": "薬",
+    "meaning": "药",
+    "example": "毎食後にくすりを飲みます。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "たいおん",
+    "kanji": "体温",
+    "meaning": "体温",
+    "example": "たいおんを毎日測定します。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "けんしん",
+    "kanji": "健診",
+    "meaning": "体检",
+    "example": "年に一度けんしんを受けます。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "きゅうきゅうしゃ",
+    "kanji": "救急車",
+    "meaning": "救护车",
+    "example": "事故できゅうきゅうしゃを呼びました。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "しんさつ",
+    "kanji": "診察",
+    "meaning": "诊察",
+    "example": "医師のしんさつを受けて薬をもらいました。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "よぼうせっしゅ",
+    "kanji": "予防接種",
+    "meaning": "预防接种",
+    "example": "子供によぼうせっしゅを受けさせます。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "4",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "りはびり",
+    "kanji": "リハビリ",
+    "meaning": "康复训练",
+    "example": "けがの後、りはびりを続けています。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  },
+  {
+    "kana": "しんぞう",
+    "kanji": "心臓",
+    "meaning": "心脏",
+    "example": "しんぞうの検査を受けました。",
+    "mark": "健康用语",
+    "difficultyCoefficient": "3",
+    "wordSet": "健康医疗"
+  }
+]

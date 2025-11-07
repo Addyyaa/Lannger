@@ -1,0 +1,20 @@
+[
+  {
+    "kana": "あ",
+    "kanji": "あ",
+    "meaning": "测试",
+    "example": "これはテストです。",
+    "mark": "",
+    "difficultyCoefficient": "1",
+    "wordSet": "Default"
+  },
+  {
+    "kana": "い",
+    "kanji": "い",
+    "meaning": "测试2",
+    "example": "これもテストです。",
+    "mark": "",
+    "difficultyCoefficient": "2"
+  }
+]
+

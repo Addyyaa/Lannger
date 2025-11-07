@@ -337,7 +337,7 @@ export default function Manage() {
                   <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
                 }
                 {state.popup === "SET_DATA_RESTORE_CONFIRM" &&
-                  <RestoreData close={() => dispatch({ type: "CLOSE_POPUP" } as Action)} setPopup={dispatch} setWordSets={setWordSets} wordSets={wordSets} />
+                  <RestoreData close={() => dispatch({ type: "CLOSE_POPUP" } as Action)} setPopup={dispatch} setWordSets={setWordSets} />
                 }
               </div>
             </div>

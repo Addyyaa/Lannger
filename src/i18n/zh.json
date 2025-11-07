@@ -27,6 +27,8 @@
     "unnamed": "未命名",
     "unknown": "未知",
     "edit": "编辑",
+    "editWord": "编辑单词",
+    "saveChanges": "保存修改",
     "editWordSet": "编辑单词集",
     "delete": "删除",
     "systemSettings": "⚙️ 系统设置",
@@ -130,6 +132,8 @@
     "deleteWord": "删除单词",
     "deleteWordMessage": "确定要删除该单词吗？此操作无法撤销。",
     "deleteWordFailed": "删除单词失败",
+    "wordUpdateSuccess": "单词更新成功",
+    "wordUpdateFailed": "单词更新失败",
     "actions": "操作",
     "selectWord": "选择单词",
     "selectAll": "全选",
@@ -155,5 +159,7 @@
     "startSession": "开始学习",
     "endSession": "结束学习",
     "enterAnswer": "请输入答案",
-    "learned": "已学习"
+    "learned": "已学习",
+    "fileTooLarge": "文件过大",
+    "invalidFileType": "不支持的文件类型"
 }

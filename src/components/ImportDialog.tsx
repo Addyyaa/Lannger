@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import CloseButton from "./CloseButton";
 import * as dbOperator from "../store/wordStore";
-import { Word } from "../db";
+import { Word, WordSet } from "../db";
 import { DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME } from "../db";
 
 interface ImportDialogProps {
@@ -130,6 +130,23 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
     const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
         const file = event.target.files?.[0];
         if (file) {
+            // 文件大小限制：最大 10MB（防止 ReDoS 攻击）
+            const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+            if (file.size > MAX_FILE_SIZE) {
+                alert(t("fileTooLarge") || `文件过大，最大支持 ${MAX_FILE_SIZE / 1024 / 1024}MB`);
+                event.target.value = ""; // 清空文件选择
+                return;
+            }
+
+            // 验证文件类型
+            const validExtensions = [".json", ".xlsx", ".xls", ".xml"];
+            const fileExtension = "." + file.name.split(".").pop()?.toLowerCase();
+            if (!validExtensions.includes(fileExtension)) {
+                alert(t("invalidFileType") || "不支持的文件类型");
+                event.target.value = "";
+                return;
+            }
+
             setSelectedFile(file);
             setFileName(file.name);
             // 根据文件扩展名自动设置格式
@@ -203,18 +220,46 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
     // 解析Excel文件
     const parseExcelFile = async (file: File): Promise<any[]> => {
         return new Promise((resolve, reject) => {
+            // 设置超时：30秒（防止 ReDoS 攻击导致长时间挂起）
+            const timeoutId = setTimeout(() => {
+                reject(new Error("文件解析超时，请检查文件是否损坏或过大"));
+            }, 30000);
+
             const reader = new FileReader();
             reader.onload = (e) => {
                 try {
+                    clearTimeout(timeoutId);
                     const data = e.target?.result;
                     if (!data || !(data instanceof ArrayBuffer)) {
                         reject(new Error("文件读取失败：无效的数据格式"));
                         return;
                     }
-                    const workbook = XLSX.read(data, { type: "array" });
+
+                    // 使用安全的解析选项，限制解析范围
+                    const workbook = XLSX.read(data, {
+                        type: "array",
+                        cellDates: false, // 禁用日期解析，减少攻击面
+                        cellNF: false, // 禁用数字格式，减少攻击面
+                        cellStyles: false, // 禁用样式解析，减少攻击面
+                        sheetRows: 10000, // 限制最大行数（防止超大文件）
+                    });
+
+                    if (!workbook.SheetNames || workbook.SheetNames.length === 0) {
+                        reject(new Error("Excel文件不包含有效的工作表"));
+                        return;
+                    }
+
                     const firstSheetName = workbook.SheetNames[0];
                     const worksheet = workbook.Sheets[firstSheetName];
-                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+                    if (!worksheet) {
+                        reject(new Error("无法读取工作表数据"));
+                        return;
+                    }
+
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet, {
+                        defval: "", // 默认值，防止 undefined
+                        raw: false, // 不返回原始值，减少攻击面
+                    });
 
                     // 转换Excel列名为标准字段名
                     const wordsData = jsonData.map((row: any) => {
@@ -250,10 +295,14 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
                     });
                     resolve(wordsData);
                 } catch (error) {
+                    clearTimeout(timeoutId);
                     reject(error);
                 }
             };
-            reader.onerror = () => reject(new Error("文件读取失败"));
+            reader.onerror = () => {
+                clearTimeout(timeoutId);
+                reject(new Error("文件读取失败"));
+            };
             reader.readAsArrayBuffer(file);
         });
     };
@@ -332,11 +381,32 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
             }
 
             // 获取所有单词集，用于名称到ID的映射
-            let wordSets = await dbOperator.getAllWordSets();
+            let wordSets: WordSet[] = [];
+            try {
+                const fetchedWordSets = await dbOperator.getAllWordSets();
+                // 防御性检查：确保 wordSets 是数组
+                if (Array.isArray(fetchedWordSets)) {
+                    wordSets = fetchedWordSets;
+                } else {
+                    console.error("getAllWordSets 返回了非数组值:", fetchedWordSets, typeof fetchedWordSets);
+                    wordSets = [];
+                }
+            } catch (error) {
+                console.error("获取单词集失败:", error);
+                wordSets = [];
+            }
+            
             const wordSetMap = new Map<string, number>();
-            wordSets.forEach((set) => {
-                wordSetMap.set(set.name, set.id);
-            });
+            // 确保 wordSets 是数组后再遍历
+            if (Array.isArray(wordSets)) {
+                wordSets.forEach((set) => {
+                    if (set && set.name && typeof set.id === "number") {
+                        wordSetMap.set(set.name, set.id);
+                    }
+                });
+            } else {
+                console.error("wordSets 不是数组，无法遍历:", wordSets, typeof wordSets);
+            }
 
             let successCount = 0;
             let failCount = 0;
@@ -394,7 +464,25 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
                                     });
                                     wordSetMap.set(wordSetName, newSetId);
                                     // 更新wordSets列表
-                                    wordSets = await dbOperator.getAllWordSets();
+                                    try {
+                                        const updatedWordSets = await dbOperator.getAllWordSets();
+                                        // 防御性检查：确保返回的是数组
+                                        if (Array.isArray(updatedWordSets)) {
+                                            wordSets = updatedWordSets;
+                                            // 更新 wordSetMap（重新构建以确保完整性）
+                                            updatedWordSets.forEach((set) => {
+                                                if (set && set.name && typeof set.id === "number") {
+                                                    wordSetMap.set(set.name, set.id);
+                                                }
+                                            });
+                                        } else {
+                                            console.error("getAllWordSets 返回了非数组值:", updatedWordSets, typeof updatedWordSets);
+                                            // 即使获取失败，wordSetMap 中已经有新创建的词集了，所以可以继续
+                                        }
+                                    } catch (error) {
+                                        console.error("更新单词集列表失败:", error);
+                                        // 即使更新失败，wordSetMap 中已经有新创建的词集了，所以可以继续
+                                    }
                                 } catch (error) {
                                     console.error("创建单词集失败:", error);
                                     // 如果创建失败，跳过该单词（不导入到默认词集）

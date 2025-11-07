@@ -1,0 +1,66 @@
+[
+  {
+    "kana": "おはよう",
+    "kanji": "お早う",
+    "meaning": "早上好",
+    "example": "おはようございます。",
+    "mark": "早晨问候",
+    "difficultyCoefficient": "1",
+    "wordSet": "问候语"
+  },
+  {
+    "kana": "こんばんは",
+    "kanji": "今晩は",
+    "meaning": "晚上好",
+    "example": "こんばんは、お疲れ様です。",
+    "mark": "晚上问候",
+    "difficultyCoefficient": "1",
+    "wordSet": "问候语"
+  },
+  {
+    "kana": "みる",
+    "kanji": "見る",
+    "meaning": "看",
+    "example": "テレビを見ます。",
+    "mark": "一段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "きく",
+    "kanji": "聞く",
+    "meaning": "听，问",
+    "example": "音楽を聞きます。",
+    "mark": "五段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "はなす",
+    "kanji": "話す",
+    "meaning": "说，讲",
+    "example": "日本語を話します。",
+    "mark": "五段动词",
+    "difficultyCoefficient": "3",
+    "wordSet": "动词"
+  },
+  {
+    "kana": "うつくしい",
+    "kanji": "美しい",
+    "meaning": "美丽的",
+    "example": "美しい景色です。",
+    "mark": "い形容词",
+    "difficultyCoefficient": "4",
+    "wordSet": "形容词"
+  },
+  {
+    "kana": "たかい",
+    "kanji": "高い",
+    "meaning": "高的，贵的",
+    "example": "この山は高いです。",
+    "mark": "い形容词",
+    "difficultyCoefficient": "4",
+    "wordSet": "形容词"
+  }
+]
+

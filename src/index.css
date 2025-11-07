@@ -66,3 +66,204 @@ button {
 button:hover {
   border-color: #646cff;
 }
+
+/* 自定义复选框样式 - 适配主题 */
+input[type="checkbox"].theme-checkbox {
+  position: relative;
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+}
+
+input[type="checkbox"].theme-checkbox::after {
+  content: "✓";
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 14px;
+  font-weight: bold;
+  line-height: 1;
+  transition: transform 0.15s ease;
+  pointer-events: none;
+}
+
+input[type="checkbox"].theme-checkbox:checked::after {
+  transform: translate(-50%, -50%) scale(1);
+}
+
+/* 暗色模式复选框 */
+body.dark input[type="checkbox"].theme-checkbox {
+  background-color: rgba(255, 255, 255, 0.15);
+  border: 2px solid rgba(255, 255, 255, 0.4);
+}
+
+body.dark input[type="checkbox"].theme-checkbox:checked {
+  background-color: rgba(0, 180, 255, 0.3);
+  border-color: #00b4ff;
+}
+
+body.dark input[type="checkbox"].theme-checkbox:checked::after {
+  color: #00b4ff;
+}
+
+/* 亮色模式复选框 */
+body:not(.dark) input[type="checkbox"].theme-checkbox {
+  background-color: #ffffff;
+  border: 2px solid rgba(0, 0, 0, 0.25);
+}
+
+body:not(.dark) input[type="checkbox"].theme-checkbox:checked {
+  background-color: rgba(0, 150, 212, 0.15);
+  border-color: #0096d4;
+}
+
+body:not(.dark) input[type="checkbox"].theme-checkbox:checked::after {
+  color: #0096d4;
+}
+
+/* Apple HIG 风格的动画 */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(2vh) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* Apple HIG 风格的全局输入框样式 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  padding: 1.2vh 1.4vw;
+  border-radius: 1vh;
+  border: 0.1vh solid;
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  font-size: 1em;
+  box-sizing: border-box;
+  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
+  line-height: 1.5;
+  min-height: 4.4vh;
+}
+
+/* 暗色模式输入框基础样式 */
+body.dark input[type="text"],
+body.dark input[type="email"],
+body.dark input[type="password"],
+body.dark input[type="number"],
+body.dark input[type="search"],
+body.dark input[type="tel"],
+body.dark input[type="url"],
+body.dark textarea,
+body.dark select {
+  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+/* 亮色模式输入框基础样式 */
+body:not(.dark) input[type="text"],
+body:not(.dark) input[type="email"],
+body:not(.dark) input[type="password"],
+body:not(.dark) input[type="number"],
+body:not(.dark) input[type="search"],
+body:not(.dark) input[type="tel"],
+body:not(.dark) input[type="url"],
+body:not(.dark) textarea,
+body:not(.dark) select {
+  border-color: rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.02);
+  color: #000000;
+}
+
+/* 暗色模式输入框焦点样式 */
+body.dark input[type="text"]:focus,
+body.dark input[type="email"]:focus,
+body.dark input[type="password"]:focus,
+body.dark input[type="number"]:focus,
+body.dark input[type="search"]:focus,
+body.dark input[type="tel"]:focus,
+body.dark input[type="url"]:focus,
+body.dark textarea:focus,
+body.dark select:focus {
+  border-color: rgba(0, 180, 255, 0.6);
+  box-shadow: 0 0 0 0.3vh rgba(0, 180, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+}
+
+/* 亮色模式输入框焦点样式 */
+body:not(.dark) input[type="text"]:focus,
+body:not(.dark) input[type="email"]:focus,
+body:not(.dark) input[type="password"]:focus,
+body:not(.dark) input[type="number"]:focus,
+body:not(.dark) input[type="search"]:focus,
+body:not(.dark) input[type="tel"]:focus,
+body:not(.dark) input[type="url"]:focus,
+body:not(.dark) textarea:focus,
+body:not(.dark) select:focus {
+  border-color: rgba(0, 150, 212, 0.6);
+  box-shadow: 0 0 0 0.3vh rgba(0, 150, 212, 0.2);
+  background: #ffffff;
+}
+
+/* textarea 特殊样式 */
+textarea {
+  resize: vertical;
+  min-height: 8vh;
+  line-height: 1.6;
+}
+
+/* select 特殊样式 */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='rgba(0,0,0,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 1.4vw center;
+  background-size: 1.2vw;
+  padding-right: 3.5vw;
+  cursor: pointer;
+}
+
+body.dark select {
+  background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+}
+
+/* 排除复选框和单选按钮 */
+input[type="checkbox"],
+input[type="radio"] {
+  padding: 0;
+  border: none;
+  background: none;
+  min-height: auto;
+  width: auto;
+  box-shadow: none;
+}
+
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  border: none;
+  box-shadow: none;
+  background: none;
+}

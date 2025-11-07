@@ -153,6 +153,7 @@ function GlobalHeader() {
     const handleLanguageClicked = () => {
         setLg_clicked(false)
     }
+    const themeToggleSize = "clamp(40px, 2.8vw, 52px)"
     return (
         <div style={{
             width: '100%',
@@ -189,19 +190,33 @@ function GlobalHeader() {
                 {lg_clicked && <LanguageMenu setLanguageClicked={handleLanguageClicked} />}
             </div>
             <button onClick={toggleTheme} aria-label="toggle-theme" style={{
-                width: 'auto',
-                aspectRatio: '1/1',
+                width: themeToggleSize,
+                height: themeToggleSize,
+                minWidth: "40px",
+                minHeight: "40px",
+                borderRadius: "50%",
                 padding: 0,
                 marginRight: '0.5vw',
                 alignItems: "center",
                 justifyContent: "center",
                 display: "flex",
+                background: "transparent",
+                border: "1px solid rgba(0, 180, 255, 0.35)",
+                cursor: "pointer",
+                transition: "transform 0.2s ease, box-shadow 0.2s ease",
                 boxShadow: `
                 0 0 6px rgba(0, 180, 255, 0.4),
                 0 0 12px rgba(0, 180, 255, 0.3),
                 0 0 24px rgba(0, 180, 255, 0.2)
             `
-            }}>
+            }}
+                onMouseEnter={(event) => {
+                    event.currentTarget.style.transform = "translateY(-2px)";
+                }}
+                onMouseLeave={(event) => {
+                    event.currentTarget.style.transform = "translateY(0)";
+                }}
+            >
                 {isDark ? <span style={{ fontSize: '1.5vw' }}>☀️</span> : <span style={{ fontSize: '1.5vw' }}>🌙</span>}
             </button>
         </div>
