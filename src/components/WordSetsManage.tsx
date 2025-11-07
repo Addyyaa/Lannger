@@ -33,7 +33,14 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const loadWordSets = async () => {
         try {
             const sets = await dbOperator.getAllWordSets();
-            setWordSets(sets);
+            // 为每个单词集获取单词数量
+            const setsWithWords = await Promise.all(
+                sets.map(async (set) => {
+                    const words = await dbOperator.getWordsByWordSet(set.id);
+                    return { ...set, words };
+                })
+            );
+            setWordSets(setsWithWords);
         } catch (error) {
             console.error("加载单词集失败:", error);
         } finally {

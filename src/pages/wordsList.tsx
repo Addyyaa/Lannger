@@ -1,12 +1,13 @@
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useTranslation } from "react-i18next";
+import { useTranslation, Trans } from "react-i18next";
 import { Tooltip } from "antd";
 import { List, RowComponentProps } from "react-window";
 import { Word, WordSet } from "../db";
 import * as dbOperator from "../store/wordStore";
 import { useTheme } from "../main";
 import BackButton from "../components/BackButton";
+import ConfirmWidget from "../components/ConfirmWidget";
 
 /**
  * 单词列表页面组件
@@ -21,9 +22,13 @@ export default function WordsList() {
     const [words, setWords] = useState<Word[]>([]);
     const [wordSets, setWordSets] = useState<WordSet[]>([]);
     const [loading, setLoading] = useState<boolean>(true);
+    const [deletePopup, setDeletePopup] = useState<boolean>(false);
+    const [deleteWordId, setDeleteWordId] = useState<number | null>(null);
+    const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
+    const [batchDeletePopup, setBatchDeletePopup] = useState<boolean>(false);
 
     // 虚拟列表配置常量
-    const COLUMN_TEMPLATE = "1.5fr 1.5fr 2fr 1.5fr 1.5fr 1fr";
+    const COLUMN_TEMPLATE = "0.5fr 1.5fr 1.5fr 2fr 1.5fr 1.5fr 1fr 0.8fr";
     const ROW_HEIGHT = 60;
     const MAX_LIST_HEIGHT = 600;
 
@@ -36,30 +41,45 @@ export default function WordsList() {
         return map;
     }, [wordSets]);
 
-    useEffect(() => {
-        const fetchData = async () => {
-            try {
-                setLoading(true);
-                // 获取所有单词集
-                const fetchedWordSets = await dbOperator.getAllWordSets();
-                setWordSets(fetchedWordSets);
+    // 获取数据的函数
+    const fetchData = useCallback(async () => {
+        try {
+            setLoading(true);
+            // 获取所有单词集
+            const fetchedWordSets = await dbOperator.getAllWordSets();
+            setWordSets(fetchedWordSets);
 
-                // 获取单词列表
-                if (wordSetId && !isNaN(wordSetId)) {
-                    const fetchedWords = await dbOperator.getWordsByWordSet(wordSetId);
-                    setWords(fetchedWords);
-                } else {
-                    const fetchedWords = await dbOperator.getAllWords();
-                    setWords(fetchedWords);
-                }
-            } catch (error) {
-                console.error(t("fetchWordsError"), error);
-            } finally {
-                setLoading(false);
+            // 获取单词列表
+            // 注意：wordSetId 可能是 0（默认词集ID），所以不能使用 wordSetId && 来判断
+            if (wordSetId !== null && !isNaN(wordSetId)) {
+                const fetchedWords = await dbOperator.getWordsByWordSet(wordSetId);
+                setWords(fetchedWords);
+            } else {
+                const fetchedWords = await dbOperator.getAllWords();
+                setWords(fetchedWords);
             }
-        };
+        } catch (error) {
+            console.error(t("fetchWordsError"), error);
+        } finally {
+            setLoading(false);
+        }
+    }, [wordSetId, t]);
+
+    useEffect(() => {
         fetchData();
-    }, [wordSetId]);
+    }, [fetchData]);
+
+    // 监听窗口焦点事件，当页面重新获得焦点时刷新数据
+    useEffect(() => {
+        const handleFocus = () => {
+            fetchData();
+        };
+
+        window.addEventListener("focus", handleFocus);
+        return () => {
+            window.removeEventListener("focus", handleFocus);
+        };
+    }, [fetchData]);
 
     // 页面容器样式
     const containerStyle: React.CSSProperties = {
@@ -76,6 +96,19 @@ export default function WordsList() {
         gap: "16px",
         marginBottom: "24px",
         flexWrap: "wrap",
+        position: "relative",
+    };
+
+    // 批量操作栏样式
+    const batchActionBarStyle: React.CSSProperties = {
+        display: "flex",
+        alignItems: "center",
+        gap: "12px",
+        marginBottom: "16px",
+        padding: "12px 16px",
+        borderRadius: "8px",
+        background: isDark ? "rgba(255, 71, 87, 0.1)" : "rgba(255, 71, 87, 0.05)",
+        border: isDark ? "1px solid rgba(255, 71, 87, 0.3)" : "1px solid rgba(255, 71, 87, 0.2)",
     };
 
     // 标题样式
@@ -193,11 +226,72 @@ export default function WordsList() {
         navigate("/manage");
     };
 
+    // 处理删除单词
+    const handleDeleteWord = useCallback(async () => {
+        if (deleteWordId !== null) {
+            try {
+                await dbOperator.deleteWord(deleteWordId);
+                setDeletePopup(false);
+                setDeleteWordId(null);
+                // 刷新列表
+                fetchData();
+            } catch (error) {
+                console.error(t("deleteWordFailed"), error);
+                alert(t("deleteWordFailed"));
+            }
+        }
+    }, [deleteWordId, fetchData, t]);
+
+    // 处理批量删除单词
+    const handleBatchDeleteWords = useCallback(async () => {
+        if (selectedWordIds.size === 0) {
+            return;
+        }
+        try {
+            const deletePromises = Array.from(selectedWordIds).map((wordId) =>
+                dbOperator.deleteWord(wordId)
+            );
+            await Promise.all(deletePromises);
+            setBatchDeletePopup(false);
+            setSelectedWordIds(new Set());
+            // 刷新列表
+            fetchData();
+        } catch (error) {
+            console.error(t("deleteWordFailed"), error);
+            alert(t("deleteWordFailed"));
+        }
+    }, [selectedWordIds, fetchData, t]);
+
+    // 切换单词选中状态
+    const toggleWordSelection = useCallback((wordId: number) => {
+        setSelectedWordIds((prev) => {
+            const newSet = new Set(prev);
+            if (newSet.has(wordId)) {
+                newSet.delete(wordId);
+            } else {
+                newSet.add(wordId);
+            }
+            return newSet;
+        });
+    }, []);
+
+    // 全选/取消全选
+    const toggleSelectAll = useCallback(() => {
+        if (selectedWordIds.size === words.length) {
+            setSelectedWordIds(new Set());
+        } else {
+            const allIds = new Set(words.map((word) => word.id).filter((id): id is number => id !== undefined));
+            setSelectedWordIds(allIds);
+        }
+    }, [selectedWordIds.size, words]);
+
     // 虚拟行组件类型定义
     type VirtualRowExtraProps = {
         getWord: (index: number) => Word;
         getWordSetName: (setId?: number) => string;
         getDifficulty: (word: Word) => string;
+        selectedWordIds: Set<number>;
+        toggleWordSelection: (wordId: number) => void;
     };
 
     // 虚拟行组件
@@ -208,9 +302,32 @@ export default function WordsList() {
         getWord: getWordItem,
         getWordSetName: getSetName,
         getDifficulty: getDiff,
+        selectedWordIds,
+        toggleWordSelection,
     }: RowComponentProps<VirtualRowExtraProps>) => {
         const word = getWordItem(index);
         const rowBackground = isDark ? "rgb(41, 40, 40)" : "rgb(243, 240, 240)";
+        const isSelected = word.id !== undefined && selectedWordIds.has(word.id);
+
+        // 复选框样式
+        const checkboxStyle: React.CSSProperties = {
+            ...baseCellStyle,
+            justifyContent: "center",
+            cursor: "pointer",
+        };
+
+        // 删除按钮样式
+        const deleteButtonStyle: React.CSSProperties = {
+            ...baseCellStyle,
+            justifyContent: "center",
+            cursor: "pointer",
+            color: isDark ? "#ff6b6b" : "#ff4757",
+            fontSize: "16px",
+            fontWeight: "bold",
+            padding: "4px 8px",
+            borderRadius: "4px",
+            transition: "all 0.2s ease",
+        };
 
         return (
             <div
@@ -226,12 +343,33 @@ export default function WordsList() {
                     boxSizing: "border-box",
                     padding: "0 16px",
                     height: ROW_HEIGHT,
-                    background: rowBackground,
+                    background: isSelected
+                        ? isDark
+                            ? "rgba(0, 180, 255, 0.2)"
+                            : "rgba(0, 180, 255, 0.1)"
+                        : rowBackground,
                     borderBottom: isDark
                         ? "1px solid rgba(255,255,255,0.06)"
                         : "1px solid rgba(0,0,0,0.05)",
                 }}
             >
+                <div style={checkboxStyle}>
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                            if (word.id !== undefined) {
+                                toggleWordSelection(word.id);
+                            }
+                        }}
+                        style={{
+                            width: "18px",
+                            height: "18px",
+                            cursor: "pointer",
+                        }}
+                        aria-label={t("selectWord")}
+                    />
+                </div>
                 <Tooltip
                     title={
                         word.example ? (
@@ -279,6 +417,29 @@ export default function WordsList() {
                 <div style={baseCellStyle}>{getSetName(word.setId)}</div>
                 <div style={baseCellStyle}>{word.mark || "-"}</div>
                 <div style={baseCellStyle}>{getDiff(word)}</div>
+                <div
+                    style={deleteButtonStyle}
+                    onClick={() => {
+                        if (word.id !== undefined) {
+                            setDeleteWordId(word.id);
+                            setDeletePopup(true);
+                        }
+                    }}
+                    onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = isDark
+                            ? "rgba(255, 107, 107, 0.2)"
+                            : "rgba(255, 71, 87, 0.1)";
+                        e.currentTarget.style.transform = "scale(1.1)";
+                    }}
+                    onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = "transparent";
+                        e.currentTarget.style.transform = "scale(1)";
+                    }}
+                    role="button"
+                    aria-label={t("delete")}
+                >
+                    🗑️
+                </div>
             </div>
         );
     };
@@ -301,6 +462,38 @@ export default function WordsList() {
                     {t("wordListTitle")} {wordSetId ? `(${wordSetMap.get(wordSetId) || t("unknown")})` : `(${t("wordListAllWords")})`}
                 </h1>
             </div>
+            {selectedWordIds.size > 0 && (
+                <div style={batchActionBarStyle}>
+                    <span style={{ color: isDark ? "#f5f5f5" : "#333", fontWeight: "500" }}>
+                        {t("selectedCount")}: {selectedWordIds.size}
+                    </span>
+                    <button
+                        onClick={() => setBatchDeletePopup(true)}
+                        style={{
+                            background: "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
+                            color: "white",
+                            border: "none",
+                            borderRadius: "8px",
+                            padding: "8px 16px",
+                            fontSize: "14px",
+                            fontWeight: "bold",
+                            cursor: "pointer",
+                            transition: "all 0.3s ease",
+                            boxShadow: "0 4px 15px rgba(255, 71, 87, 0.3)",
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = "translateY(-2px)";
+                            e.currentTarget.style.boxShadow = "0 6px 20px rgba(255, 71, 87, 0.4)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "0 4px 15px rgba(255, 71, 87, 0.3)";
+                        }}
+                    >
+                        {t("batchDelete")}
+                    </button>
+                </div>
+            )}
             {words.length === 0 ? (
                 <div style={emptyStateStyle}>
                     <div style={{ fontSize: "48px", marginBottom: "16px" }}>📚</div>
@@ -309,12 +502,26 @@ export default function WordsList() {
             ) : (
                 <div style={listContainerStyle} role="table" aria-label={t("wordList")}>
                     <div style={stickyThStyle} role="row" data-testid="words-table-header">
+                        <span role="columnheader" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}>
+                            <input
+                                type="checkbox"
+                                checked={selectedWordIds.size === words.length && words.length > 0}
+                                onChange={toggleSelectAll}
+                                style={{
+                                    width: "18px",
+                                    height: "18px",
+                                    cursor: "pointer",
+                                }}
+                                aria-label={t("selectAll")}
+                            />
+                        </span>
                         <span role="columnheader">{t("kana")}</span>
                         <span role="columnheader">{t("kanji")}</span>
                         <span role="columnheader">{t("meaning")}</span>
                         <span role="columnheader">{t("wordSet")}</span>
                         <span role="columnheader">{t("mark")}</span>
                         <span role="columnheader">{t("difficulty")}</span>
+                        <span role="columnheader">{t("actions")}</span>
                     </div>
                     <List
                         style={listStyle}
@@ -326,10 +533,46 @@ export default function WordsList() {
                             getWord,
                             getWordSetName,
                             getDifficulty,
+                            selectedWordIds,
+                            toggleWordSelection,
                         }}
                         aria-label={t("wordList")}
                     />
                 </div>
+            )}
+            {deletePopup && (
+                <ConfirmWidget
+                    title={t("deleteWord")}
+                    message={t("deleteWordMessage")}
+                    onConfirm={handleDeleteWord}
+                    onCancel={() => {
+                        setDeletePopup(false);
+                        setDeleteWordId(null);
+                    }}
+                    confirmButtonStyle={{
+                        backgroundColor: "#ff4757",
+                        color: "#fff",
+                    }}
+                />
+            )}
+            {batchDeletePopup && (
+                <ConfirmWidget
+                    title={t("batchDeleteWords")}
+                    message={
+                        <Trans
+                            i18nKey="batchDeleteWordsMessage"
+                            values={{ count: selectedWordIds.size }}
+                        />
+                    }
+                    onConfirm={handleBatchDeleteWords}
+                    onCancel={() => {
+                        setBatchDeletePopup(false);
+                    }}
+                    confirmButtonStyle={{
+                        backgroundColor: "#ff4757",
+                        color: "#fff",
+                    }}
+                />
             )}
         </div>
     );

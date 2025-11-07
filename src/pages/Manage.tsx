@@ -55,9 +55,30 @@ function AddWordSetsAction(
   );
 }
 
-function ImportWordsAction(dispatch: (action: Action) => void) {
+function ImportWordsAction(
+  dispatch: (action: Action) => void,
+  setWordSets: React.Dispatch<React.SetStateAction<any[]>>
+) {
   return ComponentAsModel(
-    <ImportDialog closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
+    <ImportDialog
+      closePopup={() => dispatch({ type: "CLOSE_POPUP" })}
+      onImportComplete={async () => {
+        // 导入完成后刷新单词集列表（包含单词数量）
+        try {
+          const sets = await dbOperator.getAllWordSets();
+          // 为每个单词集获取单词数量
+          const setsWithWords = await Promise.all(
+            sets.map(async (set) => {
+              const words = await dbOperator.getWordsByWordSet(set.id);
+              return { ...set, words };
+            })
+          );
+          setWordSets(setsWithWords);
+        } catch (error) {
+          console.error("刷新单词集列表失败:", error);
+        }
+      }}
+    />
   );
 }
 
@@ -184,7 +205,7 @@ export default function Manage() {
           {state.popup === "SET_ADD_WORD_SETS" &&
             AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
           {state.popup === "SET_IMPORT_WORDS" &&
-            ImportWordsAction(dispatch as (action: Action) => void)}
+            ImportWordsAction(dispatch as (action: Action) => void, setWordSets)}
           <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
         </section>
         <section style={cardStyle} data-testid="system-settings-section">
