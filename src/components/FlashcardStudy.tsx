@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
 import { Word } from "../db";
@@ -32,16 +32,24 @@ export default function FlashcardStudy({
     const [currentIndex, setCurrentIndex] = useState(0);
     const [showAnswer, setShowAnswer] = useState(false);
     const [loading, setLoading] = useState(true);
-    const [sessionStats, setSessionStats] = useState({
+    const createInitialStats = () => ({
         studiedCount: 0,
         correctCount: 0,
         wrongCount: 0,
     });
+    const [sessionStats, setSessionStats] = useState(createInitialStats);
     const startTimeRef = useRef<number>(Date.now());
+    const [isResetting, setIsResetting] = useState(false);
+    const [resetFeedback, setResetFeedback] = useState<string | null>(null);
+    const shouldPersistRef = useRef(true);
 
-    useEffect(() => {
-        loadWords();
-    }, [wordSetId]);
+    const clearPersistedSessionState = useCallback(async () => {
+        try {
+            await dbOperator.clearFlashcardSessionState();
+        } catch (error) {
+            console.error("清除闪卡会话失败:", error);
+        }
+    }, []);
 
     useEffect(() => {
         if (wordIds.length > 0 && currentIndex < wordIds.length) {
@@ -49,9 +57,15 @@ export default function FlashcardStudy({
         }
     }, [wordIds, currentIndex]);
 
-    const loadWords = async () => {
+    const loadWords = useCallback(async () => {
         try {
+            shouldPersistRef.current = false;
             setLoading(true);
+            setSessionStats(createInitialStats());
+            setShowAnswer(false);
+            setResetFeedback(null);
+            setCurrentWord(null);
+            await clearPersistedSessionState();
             const result = await scheduleFlashcardWords({
                 wordSetId,
                 limit: 50,
@@ -61,13 +75,113 @@ export default function FlashcardStudy({
         } catch (error) {
             console.error("加载单词失败:", error);
         } finally {
+            startTimeRef.current = Date.now();
             setLoading(false);
+            shouldPersistRef.current = true;
         }
-    };
+    }, [wordSetId, clearPersistedSessionState]);
+
+    useEffect(() => {
+        let cancelled = false;
+
+        const restoreOrLoad = async () => {
+            try {
+                const persisted = await dbOperator.getFlashcardSessionState();
+                if (cancelled) {
+                    return;
+                }
+
+                const normalizedWordSetId = wordSetId ?? null;
+                const persistedWordSetId = persisted?.wordSetId ?? null;
+
+                if (
+                    persisted &&
+                    Array.isArray(persisted.wordIds) &&
+                    persisted.wordIds.length > 0 &&
+                    normalizedWordSetId === persistedWordSetId
+                ) {
+                    const wordRecords = await Promise.all(
+                        persisted.wordIds.map((id) => dbOperator.getWord(id))
+                    );
+
+                    if (cancelled) {
+                        return;
+                    }
+
+                    const validWordIds: number[] = [];
+                    wordRecords.forEach((word, index) => {
+                        if (word) {
+                            validWordIds.push(persisted.wordIds[index]);
+                        }
+                    });
+
+                    if (validWordIds.length > 0) {
+                        if (cancelled) {
+                            return;
+                        }
+                        const nextIndex = Math.min(
+                            Math.max(persisted.currentIndex ?? 0, 0),
+                            validWordIds.length - 1
+                        );
+
+                        setWordIds(validWordIds);
+                        setCurrentIndex(nextIndex);
+                        setSessionStats(
+                            persisted.sessionStats
+                                ? {
+                                      studiedCount: persisted.sessionStats.studiedCount ?? 0,
+                                      correctCount: persisted.sessionStats.correctCount ?? 0,
+                                      wrongCount: persisted.sessionStats.wrongCount ?? 0,
+                                  }
+                                : createInitialStats()
+                        );
+                        setShowAnswer(Boolean(persisted.showAnswer));
+                        startTimeRef.current = Date.now();
+                        shouldPersistRef.current = true;
+                        setLoading(false);
+                        return;
+                    }
+                }
+
+                await loadWords();
+            } catch (error) {
+                console.error("恢复闪卡会话失败:", error);
+                await loadWords();
+            }
+        };
+
+        restoreOrLoad();
+
+        return () => {
+            cancelled = true;
+        };
+    }, [wordSetId, loadWords]);
+
+    useEffect(() => {
+        if (loading) return;
+        if (!wordIds || wordIds.length === 0) return;
+        if (currentIndex < 0 || currentIndex >= wordIds.length) return;
+        if (!shouldPersistRef.current) return;
+
+        const state = {
+            wordSetId,
+            wordIds,
+            currentIndex,
+            sessionStats,
+            showAnswer,
+            currentWordId: wordIds[currentIndex],
+        };
+
+        dbOperator.saveFlashcardSessionState(state).catch((error) => {
+            console.error("保存闪卡会话失败:", error);
+        });
+    }, [wordIds, currentIndex, sessionStats, showAnswer, wordSetId, loading]);
 
     const loadCurrentWord = async () => {
         if (currentIndex >= wordIds.length) {
             // 学习完成
+            shouldPersistRef.current = false;
+            await clearPersistedSessionState();
             if (onSessionComplete) {
                 onSessionComplete(sessionStats);
             }
@@ -110,6 +224,8 @@ export default function FlashcardStudy({
             setCurrentIndex(currentIndex + 1);
         } else {
             // 学习完成
+            shouldPersistRef.current = false;
+            await clearPersistedSessionState();
             if (onSessionComplete) {
                 onSessionComplete({
                     ...sessionStats,
@@ -119,6 +235,31 @@ export default function FlashcardStudy({
                 });
             }
             closePopup();
+        }
+    };
+
+    const handleResetProgress = async () => {
+        if (isResetting) return;
+
+        try {
+            setIsResetting(true);
+            setResetFeedback(null);
+            const resetCount = await dbOperator.resetWordProgress(wordSetId);
+
+            if (resetCount === 0) {
+                setResetFeedback(t("resetProgressEmpty"));
+                return;
+            }
+
+            shouldPersistRef.current = false;
+            await clearPersistedSessionState();
+            await loadWords();
+            window.alert(t("resetProgressSuccess", { count: resetCount }));
+        } catch (error) {
+            console.error("重置学习进度失败:", error);
+            setResetFeedback(t("resetProgressError"));
+        } finally {
+            setIsResetting(false);
         }
     };
 
@@ -150,6 +291,19 @@ export default function FlashcardStudy({
         alignItems: "center",
         flex: 1,
         position: "relative",
+        perspective: "100vw",
+        WebkitPerspective: "100vw",
+    };
+
+    // 3D卡片容器
+    const card3DContainerStyle: React.CSSProperties = {
+        position: "relative",
+        width: "100%",
+        height: "100%",
+        transformStyle: "preserve-3d",
+        WebkitTransformStyle: "preserve-3d",
+        transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+        transform: showAnswer ? "rotateY(180deg)" : "rotateY(0deg)",
     };
 
     // 卡片正面和背面的共同样式
@@ -159,6 +313,8 @@ export default function FlashcardStudy({
         height: "100%",
         top: 0,
         left: 0,
+        backfaceVisibility: "hidden",
+        WebkitBackfaceVisibility: "hidden",
         background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.02)",
         borderRadius: "1.4vw",
         border: isDark ? "0.12vw solid #555" : "0.12vw solid #e0e0e0",
@@ -176,27 +332,26 @@ export default function FlashcardStudy({
         justifyContent: "center",
         alignItems: "center",
         cursor: "default",
+        transform: "rotateY(0deg)",
     };
 
     const cardBackStyle: React.CSSProperties = {
         ...cardFaceBaseStyle,
         display: "flex",
         flexDirection: "column",
-        backgroundColor: "transparent",
-        boxShadow: "none",
         padding: 0,
         overflowY: "hidden",
         cursor: "default",
-        border: "none",
         justifyContent: "center",
         alignItems: "center",
         height: "85%",
         top: 0,
+        transform: "rotateY(180deg)",
     };
 
     const labelStyle: React.CSSProperties = {
         fontSize: "calc(0.7vw + 0.7vh)",
-        color: isDark ? "#999" : "#999",
+        color: isDark ? "#999" : "#666",
         marginBottom: "0.8vh",
         textAlign: "center",
         width: "100%",
@@ -239,21 +394,37 @@ export default function FlashcardStudy({
         flex: "0 1 auto",
     };
 
+    const resetButtonStyle: React.CSSProperties = {
+        ...buttonStyle,
+        background: isDark
+            ? "linear-gradient(135deg, #5856D6 0%, #AF52DE 100%)"
+            : "linear-gradient(135deg, #5AC8FA 0%, #007AFF 100%)",
+        color: "white",
+        padding: "1.4vh 3vw",
+        minWidth: "18vw",
+    };
+
     const showAnswerButtonStyle: React.CSSProperties = {
         ...buttonStyle,
-        background: "linear-gradient(135deg, #007AFF 0%, #0051D5 100%)",
+        background: isDark 
+            ? "linear-gradient(135deg, #0A84FF 0%, #0051D5 100%)"
+            : "linear-gradient(135deg, #007AFF 0%, #0051D5 100%)",
         color: "white",
     };
 
     const correctButtonStyle: React.CSSProperties = {
         ...buttonStyle,
-        background: "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
+        background: isDark
+            ? "linear-gradient(135deg, #34C759 0%, #30D158 100%)"
+            : "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
         color: "white",
     };
 
     const wrongButtonStyle: React.CSSProperties = {
         ...buttonStyle,
-        background: "linear-gradient(135deg, #f44336 0%, #d32f2f 100%)",
+        background: isDark
+            ? "linear-gradient(135deg, #FF3B30 0%, #FF2D55 100%)"
+            : "linear-gradient(135deg, #f44336 0%, #d32f2f 100%)",
         color: "white",
     };
 
@@ -266,7 +437,9 @@ export default function FlashcardStudy({
 
     const learnedButtonStyle: React.CSSProperties = {
         ...buttonStyle,
-        background: "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
+        background: isDark
+            ? "linear-gradient(135deg, #34C759 0%, #30D158 100%)"
+            : "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
         color: "white",
     };
 
@@ -277,7 +450,32 @@ export default function FlashcardStudy({
         marginBottom: "2vh",
     };
 
-    
+    const emptyStateContentStyle: React.CSSProperties = {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        gap: "2vh",
+        height: "100%",
+        padding: "4vh 6vw",
+        textAlign: "center",
+        color: isDark ? "#ccc" : "#666",
+    };
+
+    const emptyStateTitleStyle: React.CSSProperties = {
+        fontSize: "calc(1.1vw + 1.1vh)",
+        fontWeight: 600,
+        color: isDark ? "#f0f0f0" : "#333",
+        lineHeight: 1.6,
+    };
+
+    const resetFeedbackStyle: React.CSSProperties = {
+        fontSize: "calc(0.8vw + 0.8vh)",
+        color: isDark ? "#8E8E93" : "#666",
+        maxWidth: "28vw",
+        lineHeight: 1.6,
+    };
+
 
     if (loading) {
         return (
@@ -294,8 +492,31 @@ export default function FlashcardStudy({
         return (
             <div style={outerContainerStyle}>
                 <CloseButton onClick={closePopup} iconColor={isDark ? "#fff" : "#333"} />
-                <div style={{ textAlign: "center", padding: "4vh 4vw", color: isDark ? "#ccc" : "#666" }}>
-                    {t("noWords")}
+                <div style={emptyStateContentStyle}>
+                    <div style={emptyStateTitleStyle}>{t("allWordsMastered")}</div>
+                    {resetFeedback && <div style={resetFeedbackStyle}>{resetFeedback}</div>}
+                    <button
+                        style={{
+                            ...resetButtonStyle,
+                            opacity: isResetting ? 0.6 : 1,
+                            cursor: isResetting ? "not-allowed" : resetButtonStyle.cursor ?? "pointer",
+                        }}
+                        onClick={handleResetProgress}
+                        disabled={isResetting}
+                        onMouseEnter={(e) => {
+                            if (isResetting) return;
+                            e.currentTarget.style.transform = "translateY(-0.2vh)";
+                            e.currentTarget.style.boxShadow = isDark
+                                ? "0 0.4vh 1.2vh rgba(88, 86, 214, 0.45)"
+                                : "0 0.4vh 1.2vh rgba(90, 200, 250, 0.45)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = "translateY(0)";
+                            e.currentTarget.style.boxShadow = "none";
+                        }}
+                    >
+                        {isResetting ? t("resetting") : t("resetProgress")}
+                    </button>
                 </div>
             </div>
         );
@@ -311,8 +532,9 @@ export default function FlashcardStudy({
             </div>
                 {/* 卡片容器包装 */}
                 <div style={cardWrapperStyle}>
-                    {/* 卡片正面（问题面） */}
-                    {!showAnswer && (
+                    {/* 3D卡片容器 */}
+                    <div style={card3DContainerStyle}>
+                        {/* 卡片正面（问题面） */}
                         <div
                             style={cardFaceStyle}
                             data-testid="FlashcardStudy-5"
@@ -321,63 +543,63 @@ export default function FlashcardStudy({
                                 {currentWord.kanji || currentWord.kana}
                             </div>
                         </div>
-                    )}
 
-                    {/* 卡片背面（答案面） */}
-                    {showAnswer && (() => {
-                        // 计算内容项数量
-                        const contentItems = [
-                            currentWord.kanji && "kanji",
-                            "kana",
-                            "meaning",
-                            currentWord.example && "example"
-                        ].filter(Boolean);
-                        const itemCount = contentItems.length;
-                        const itemHeight = `${85 / itemCount}%`;
-                        
-                        const contentItemStyle: React.CSSProperties = {
-                            height: itemHeight,
-                            width: "100%",
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            justifyContent: "center",
-                            boxSizing: "border-box",
-                        };
+                        {/* 卡片背面（答案面） */}
+                        {(() => {
+                            // 计算内容项数量
+                            const contentItems = [
+                                currentWord.kanji && "kanji",
+                                "kana",
+                                "meaning",
+                                currentWord.example && "example"
+                            ].filter(Boolean);
+                            const itemCount = contentItems.length;
+                            const itemHeight = `${85 / itemCount}%`;
+                            
+                            const contentItemStyle: React.CSSProperties = {
+                                height: itemHeight,
+                                width: "100%",
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                boxSizing: "border-box",
+                            };
 
-                        return (
-                            <div style={cardBackStyle} data-testid="FlashcardStudy-answer">
-                                {currentWord.kanji && (
+                            return (
+                                <div style={cardBackStyle} data-testid="FlashcardStudy-answer">
+                                    {currentWord.kanji && (
+                                        <div style={contentItemStyle}>
+                                            <div style={labelStyle}>{t("kanji")}</div>
+                                            <div style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
+                                                {currentWord.kanji}
+                                            </div>
+                                        </div>
+                                    )}
                                     <div style={contentItemStyle}>
-                                        <div style={labelStyle}>{t("kanji")}</div>
-                                        <div style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
-                                            {currentWord.kanji}
+                                        <div style={labelStyle}>{t("kana")}</div>
+                                        <div style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
+                                            {currentWord.kana}
                                         </div>
                                     </div>
-                                )}
-                                <div style={contentItemStyle}>
-                                    <div style={labelStyle}>{t("kana")}</div>
-                                    <div style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
-                                        {currentWord.kana}
-                                    </div>
-                                </div>
-                                <div style={contentItemStyle}>
-                                    <div style={labelStyle}>{t("meaning")}</div>
-                                    <div style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6", textAlign: "center", padding: "0 2vw" }}>
-                                        {currentWord.meaning}
-                                    </div>
-                                </div>
-                                {currentWord.example && (
                                     <div style={contentItemStyle}>
-                                        <div style={labelStyle}>{t("example")}</div>
-                                        <div style={{ fontSize: "calc(0.9vw + 0.9vh)", color: isDark ? "#ccc" : "#666", fontStyle: "italic", lineHeight: "1.6", marginTop: "1vh", textAlign: "center", padding: "0 2vw" }}>
-                                            {currentWord.example}
+                                        <div style={labelStyle}>{t("meaning")}</div>
+                                        <div style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6", textAlign: "center", padding: "0 2vw" }}>
+                                            {currentWord.meaning}
                                         </div>
                                     </div>
-                                )}
-                            </div>
-                        );
-                    })()}
+                                    {currentWord.example && (
+                                        <div style={contentItemStyle}>
+                                            <div style={labelStyle}>{t("example")}</div>
+                                            <div style={{ fontSize: "calc(0.9vw + 0.9vh)", color: isDark ? "#ccc" : "#666", fontStyle: "italic", lineHeight: "1.6", marginTop: "1vh", textAlign: "center", padding: "0 2vw" }}>
+                                                {currentWord.example}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            );
+                        })()}
+                    </div>
                 </div>
 
             {/* 按钮组 - 根据 showAnswer 状态显示不同按钮 */}
@@ -389,7 +611,9 @@ export default function FlashcardStudy({
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
-                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
+                                e.currentTarget.style.boxShadow = isDark
+                                    ? "0 0.4vh 1.2vh rgba(52, 199, 89, 0.5)"
+                                    : "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";
@@ -404,7 +628,9 @@ export default function FlashcardStudy({
                             onClick={handleShowAnswer}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
-                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
+                                e.currentTarget.style.boxShadow = isDark
+                                    ? "0 0.4vh 1.2vh rgba(10, 132, 255, 0.5)"
+                                    : "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";
@@ -422,7 +648,9 @@ export default function FlashcardStudy({
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
-                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
+                                e.currentTarget.style.boxShadow = isDark
+                                    ? "0 0.4vh 1.2vh rgba(52, 199, 89, 0.5)"
+                                    : "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";
@@ -437,7 +665,9 @@ export default function FlashcardStudy({
                             onClick={() => handleResult("wrong")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
-                                e.currentTarget.style.boxShadow = "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
+                                e.currentTarget.style.boxShadow = isDark
+                                    ? "0 0.4vh 1.2vh rgba(255, 59, 48, 0.5)"
+                                    : "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
                             }}
                             onMouseLeave={(e) => {
                                 e.currentTarget.style.transform = "translateY(0)";

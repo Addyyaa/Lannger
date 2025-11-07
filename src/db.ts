@@ -34,6 +34,20 @@ export interface WordSet {
 // 学习模式
 export type StudyMode = "flashcard" | "test" | "review";
 
+export interface FlashcardSessionState {
+  wordSetId?: number;
+  wordIds: number[];
+  currentIndex: number;
+  sessionStats: {
+    studiedCount: number;
+    correctCount: number;
+    wrongCount: number;
+  };
+  showAnswer: boolean;
+  currentWordId?: number;
+  savedAt: string;
+}
+
 // 用户设置（单行表，id 固定为 1）
 export interface UserSettings {
   id: number; // 固定为 1
@@ -43,6 +57,7 @@ export interface UserSettings {
   longestStreak: number;
   createdAt?: string;
   updatedAt?: string;
+  flashcardSessionState?: FlashcardSessionState | null;
 }
 
 // 每日统计（用于展示“今日已学习单词数”等，并支撑 Streak 计算）

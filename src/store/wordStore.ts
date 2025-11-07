@@ -1,5 +1,5 @@
 import dataVerify from "../utils/dataVerify";
-import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME } from "../db";
+import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME, FlashcardSessionState } from "../db";
 
 /**
  * 生成导入时的临时词集名称，避免硬编码常量
@@ -118,6 +118,129 @@ export async function getWordSet(id: number) {
 export async function getWord(id: number) {
   await ensureDBOpen();
   return await db.words.get(id);
+}
+
+async function ensureUserSettingsRecord() {
+  const now = new Date().toISOString();
+  let settings = await db.userSettings.get(1);
+  if (!settings) {
+    settings = {
+      id: 1,
+      currentMode: "flashcard",
+      dailyGoal: 20,
+      currentStreak: 0,
+      longestStreak: 0,
+      createdAt: now,
+      updatedAt: now,
+    };
+    await db.userSettings.put(settings);
+  }
+  return settings;
+}
+
+export async function saveFlashcardSessionState(
+  state: Omit<FlashcardSessionState, "savedAt"> & { savedAt?: string }
+): Promise<void> {
+  await ensureDBOpen();
+  const now = new Date().toISOString();
+  const settings = await ensureUserSettingsRecord();
+  const payload: FlashcardSessionState = {
+    ...state,
+    savedAt: state.savedAt ?? now,
+  };
+
+  await db.userSettings.put({
+    ...settings,
+    flashcardSessionState: payload,
+    updatedAt: now,
+  });
+}
+
+export async function getFlashcardSessionState(): Promise<FlashcardSessionState | null> {
+  await ensureDBOpen();
+  const settings = await db.userSettings.get(1);
+  if (!settings || !settings.flashcardSessionState) {
+    return null;
+  }
+
+  const state = settings.flashcardSessionState;
+  if (!Array.isArray(state.wordIds) || state.wordIds.length === 0) {
+    return null;
+  }
+
+  return state;
+}
+
+export async function clearFlashcardSessionState(): Promise<void> {
+  await ensureDBOpen();
+  const settings = await db.userSettings.get(1);
+  if (!settings || !settings.flashcardSessionState) {
+    return;
+  }
+
+  const now = new Date().toISOString();
+  const updatedSettings = {
+    ...settings,
+    flashcardSessionState: null,
+    updatedAt: now,
+  };
+
+  await db.userSettings.put(updatedSettings);
+}
+
+export async function resetWordProgress(wordSetId?: number): Promise<number> {
+  await ensureDBOpen();
+
+  const targetWords: Word[] = wordSetId !== undefined
+    ? await db.words.where("setId").equals(wordSetId).toArray()
+    : await db.words.toArray();
+
+  if (!Array.isArray(targetWords) || targetWords.length === 0) {
+    return 0;
+  }
+
+  let resetCount = 0;
+  await db.transaction("rw", db.wordProgress, db.words, async () => {
+    for (const word of targetWords) {
+      if (!word || typeof word.id !== "number") continue;
+
+      const now = new Date().toISOString();
+      const existingProgress = await db.wordProgress.get(word.id);
+
+      const baseProgress = existingProgress ?? {
+        wordId: word.id,
+        setId: typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
+        createdAt: now,
+      };
+
+      await db.wordProgress.put({
+        ...baseProgress,
+        wordId: word.id,
+        setId: typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
+        easeFactor: 2.5,
+        intervalDays: 0,
+        repetitions: 0,
+        difficulty: word.review?.difficulty,
+        timesSeen: 0,
+        timesCorrect: 0,
+        correctStreak: 0,
+        wrongStreak: 0,
+        lastResult: undefined,
+        lastMode: undefined,
+        lastReviewedAt: undefined,
+        nextReviewAt: undefined,
+        averageResponseTime: undefined,
+        lastResponseTime: undefined,
+        fastResponseCount: 0,
+        slowResponseCount: 0,
+        updatedAt: now,
+      });
+
+      resetCount += 1;
+    }
+  });
+
+  return resetCount;
 }
 
 // 按照普通字段查询
