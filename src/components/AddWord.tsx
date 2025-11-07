@@ -1,6 +1,6 @@
 import { useTheme } from "../main";
 import { useTranslation } from "react-i18next";
-import { useState, useEffect, useRef } from "react";
+import { useState, useRef } from "react";
 import { Form } from "antd";
 import TextArea from "antd/es/input/TextArea";
 import Submmit from "./Submmit";
@@ -18,20 +18,6 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     mark: "",
     difficultyCoefficient: "5",
   });
-
-  // 调试：在浏览器控制台输出按钮的实际样式
-  useEffect(() => {
-    if (buttonRef.current) {
-      const computedStyle = window.getComputedStyle(buttonRef.current);
-      console.log("提交按钮样式调试:", {
-        backgroundColor: computedStyle.backgroundColor,
-        width: computedStyle.width,
-        height: computedStyle.height,
-        display: computedStyle.display,
-        padding: computedStyle.padding,
-      });
-    }
-  }, []);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -54,7 +40,18 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
       return;
     }
 
-    await dbOperator.createWord(word).then(() => {
+    // 将 difficultyCoefficient 转换为 review.difficulty
+    const wordToSave = {
+      ...word,
+      review: {
+        times: 0,
+        difficulty: parseInt(word.difficultyCoefficient, 10),
+      },
+    };
+    // 删除 difficultyCoefficient，因为它不是 Word 接口的一部分
+    delete (wordToSave as any).difficultyCoefficient;
+
+    await dbOperator.createWord(wordToSave).then(() => {
       closePopup()
     }).catch(
       (error) => {
@@ -66,7 +63,9 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
   return (
     <div style={AddWordStyle}>
       <div style={FormContainer(isDark)}>
-        <button onClick={closePopup} style={CloseButtonStyle}>X</button>
+        <button onClick={closePopup} style={CloseButtonStyle} aria-label={t("close")}>
+          {t("close")}
+        </button>
         <Form style={FormStyle} data-testid="word-info-form">
           <fieldset style={{ ...fieldsetStyle, height: "65%" }} data-testid="word-info-must">
             <legend style={{ color: isDark ? "black" : "black", borderColor: "rgb(177, 169, 169)", padding: "1% 0 0 1.5%", boxSizing: "border-box" }}>{t('word')}</legend>

@@ -84,5 +84,16 @@
     "markPlaceholder": "Optional",
     "addWordFailed": "Word addition failed.",
     "isRequired": "is required",
-    "defaultWordSetMark": "All uncategorized words are in this set"
+    "defaultWordSetMark": "All uncategorized words are in this set",
+    "back": "Back",
+    "defaultWordSet": "Default",
+    "noExample": "No example",
+    "wordList": "Word List",
+    "wordListTitle": "Word List",
+    "wordListAllWords": "All Words",
+    "wordListWordSetId": "Word Set ID",
+    "noWords": "No words",
+    "difficulty": "Difficulty",
+    "fetchWordsError": "Failed to fetch word list",
+    "close": "Close"
 }

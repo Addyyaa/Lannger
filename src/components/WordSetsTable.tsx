@@ -9,6 +9,7 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import EditWordSets from "./EditWordSets";
 import { ManageContext } from "../pages/Manage";
 import { DEFAULT_WORD_SET_ID } from "../db";
+import { Link } from "react-router-dom";
 
 export default function WordSetsTable({
   wordSets,
@@ -251,7 +252,7 @@ export default function WordSetsTable({
 
         >
           <div style={{ ...baseCellStyle, justifyContent: "center", overflow: "hidden" }}>
-            {currentSet?.name ?? t("noName")}
+            <Link to={`/wordsList/${currentSet?.id}`}>{currentSet?.name ?? t("noName")}</Link>
           </div>
         </Tooltip>
         <Tooltip

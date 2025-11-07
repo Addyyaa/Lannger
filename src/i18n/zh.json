@@ -84,5 +84,16 @@
     "markPlaceholder": "备注（可选）",
     "addWordFailed": "单词添加失败：",
     "isRequired": "是必填项",
-    "defaultWordSetMark": "所有未分类的单词都在该集合中"
+    "defaultWordSetMark": "所有未分类的单词都在该集合中",
+    "back": "返回",
+    "defaultWordSet": "默认",
+    "noExample": "暂无例句",
+    "wordList": "单词列表",
+    "wordListTitle": "单词列表",
+    "wordListAllWords": "全部单词",
+    "wordListWordSetId": "单词集 ID",
+    "noWords": "暂无单词",
+    "difficulty": "难度系数",
+    "fetchWordsError": "获取单词列表失败",
+    "close": "关闭"
 }

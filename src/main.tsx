@@ -7,6 +7,7 @@ import './i18n/i18n'
 import Home from './pages/Home'
 import Study from './pages/Study'
 import Manage from './pages/Manage'
+import WordsList from './pages/wordsList'
 import Layout from './components/Layout'
 import { useTranslation } from 'react-i18next'
 import i18n from './i18n/i18n'
@@ -232,7 +233,8 @@ function createRoutes() {
             children: [
                 { index: true, element: <Home /> },
                 { path: 'study', element: <Study /> },
-                { path: 'manage', element: <Manage /> }
+                { path: 'manage', element: <Manage /> },
+                { path: 'wordsList/:id', element: <WordsList /> }
             ]
         }
     ]
