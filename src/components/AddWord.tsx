@@ -83,39 +83,39 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
   }
 
   return (
-    <div style={AddWordStyle}>
-      <div style={FormContainer(isDark)}>
+    <div data-test-id="div-test-2" style={AddWordStyle}>
+      <div data-test-id="div-test-1" style={FormContainer(isDark)}>
         <CloseButton
-          onClick={closePopup}
+          data-test-id="closebutton-test" onClick={closePopup}
           ariaLabel={t("close")}
           iconColor="#333333"
         />
-        <Form style={FormStyle} data-testid="word-info-form">
-          <fieldset style={{ ...fieldsetStyle, height: "65%" }} data-testid="word-info-must">
-            <legend style={{ color: isDark ? "black" : "black", borderColor: "rgb(177, 169, 169)", padding: "1% 0 0 1.5%", boxSizing: "border-box" }}>{t('word')}</legend>
-            <section style={sectionStyle}>
+        <Form data-test-id="form-test" style={FormStyle} data-testid="word-info-form">
+          <fieldset data-test-id="fieldset-test-1" style={{ ...fieldsetStyle, height: "65%" }} data-testid="word-info-must">
+            <legend data-test-id="legend-test" style={{ color: isDark ? "black" : "black", borderColor: "rgb(177, 169, 169)", padding: "1% 0 0 1.5%", boxSizing: "border-box" }}>{t('word')}</legend>
+            <section data-test-id="section-test-6" style={sectionStyle}>
 
-              <label style={labelStyle(isDark)}>{t('kana')} <span style={{ color: 'red' }}>*</span></label>
-              <input type="text" style={inputStyle} required value={word.kana} onChange={(e) => setWord({ ...word, kana: e.target.value })} />
+              <label data-test-id="label-test-6" style={labelStyle(isDark)}>{t('kana')} <span data-test-id="span-test-3" style={{ color: 'red' }}>*</span></label>
+              <input data-test-id="input-test-2" type="text" style={inputStyle} required value={word.kana} onChange={(e) => setWord({ ...word, kana: e.target.value })} />
             </section>
-            <section style={sectionStyle}>
-              <label style={labelStyle(isDark)}>{t('kanji')} <span style={{ color: 'red' }}>*</span></label>
-              <input type="text" style={inputStyle} required value={word.kanji} onChange={(e) => setWord({ ...word, kanji: e.target.value })} />
+            <section data-test-id="section-test-5" style={sectionStyle}>
+              <label data-test-id="label-test-5" style={labelStyle(isDark)}>{t('kanji')} <span data-test-id="span-test-2" style={{ color: 'red' }}>*</span></label>
+              <input data-test-id="input-test-1" type="text" style={inputStyle} required value={word.kanji} onChange={(e) => setWord({ ...word, kanji: e.target.value })} />
             </section>
-            <section style={sectionStyle}>
-              <label style={labelStyle(isDark)}>{t('meaning')} <span style={{ color: 'red' }}>*</span></label>
-              <input type="text" style={inputStyle} required value={word.meaning} onChange={(e) => setWord({ ...word, meaning: e.target.value })} />
+            <section data-test-id="section-test-4" style={sectionStyle}>
+              <label data-test-id="label-test-4" style={labelStyle(isDark)}>{t('meaning')} <span data-test-id="span-test-1" style={{ color: 'red' }}>*</span></label>
+              <input data-test-id="input-test" type="text" style={inputStyle} required value={word.meaning} onChange={(e) => setWord({ ...word, meaning: e.target.value })} />
             </section>
-            <section style={{ ...sectionStyle, height: "40%" }}>
-              <label style={labelStyle(isDark)}>{t('example')} <span style={{ color: 'red' }}>*</span>  </label>
-              <TextArea style={{ ...inputStyle, height: "100%" }} placeholder={t('examplePlaceholder')} required value={word.example} onChange={(e) => setWord({ ...word, example: e.target.value })} />
+            <section data-test-id="section-test-3" style={{ ...sectionStyle, height: "40%" }}>
+              <label data-test-id="label-test-3" style={labelStyle(isDark)}>{t('example')} <span data-test-id="span-test" style={{ color: 'red' }}>*</span>  </label>
+              <TextArea data-test-id="textarea-test-1" style={{ ...inputStyle, height: "100%" }} placeholder={t('examplePlaceholder')} required value={word.example} onChange={(e) => setWord({ ...word, example: e.target.value })} />
             </section>
           </fieldset>
-          <fieldset style={{ ...fieldsetStyle, height: "35%" }} data-testid="word-info-optional">
-            <section style={{ ...sectionStyle, height: "33%" }}>
-              <label style={labelStyle(isDark)}>{t('wordSet')}</label>
+          <fieldset data-test-id="fieldset-test" style={{ ...fieldsetStyle, height: "35%" }} data-testid="word-info-optional">
+            <section data-test-id="section-test-2" style={{ ...sectionStyle, height: "33%" }}>
+              <label data-test-id="label-test-2" style={labelStyle(isDark)}>{t('wordSet')}</label>
               <select
-                id="wordSet"
+                data-test-id="select-test-1" id="wordSet"
                 style={selectStyle}
                 value={word.setId !== undefined ? word.setId.toString() : DEFAULT_WORD_SET_ID.toString()}
                 onChange={(e) => {
@@ -124,29 +124,29 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 }}
               >
                 {wordSets.map((set) => (
-                  <option key={set.id} value={set.id.toString()}>
+                  <option data-test-id="option-test-5" key={set.id} value={set.id.toString()}>
                     {set.name}
                   </option>
                 ))}
               </select>
             </section>
-            <section style={{ ...sectionStyle, height: "33%" }}>
-              <label style={labelStyle(isDark)}>{t('mark')}</label>
-              <TextArea style={{ ...inputStyle, height: "100%" }} placeholder={t('markPlaceholder')} value={word.mark} onChange={(e) => setWord({ ...word, mark: e.target.value })} />
+            <section data-test-id="section-test-1" style={{ ...sectionStyle, height: "33%" }}>
+              <label data-test-id="label-test-1" style={labelStyle(isDark)}>{t('mark')}</label>
+              <TextArea data-test-id="textarea-test" style={{ ...inputStyle, height: "100%" }} placeholder={t('markPlaceholder')} value={word.mark} onChange={(e) => setWord({ ...word, mark: e.target.value })} />
             </section>
-            <section style={{ ...sectionStyle, height: "34%" }}>
-              <label style={labelStyle(isDark)}>{t('difficultyCoefficient')}</label>
-              <select id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => setWord({ ...word, difficultyCoefficient: e.target.value })}>
-                <option value="1">{t('n1')}</option>
-                <option value="2">{t('n2')}</option>
-                <option value="3">{t('n3')}</option>
-                <option value="4">{t('n4')}</option>
-                <option value="5">{t('n5')}</option>
+            <section data-test-id="section-test" style={{ ...sectionStyle, height: "34%" }}>
+              <label data-test-id="label-test" style={labelStyle(isDark)}>{t('difficultyCoefficient')}</label>
+              <select data-test-id="select-test" id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => setWord({ ...word, difficultyCoefficient: e.target.value })}>
+                <option data-test-id="option-test-4" value="1">{t('n1')}</option>
+                <option data-test-id="option-test-3" value="2">{t('n2')}</option>
+                <option data-test-id="option-test-2" value="3">{t('n3')}</option>
+                <option data-test-id="option-test-1" value="4">{t('n4')}</option>
+                <option data-test-id="option-test" value="5">{t('n5')}</option>
               </select>
             </section>
           </fieldset>
           <div
-            ref={buttonRef}
+            data-test-id="div-test" ref={buttonRef}
             style={submitButtonStyle}
             onClick={handleSubmit}
             onMouseEnter={() => setIsHovered(true)}
@@ -160,7 +160,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
               }
             }}
           >
-            <Submmit {...{
+            <Submmit data-test-id="submmit-test" {...{
               width: "80%",
               height: "80%",
               filter: isHovered
@@ -260,6 +260,7 @@ const selectStyle: React.CSSProperties = {
   height: "60%",
   borderRadius: "0.4vw",
   marginRight: "10%",
+  padding: "0 0 0 1%",
   border: "1px solid #e0e0e0",
   outline: "none",
   fontSize: "1.2vw",
