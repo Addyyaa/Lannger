@@ -1,5 +1,6 @@
 import { useTranslation } from "react-i18next";
 import { useTheme } from "../main";
+import CloseButton from "./CloseButton";
 interface ConfirmWidgetProps {
     title: string;
     message: React.ReactNode;
@@ -46,7 +47,17 @@ export default function ConfirmWidget({ title, message, confirmText, cancelText,
     return (
         <div style={Container}>
             <div style={{ ...confirmWidgetStyle(isDark), ...containerStyle }} data-testid="confirm-widget">
-                {showCloseButton && <button style={closeButtonStyleInner(isDark)} onClick={close}>X</button>}
+                {showCloseButton && close && (
+                    <CloseButton
+                        onClick={close}
+                        ariaLabel={t("close")}
+                        iconColor="#333333"
+                        size={40}
+                        position="absolute"
+                        top="2%"
+                        right="2%"
+                    />
+                )}
                 <h1 style={{ ...titleStyleInner(isDark), ...titleStyle }} data-testid="confirm-widget-title">{title}</h1>
                 <p style={{ ...messageStyleInner, ...messageStyle }} data-testid="confirm-widget-message">{message}</p>
                 <button
@@ -178,14 +189,3 @@ const Container: React.CSSProperties = {
     alignItems: "center",
     zIndex: 9999,
 };
-
-const closeButtonStyleInner = (isDark: boolean): React.CSSProperties => ({
-    position: "absolute",
-    display: "flex",
-    top: '2%',
-    right: "2%",
-    width: "auto",
-    height: "auto",
-    backgroundColor: "transparent",
-    color: isDark ? "#ffffff" : "#000000",
-});

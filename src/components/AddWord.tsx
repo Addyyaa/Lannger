@@ -8,20 +8,60 @@ import CloseButton from "./CloseButton";
 import * as dbOperator from "../store/wordStore";
 import { WordSet } from "../db";
 import { DEFAULT_WORD_SET_ID } from "../db";
+
+// localStorage 键名
+const STORAGE_KEY_LAST_SET_ID = "lannger_last_word_set_id";
+const STORAGE_KEY_LAST_DIFFICULTY = "lannger_last_difficulty_coefficient";
+
+// 从 localStorage 读取上次的选择
+function loadLastSelections() {
+  try {
+    const lastSetId = localStorage.getItem(STORAGE_KEY_LAST_SET_ID);
+    const lastDifficulty = localStorage.getItem(STORAGE_KEY_LAST_DIFFICULTY);
+    
+    return {
+      setId: lastSetId ? parseInt(lastSetId, 10) : undefined,
+      difficultyCoefficient: lastDifficulty || "5",
+    };
+  } catch (error) {
+    console.error("读取上次选择失败:", error);
+    return {
+      setId: undefined,
+      difficultyCoefficient: "5",
+    };
+  }
+}
+
+// 保存选择到 localStorage
+function saveSelections(setId: number | undefined, difficultyCoefficient: string) {
+  try {
+    if (setId !== undefined) {
+      localStorage.setItem(STORAGE_KEY_LAST_SET_ID, setId.toString());
+    }
+    localStorage.setItem(STORAGE_KEY_LAST_DIFFICULTY, difficultyCoefficient);
+  } catch (error) {
+    console.error("保存选择失败:", error);
+  }
+}
+
 export default function AddWord({ closePopup }: { closePopup: () => void }) {
   const { isDark } = useTheme();
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
+  const kanaInputRef = useRef<HTMLInputElement>(null);
   const [wordSets, setWordSets] = useState<WordSet[]>([]);
+  
+  // 从 localStorage 加载上次的选择
+  const lastSelections = loadLastSelections();
   const [word, setWord] = useState({
     kana: "",
     kanji: "",
     meaning: "",
     example: "",
     mark: "",
-    difficultyCoefficient: "5",
-    setId: undefined as number | undefined,
+    difficultyCoefficient: lastSelections.difficultyCoefficient,
+    setId: lastSelections.setId,
   });
 
   // 获取所有单词集
@@ -30,6 +70,22 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
       try {
         const sets = await dbOperator.getAllWordSets();
         setWordSets(sets);
+        
+        // 验证当前选择的 setId 是否仍然有效
+        setWord(prev => {
+          if (prev.setId !== undefined) {
+            const isValidSetId = sets.some(set => set.id === prev.setId);
+            if (!isValidSetId) {
+              // 如果选择的词集不存在，清除无效的 localStorage 值
+              localStorage.removeItem(STORAGE_KEY_LAST_SET_ID);
+              return {
+                ...prev,
+                setId: undefined,
+              };
+            }
+          }
+          return prev;
+        });
       } catch (error) {
         console.error(t("fetchWordSetsError"), error);
       }
@@ -74,7 +130,30 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     delete (wordToSave as any).difficultyCoefficient;
 
     await dbOperator.createWord(wordToSave).then(() => {
-      closePopup()
+      // 显示成功提示
+      alert(t('addWordSuccess'));
+      
+      // 重置表单，保留单词集和难度系数设置，方便继续添加
+      // 这些值已经保存在 localStorage 中，下次打开会自动恢复
+      setWord({
+        kana: "",
+        kanji: "",
+        meaning: "",
+        example: "",
+        mark: "",
+        difficultyCoefficient: word.difficultyCoefficient, // 保留难度系数
+        setId: word.setId, // 保留单词集选择
+      });
+      
+      // 确保选择已保存到 localStorage
+      saveSelections(word.setId, word.difficultyCoefficient);
+      
+      // 将焦点设置到第一个输入框（kana），方便继续输入
+      setTimeout(() => {
+        if (kanaInputRef.current) {
+          kanaInputRef.current.focus();
+        }
+      }, 100);
     }).catch(
       (error) => {
         alert(t('addWordFailed') + `\t${error}`)
@@ -96,7 +175,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             <section data-test-id="section-test-6" style={sectionStyle}>
 
               <label data-test-id="label-test-6" style={labelStyle(isDark)}>{t('kana')} <span data-test-id="span-test-3" style={{ color: 'red' }}>*</span></label>
-              <input data-test-id="input-test-2" type="text" style={inputStyle} required value={word.kana} onChange={(e) => setWord({ ...word, kana: e.target.value })} />
+              <input ref={kanaInputRef} data-test-id="input-test-2" type="text" style={inputStyle} required value={word.kana} onChange={(e) => setWord({ ...word, kana: e.target.value })} />
             </section>
             <section data-test-id="section-test-5" style={sectionStyle}>
               <label data-test-id="label-test-5" style={labelStyle(isDark)}>{t('kanji')} <span data-test-id="span-test-2" style={{ color: 'red' }}>*</span></label>
@@ -121,6 +200,8 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 onChange={(e) => {
                   const setId = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
                   setWord({ ...word, setId });
+                  // 保存选择到 localStorage
+                  saveSelections(setId, word.difficultyCoefficient);
                 }}
               >
                 {wordSets.map((set) => (
@@ -136,7 +217,12 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             </section>
             <section data-test-id="section-test" style={{ ...sectionStyle, height: "34%" }}>
               <label data-test-id="label-test" style={labelStyle(isDark)}>{t('difficultyCoefficient')}</label>
-              <select data-test-id="select-test" id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => setWord({ ...word, difficultyCoefficient: e.target.value })}>
+              <select data-test-id="select-test" id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => {
+                const difficultyCoefficient = e.target.value;
+                setWord({ ...word, difficultyCoefficient });
+                // 保存选择到 localStorage
+                saveSelections(word.setId, difficultyCoefficient);
+              }}>
                 <option data-test-id="option-test-4" value="1">{t('n1')}</option>
                 <option data-test-id="option-test-3" value="2">{t('n2')}</option>
                 <option data-test-id="option-test-2" value="3">{t('n3')}</option>

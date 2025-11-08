@@ -339,12 +339,12 @@ export default function FlashcardStudy({
         ...cardFaceBaseStyle,
         display: "flex",
         flexDirection: "column",
-        padding: 0,
-        overflowY: "hidden",
+        overflow: "hidden",
         cursor: "default",
-        justifyContent: "center",
         alignItems: "center",
-        height: "85%",
+        height: "100%",
+        width: "100%",
+        justifyContent: "flex-start",
         top: 0,
         transform: "rotateY(180deg)",
     };
@@ -372,12 +372,12 @@ export default function FlashcardStudy({
         display: "flex",
         position: "absolute",
         width: "100%",
-        height: "15%",
+        height: "auto",
         bottom: 0,
         gap: "2vw",
         justifyContent: "center",
         alignItems: "center",
-        padding: "0 5%",
+        padding: "0 0 1% 0",
         zIndex: 20,
         boxSizing: "border-box",
     };
@@ -523,75 +523,112 @@ export default function FlashcardStudy({
     }
 
     return (
-        <div style={outerContainerStyle} data-testid="FlashcardStudy-0">
-            <div style={{ position: "absolute", top: "2vh", right: "2vw", zIndex: 10 }} data-testid="FlashcardStudy-1">
-                <CloseButton onClick={closePopup} iconColor={isDark ? "#fff" : "#333"} />
+        <div data-test-id="div-test-21" style={outerContainerStyle} data-testid="FlashcardStudy-0">
+            <div data-test-id="div-test-20" style={{ position: "absolute", top: "2vh", right: "2vw", zIndex: 10 }} data-testid="FlashcardStudy-1">
+                <CloseButton data-test-id="closebutton-test" onClick={closePopup} iconColor={isDark ? "#fff" : "#333"} />
             </div>
-            <div style={{ position: "absolute", top: "2vh", left: "2vw", zIndex: 10, ...progressStyle }} data-testid="FlashcardStudy-2">
+            <div data-test-id="div-test-19" style={{ position: "absolute", top: "2vh", left: "2vw", zIndex: 10, ...progressStyle }} data-testid="FlashcardStudy-2">
                 {currentIndex + 1} / {wordIds.length}
             </div>
                 {/* 卡片容器包装 */}
-                <div style={cardWrapperStyle}>
+                <div data-test-id="div-test-18" style={cardWrapperStyle}>
                     {/* 3D卡片容器 */}
-                    <div style={card3DContainerStyle}>
+                    <div data-test-id="div-test-17" style={card3DContainerStyle}>
                         {/* 卡片正面（问题面） */}
                         <div
-                            style={cardFaceStyle}
+                            data-test-id="div-test-16" style={cardFaceStyle}
                             data-testid="FlashcardStudy-5"
                         >
-                            <div style={wordTextStyle} data-testid="FlashcardStudy-6">
+                            <div data-test-id="div-test-15" style={wordTextStyle} data-testid="FlashcardStudy-6">
                                 {currentWord.kanji || currentWord.kana}
                             </div>
                         </div>
 
                         {/* 卡片背面（答案面） */}
                         {(() => {
-                            // 计算内容项数量
-                            const contentItems = [
-                                currentWord.kanji && "kanji",
-                                "kana",
-                                "meaning",
-                                currentWord.example && "example"
-                            ].filter(Boolean);
-                            const itemCount = contentItems.length;
-                            const itemHeight = `${85 / itemCount}%`;
-                            
-                            const contentItemStyle: React.CSSProperties = {
-                                height: itemHeight,
+                            // 固定高度的内容项样式（用于 kanji、kana、meaning）
+                            const fixedContentItemStyle: React.CSSProperties = {
                                 width: "100%",
                                 display: "flex",
                                 flexDirection: "column",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 boxSizing: "border-box",
+                                flexShrink: 0,
+                                minHeight: "fit-content",
+                                padding: "1vh 0",
+                            };
+
+                            // 可滚动的例句容器样式
+                            const exampleContainerStyle: React.CSSProperties = {
+                                width: "100%",
+                                flex: 0.73,
+                                display: "flex",
+                                flexDirection: "column",
+                                alignItems: "center",
+                                justifyContent: "flex-start",
+                                boxSizing: "border-box",
+                                overflowY: "auto",
+                                overflowX: "hidden",
+                                minHeight: 0,
+                                padding: "1vh 0",
+                                // 自定义滚动条样式
+                                scrollbarWidth: "thin",
+                                scrollbarColor: isDark ? "rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1)",
+                            };
+
+                            // 例句内容样式
+                            const exampleContentStyle: React.CSSProperties = {
+                                fontSize: "calc(0.6vw + 0.6vh)",
+                                color: isDark ? "#ccc" : "#666",
+                                fontStyle: "italic",
+                                lineHeight: "1.8",
+                                textAlign: "center",
+                                padding: "0 2vw",
+                                width: "100%",
+                                boxSizing: "border-box",
+                                whiteSpace: "pre-line", // 保留换行符，自动换行
                             };
 
                             return (
-                                <div style={cardBackStyle} data-testid="FlashcardStudy-answer">
-                                    {currentWord.kanji && (
-                                        <div style={contentItemStyle}>
-                                            <div style={labelStyle}>{t("kanji")}</div>
-                                            <div style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
-                                                {currentWord.kanji}
+                                <div data-test-id="div-test-14" style={cardBackStyle} data-testid="FlashcardStudy-answer">
+                                    {/* 固定内容区域 */}
+                                    <div data-test-id="div-test-13" style={{
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        width: "100%",
+                                        flexShrink: 0,
+                                    }}>
+                                        {currentWord.kanji && (
+                                            <div data-test-id="div-test-12" style={fixedContentItemStyle}>
+                                                <div data-test-id="div-test-11" style={labelStyle}>{t("kanji")}</div>
+                                                <div data-test-id="div-test-10" style={{ fontSize: "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: "1vh" }}>
+                                                    {currentWord.kanji}
+                                                </div>
+                                            </div>
+                                        )}
+                                        <div data-test-id="div-test-9" style={fixedContentItemStyle}>
+                                            <div data-test-id="div-test-8" style={labelStyle}>{t("kana")}</div>
+                                            <div data-test-id="div-test-7" style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
+                                                {currentWord.kana}
                                             </div>
                                         </div>
-                                    )}
-                                    <div style={contentItemStyle}>
-                                        <div style={labelStyle}>{t("kana")}</div>
-                                        <div style={{ fontSize: "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: "1vh" }}>
-                                            {currentWord.kana}
+                                        <div data-test-id="div-test-6" style={fixedContentItemStyle}>
+                                            <div data-test-id="div-test-5" style={labelStyle}>{t("meaning")}</div>
+                                            <div data-test-id="div-test-4" style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6", textAlign: "center", padding: "0 2vw" }}>
+                                                {currentWord.meaning}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div style={contentItemStyle}>
-                                        <div style={labelStyle}>{t("meaning")}</div>
-                                        <div style={{ fontSize: "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: "1vh", lineHeight: "1.6", textAlign: "center", padding: "0 2vw" }}>
-                                            {currentWord.meaning}
-                                        </div>
-                                    </div>
+                                    <div data-test-id="div-test-2" style={labelStyle}>{t("example")}</div>
+                                    {/* 可滚动的例句区域 */}
                                     {currentWord.example && (
-                                        <div style={contentItemStyle}>
-                                            <div style={labelStyle}>{t("example")}</div>
-                                            <div style={{ fontSize: "calc(0.9vw + 0.9vh)", color: isDark ? "#ccc" : "#666", fontStyle: "italic", lineHeight: "1.6", marginTop: "1vh", textAlign: "center", padding: "0 2vw" }}>
+                                        <div 
+                                            data-test-id="div-test-3" style={exampleContainerStyle}
+                                            className="example-scroll-container"
+                                        >
+                                            
+                                            <div data-test-id="div-test-1" style={exampleContentStyle}>
                                                 {currentWord.example}
                                             </div>
                                         </div>
@@ -603,11 +640,11 @@ export default function FlashcardStudy({
                 </div>
 
             {/* 按钮组 - 根据 showAnswer 状态显示不同按钮 */}
-            <div style={buttonGroupStyle} data-testid="FlashcardStudy-buttonGroup">
+            <div data-test-id="div-test" style={buttonGroupStyle} data-testid="FlashcardStudy-buttonGroup">
                 {!showAnswer ? (
                     <>
                         <button
-                            style={learnedButtonStyle}
+                            data-test-id="button-test-4" style={learnedButtonStyle}
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -624,7 +661,7 @@ export default function FlashcardStudy({
                             {t("learned")}
                         </button>
                         <button
-                            style={showAnswerButtonStyle}
+                            data-test-id="button-test-3" style={showAnswerButtonStyle}
                             onClick={handleShowAnswer}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -644,7 +681,7 @@ export default function FlashcardStudy({
                 ) : (
                     <>
                         <button
-                            style={correctButtonStyle}
+                            data-test-id="button-test-2" style={correctButtonStyle}
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -661,7 +698,7 @@ export default function FlashcardStudy({
                             {t("correct")}
                         </button>
                         <button
-                            style={wrongButtonStyle}
+                            data-test-id="button-test-1" style={wrongButtonStyle}
                             onClick={() => handleResult("wrong")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -678,7 +715,7 @@ export default function FlashcardStudy({
                             {t("wrong")}
                         </button>
                         <button
-                            style={skipButtonStyle}
+                            data-test-id="button-test" style={skipButtonStyle}
                             onClick={() => handleResult("skip")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";

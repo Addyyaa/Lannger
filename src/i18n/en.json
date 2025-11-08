@@ -85,6 +85,7 @@
     "examplePlaceholder": "Please enter the example",
     "markPlaceholder": "Optional",
     "addWordFailed": "Word addition failed.",
+    "addWordSuccess": "Word added successfully!",
     "isRequired": "is required",
     "defaultWordSetMark": "All uncategorized words are in this set",
     "back": "Back",
