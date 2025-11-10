@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import { db, StudyMode, UserSettings, DailyStat, ensureDBOpen } from "../db";
 import ComponentAsModel from "../utils/componentAsModel";
 import WordSetSelector from "../components/WordSetSelector";
@@ -9,6 +9,7 @@ import FlashcardStudy from "../components/FlashcardStudy";
 export default function Study() {
     const { t } = useTranslation();
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
     const [studyStats, setStudyStats] = useState({
         totalWords: 0,
         studiedToday: 0,
@@ -184,74 +185,74 @@ export default function Study() {
 
     const containerStyle: React.CSSProperties = {
         width: "100%",
-        maxWidth: "1200px",
+        maxWidth: isPortrait ? "100%" : "75vw",
         margin: "0 auto",
-        padding: "20px",
+        padding: isPortrait ? "3vw" : "1.25vw",
     };
 
     const cardStyle: React.CSSProperties = {
         background: isDark
             ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
             : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-        borderRadius: "12px",
-        padding: "24px",
-        marginBottom: "20px",
+        borderRadius: isPortrait ? "2vw" : "0.75vw",
+        padding: isPortrait ? "4vw" : "1.5vw",
+        marginBottom: isPortrait ? "3vw" : "1.25vw",
         boxShadow: isDark
-            ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-            : "0 4px 20px rgba(0, 0, 0, 0.1)",
-        border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+            ? isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.3)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+            : isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.1)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+        border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
     };
 
     const titleStyle: React.CSSProperties = {
-        fontSize: "28px",
+        fontSize: isPortrait ? "5.5vw" : "1.75vw",
         fontWeight: "bold",
         color: "#00b4ff",
-        marginBottom: "30px",
+        marginBottom: isPortrait ? "5vw" : "1.875vw",
         textAlign: "center",
     };
 
     const statsGridStyle: React.CSSProperties = {
         display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: "20px",
-        marginBottom: "30px",
+        gridTemplateColumns: isPortrait ? "repeat(2, 1fr)" : "repeat(auto-fit, minmax(12.5vw, 1fr))",
+        gap: isPortrait ? "3vw" : "1.25vw",
+        marginBottom: isPortrait ? "5vw" : "1.875vw",
     };
 
     const statItemStyle: React.CSSProperties = {
         textAlign: "center",
-        padding: "20px",
+        padding: isPortrait ? "3vw" : "1.25vw",
         background: isDark ? "rgba(0, 180, 255, 0.1)" : "rgba(0, 180, 255, 0.05)",
-        borderRadius: "8px",
-        border: "1px solid rgba(0, 180, 255, 0.2)",
+        borderRadius: isPortrait ? "1.5vw" : "0.5vw",
+        border: `${isPortrait ? "0.3vw" : "0.06vw"} solid rgba(0, 180, 255, 0.2)`,
     };
 
     const statNumberStyle: React.CSSProperties = {
-        fontSize: "36px",
+        fontSize: isPortrait ? "6vw" : "2.25vw",
         fontWeight: "bold",
         color: "#00b4ff",
-        marginBottom: "8px",
+        marginBottom: isPortrait ? "1.5vw" : "0.5vw",
     };
 
     const statLabelStyle: React.CSSProperties = {
-        fontSize: "14px",
+        fontSize: isPortrait ? "3vw" : "0.875vw",
         color: isDark ? "#ccc" : "#666",
         textTransform: "uppercase",
-        letterSpacing: "0.5px",
+        letterSpacing: isPortrait ? "0.125vw" : "0.03vw",
     };
 
     const progressBarStyle: React.CSSProperties = {
         width: "100%",
-        height: "8px",
+        height: isPortrait ? "2vw" : "0.5vw",
         background: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
-        borderRadius: "4px",
+        borderRadius: isPortrait ? "1vw" : "0.25vw",
         overflow: "hidden",
-        marginTop: "8px",
+        marginTop: isPortrait ? "2vw" : "0.5vw",
     };
 
     const progressFillStyle: React.CSSProperties = {
         height: "100%",
         background: "linear-gradient(90deg, #00b4ff 0%, #0096d4 100%)",
-        borderRadius: "4px",
+        borderRadius: isPortrait ? "1vw" : "0.25vw",
         transition: "width 0.3s ease",
         width: `${studyStats.goalProgress}%`,
     };
@@ -259,48 +260,56 @@ export default function Study() {
 
     return (
         <>
-            <div style={containerStyle}>
-                <h1 style={titleStyle}>{t("study")}</h1>
+            <div data-test-id="div-test-20" style={containerStyle}>
+                <h1 data-test-id="h1-test" style={titleStyle}>{t("study")}</h1>
 
-                <div style={cardStyle}>
-                    <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
+                <div data-test-id="div-test-19" style={cardStyle}>
+                    <h2 data-test-id="h2-test-1" style={{
+                        marginBottom: isPortrait ? "4vw" : "1.25vw",
+                        fontSize: isPortrait ? "4.5vw" : "1.25vw",
+                        color: isDark ? "#fff" : "#333"
+                    }}>
                         {t("studyStats")}
                     </h2>
-                    <div style={statsGridStyle}>
-                        <div style={statItemStyle}>
-                            <div style={statNumberStyle}>{studyStats.totalWords}</div>
-                            <div style={statLabelStyle}>{t("totalWords")}</div>
+                    <div data-test-id="div-test-18" style={statsGridStyle}>
+                        <div data-test-id="div-test-17" style={statItemStyle}>
+                            <div data-test-id="div-test-16" style={statNumberStyle}>{studyStats.totalWords}</div>
+                            <div data-test-id="div-test-15" style={statLabelStyle}>{t("totalWords")}</div>
                         </div>
-                        <div style={statItemStyle}>
-                            <div style={statNumberStyle}>{studyStats.studiedToday}</div>
-                            <div style={statLabelStyle}>{t("studiedToday")}</div>
+                        <div data-test-id="div-test-14" style={statItemStyle}>
+                            <div data-test-id="div-test-13" style={statNumberStyle}>{studyStats.studiedToday}</div>
+                            <div data-test-id="div-test-12" style={statLabelStyle}>{t("studiedToday")}</div>
                         </div>
-                        <div style={statItemStyle}>
-                            <div style={statNumberStyle}>{studyStats.currentStreak}</div>
-                            <div style={statLabelStyle}>{t("currentStreak")}</div>
+                        <div data-test-id="div-test-11" style={statItemStyle}>
+                            <div data-test-id="div-test-10" style={statNumberStyle}>{studyStats.currentStreak}</div>
+                            <div data-test-id="div-test-9" style={statLabelStyle}>{t("currentStreak")}</div>
                         </div>
-                        <div style={statItemStyle}>
-                            <div style={statNumberStyle}>
+                        <div data-test-id="div-test-8" style={statItemStyle}>
+                            <div data-test-id="div-test-7" style={statNumberStyle}>
                                 {studyStats.studiedToday} / {studyStats.dailyGoal}
                             </div>
-                            <div style={statLabelStyle}>{t("dailyGoalProgress")}</div>
-                            <div style={progressBarStyle}>
-                                <div style={progressFillStyle}></div>
+                            <div data-test-id="div-test-6" style={statLabelStyle}>{t("dailyGoalProgress")}</div>
+                            <div data-test-id="div-test-5" style={progressBarStyle}>
+                                <div data-test-id="div-test-4" style={progressFillStyle}></div>
                             </div>
                         </div>
                     </div>
                 </div>
 
 
-                <div style={cardStyle}>
-                    <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
+                <div data-test-id="div-test-3" style={cardStyle}>
+                    <h2 data-test-id="h2-test" style={{
+                        marginBottom: isPortrait ? "4vw" : "1.25vw",
+                        fontSize: isPortrait ? "4.5vw" : "1.25vw",
+                        color: isDark ? "#fff" : "#333"
+                    }}>
                         {t("studyModes")}
                     </h2>
                     <div
-                        style={{
+                        data-test-id="div-test-2" style={{
                             display: "grid",
-                            gridTemplateColumns: "repeat(auto-fit, minmax(250px, 1fr))",
-                            gap: "16px",
+                            gridTemplateColumns: isPortrait ? "1fr" : "repeat(auto-fit, minmax(15.625vw, 1fr))",
+                            gap: isPortrait ? "3vw" : "1vw",
                         }}
                     >
                         {[
@@ -309,46 +318,50 @@ export default function Study() {
                             { mode: "review" as StudyMode, title: t("reviewMode"), desc: t("reviewDesc"), icon: "🔄" },
                         ].map((modeItem) => (
                             <div
-                                key={modeItem.mode}
+                                data-test-id="div-test-1" key={modeItem.mode}
                                 style={{
-                                    padding: "20px",
+                                    padding: isPortrait ? "4vw" : "1.25vw",
                                     background: isDark
                                         ? "rgba(255, 255, 255, 0.05)"
                                         : "rgba(0, 0, 0, 0.02)",
-                                    borderRadius: "8px",
-                                    border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+                                    borderRadius: isPortrait ? "1.5vw" : "0.5vw",
+                                    border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #555` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
                                     cursor: "pointer",
                                     transition: "all 0.3s ease",
                                 }}
                                 onClick={() => handleSelectMode(modeItem.mode)}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.transform = "translateY(-4px)";
-                                    e.currentTarget.style.boxShadow = isDark
-                                        ? "0 8px 24px rgba(0, 0, 0, 0.5)"
-                                        : "0 8px 24px rgba(0, 180, 255, 0.2)";
-                                    e.currentTarget.style.borderColor = "#00b4ff";
+                                    if (!isPortrait) {
+                                        e.currentTarget.style.transform = "translateY(-0.25vw)";
+                                        e.currentTarget.style.boxShadow = isDark
+                                            ? "0 0.5vw 1.5vw rgba(0, 0, 0, 0.5)"
+                                            : "0 0.5vw 1.5vw rgba(0, 180, 255, 0.2)";
+                                        e.currentTarget.style.borderColor = "#00b4ff";
+                                    }
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.transform = "translateY(0)";
-                                    e.currentTarget.style.boxShadow = "none";
-                                    e.currentTarget.style.borderColor = isDark ? "#555" : "#e0e0e0";
+                                    if (!isPortrait) {
+                                        e.currentTarget.style.transform = "translateY(0)";
+                                        e.currentTarget.style.boxShadow = "none";
+                                        e.currentTarget.style.borderColor = isDark ? "#555" : "#e0e0e0";
+                                    }
                                 }}
                             >
-                                <div style={{ fontSize: "24px", marginBottom: "8px" }}>{modeItem.icon}</div>
+                                <div data-test-id="div-test" style={{ fontSize: isPortrait ? "5vw" : "1.5vw", marginBottom: isPortrait ? "1.5vw" : "0.5vw" }}>{modeItem.icon}</div>
                                 <h3
-                                    style={{
-                                        margin: "0 0 8px 0",
+                                    data-test-id="h3-test" style={{
+                                        margin: `0 0 ${isPortrait ? "2vw" : "0.5vw"} 0`,
                                         color: isDark ? "#fff" : "#333",
-                                        fontSize: "16px",
+                                        fontSize: isPortrait ? "3.75vw" : "1vw",
                                     }}
                                 >
                                     {modeItem.title}
                                 </h3>
                                 <p
-                                    style={{
+                                    data-test-id="p-test" style={{
                                         margin: 0,
                                         color: isDark ? "#ccc" : "#666",
-                                        fontSize: "14px",
+                                        fontSize: isPortrait ? "3.25vw" : "0.875vw",
                                     }}
                                 >
                                     {modeItem.desc}
@@ -362,7 +375,7 @@ export default function Study() {
             {showWordSetSelector &&
                 ComponentAsModel(
                     <WordSetSelector
-                        closePopup={() => setShowWordSetSelector(false)}
+                        data-test-id="wordsetselector-test" closePopup={() => setShowWordSetSelector(false)}
                         onSelectWordSet={handleSelectWordSet}
                     />
                 )}
@@ -370,7 +383,7 @@ export default function Study() {
             {showFlashcardStudy &&
                 ComponentAsModel(
                     <FlashcardStudy
-                        closePopup={() => {
+                        data-test-id="flashcardstudy-test" closePopup={() => {
                             setShowFlashcardStudy(false);
                             setSelectedMode(null);
                             setSelectedWordSetId(undefined);

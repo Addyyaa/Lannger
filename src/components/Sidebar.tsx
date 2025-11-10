@@ -73,7 +73,7 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
         display: 'flex',
         width: 'auto',
         alignItems: 'center',
-        padding: isCollapsed ? '0.4vw 0' : '0.4vw 0.5vw',
+        padding: isCollapsed ? '16% 0' : '16% 1%',
         textDecoration: 'none',
         color: isDark ? '#fff' : '#333',
         background: isActive
@@ -102,17 +102,17 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
     }
 
     return (
-        <div style={sidebarStyle}>
+        <div data-test-id="div-test-1" style={sidebarStyle}>
             <button
-                onClick={onToggle}
+                data-test-id="button-test" onClick={onToggle}
                 style={toggleButtonStyle}
                 aria-label={t('toggleSidebar')}
             >
                 {isCollapsed ? '→' : '←'}
             </button>
 
-            <div style={logoStyle}>
-                <h2 data-testid="sidebar-logo" style={{
+            <div data-test-id="div-test" style={logoStyle}>
+                <h2 data-test-id="h2-test" data-testid="sidebar-logo" style={{
                     margin: 0,
                     padding: 0,
                     fontSize: isCollapsed ? '0' : 'clamp(18px, 1vw, 1vw)',
@@ -123,17 +123,17 @@ export default function Sidebar({ isCollapsed = false, onToggle }: SidebarProps)
                 </h2>
             </div>
 
-            <nav style={{ flex: 1 }}>
+            <nav data-test-id="nav-test" style={{ flex: 1 }}>
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path
                     return (
                         <Link
-                            key={item.path}
+                            data-test-id="link-test" key={item.path}
                             to={item.path}
                             style={menuItemStyle(isActive)}
                         >
-                            <span style={iconStyle} data-testid="sidebar-icon">{item.icon}</span>
-                            <span style={labelStyle} data-testid="sidebar-label">{item.label}</span>
+                            <span data-test-id="span-test-1" style={iconStyle} data-testid="sidebar-icon">{item.icon}</span>
+                            <span data-test-id="span-test" style={labelStyle} data-testid="sidebar-label">{item.label}</span>
                         </Link>
                     )
                 })}

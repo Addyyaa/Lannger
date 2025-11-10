@@ -46,9 +46,9 @@ export default function EditWordSets({
         dispatch({ type: "CLOSE_EDIT_WORD_SET", payload: {} });
     }
     return (
-        <div style={{ position: "absolute", width: "100%", top: "0", left: "0", height: "100%", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div data-test-id="div-test-3" style={{ position: "absolute", width: "100%", top: "0", left: "0", height: "100%", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center" }}>
             <div
-                style={{
+                data-test-id="div-test-2" style={{
                     ...AddWordSetsStyle,
                     backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
                     boxShadow: isDark ? "0 4px 20px rgba(0, 0, 0, 0.3)" : "0 4px 20px rgba(0, 0, 0, 0.1)",
@@ -56,24 +56,24 @@ export default function EditWordSets({
                 }}
             >
                 <label
-                    style={{ ...AddWordSetTitleStyle, color: isDark ? "#eee" : "#333" }}
+                    data-test-id="label-test-2" style={{ ...AddWordSetTitleStyle, color: isDark ? "#eee" : "#333" }}
                 >
                     {t("editWordSet")}
                 </label>
                 <button
-                    onClick={() => dispatch({ type: "CLOSE_EDIT_WORD_SET", payload: {} })}
+                    data-test-id="button-test-1" onClick={() => dispatch({ type: "CLOSE_EDIT_WORD_SET", payload: {} })}
                     style={CloseButtonStyle}
                     data-testid="EditWordSets-close-button"
                 >
                     X
                 </button>
-                <form style={FormStyle}>
-                    <fieldset style={fieldsetStyle}>
-                        <legend style={legendStyle}>{t("wordSet")}</legend>
-                        <div style={nameInputContainerStyle}>
-                            <label style={nameLabelStyle}>{t("setName")}</label>
+                <form data-test-id="form-test" style={FormStyle}>
+                    <fieldset data-test-id="fieldset-test" style={fieldsetStyle}>
+                        <legend data-test-id="legend-test" style={legendStyle}>{t("wordSet")}</legend>
+                        <div data-test-id="div-test-1" style={nameInputContainerStyle}>
+                            <label data-test-id="label-test-1" style={nameLabelStyle}>{t("setName")}</label>
                             <input
-                                type="text"
+                                data-test-id="input-test" type="text"
                                 data-testid="EditWordSets-setName-input"
                                 style={nameInputStyle(isDark)}
                                 value={wordSet.name}
@@ -81,10 +81,10 @@ export default function EditWordSets({
                                 placeholder={outterWordSetList[index].name}
                             />
                         </div>
-                        <div style={setMarkInputContainerStyle}>
-                            <label style={setMarkLabelStyle}>{t("setMark")}</label>
+                        <div data-test-id="div-test" style={setMarkInputContainerStyle}>
+                            <label data-test-id="label-test" style={setMarkLabelStyle}>{t("setMark")}</label>
                             <textarea
-                                data-testid="EditWordSets-setMark-input"
+                                data-test-id="textarea-test" data-testid="EditWordSets-setMark-input"
                                 style={setMarkInputStyle(isDark)}
                                 value={wordSet.mark}
                                 onChange={(e) => setWordSet({ ...wordSet, mark: e.target.value })}
@@ -92,7 +92,7 @@ export default function EditWordSets({
                             />
                         </div>
                     </fieldset>
-                    <button style={submitButtonStyle} onClick={handleSubmit}>
+                    <button data-test-id="button-test" style={submitButtonStyle} onClick={handleSubmit}>
                         {t("submitModify")}
                     </button>
                 </form>

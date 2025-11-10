@@ -3,7 +3,7 @@ import React, { useState, useEffect, useReducer } from "react";
 import { Action, ManageState, useManageContext } from "../pages/Manage";
 import ComponentAsModel from "../utils/componentAsModel";
 import AddWordSets from "../components/AddWordSets";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import WordSetsTable from "../components/WordSetsTable";
 import * as dbOperator from "../store/wordStore";
 import AddWord from "../components/AddWord";
@@ -20,6 +20,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
     const { dispatch: manageDispatch } = useManageContext();
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
     const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
 
@@ -77,37 +78,38 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const cardStyle: React.CSSProperties = {
         width: "100%",
         position: "relative",
-        marginTop: "3vh",
-        // background: isDark
-        //     ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
-        //     : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-        borderRadius: "0.7vw",
+        marginTop: isPortrait ? "3vw" : "3vh",
+        borderRadius: isPortrait ? "2vw" : "0.7vw",
         boxShadow: isDark
-            ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-            : "0 4px 20px rgba(0, 0, 0, 0.1)",
-        border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
-        // border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+            ? isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.3)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+            : isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.1)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+        border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
+        padding: isPortrait ? "4vw" : "1.5vw",
+        boxSizing: "border-box",
     };
 
     const actionButtonsStyle: React.CSSProperties = {
         display: "flex",
-        gap: "16px",
-        paddingLeft: "1vw",
-        marginBottom: "30px",
+        gap: isPortrait ? "2.5vw" : "1vw",
+        paddingLeft: isPortrait ? "0" : "1vw",
+        marginBottom: isPortrait ? "4vw" : "1.875vw",
         flexWrap: "wrap",
+        justifyContent: isPortrait ? "stretch" : "flex-start",
+        flexDirection: isPortrait ? "column" : "row",
     };
 
     const buttonStyle: React.CSSProperties = {
         background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
         color: "white",
         border: "none",
-        borderRadius: "8px",
-        padding: "12px 24px",
-        fontSize: "16px",
+        borderRadius: isPortrait ? "2vw" : "0.5vw",
+        padding: isPortrait ? "3vw 6vw" : "0.75vw 1.5vw",
+        fontSize: isPortrait ? "3.5vw" : "1vw",
         fontWeight: "bold",
         cursor: "pointer",
         transition: "all 0.3s ease",
-        boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
+        boxShadow: isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)",
+        width: isPortrait ? "100%" : "auto",
     };
 
     return (
@@ -116,23 +118,32 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
             {state.popup === "SET_ADD_WORD_SETS" &&
                 AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
 
-            <div style={cardStyle} data-testid="word-sets-manage-card">
-                <h2 style={{ marginBottom: "1.5vh", paddingLeft: "1vw" }}>
+            <div data-test-id="div-test-1" style={cardStyle} data-testid="word-sets-manage-card">
+                <h2 data-test-id="h2-test" style={{
+                    marginBottom: isPortrait ? "3vw" : "1.5vh",
+                    paddingLeft: isPortrait ? "0" : "1vw",
+                    fontSize: isPortrait ? "4.5vw" : "1.25vw",
+                    color: isDark ? "#fff" : "#333",
+                }}>
                     {t("wordSetManagement")}
                 </h2>
 
-                <div style={actionButtonsStyle}>
+                <div data-test-id="div-test" style={actionButtonsStyle}>
                     <button
-                        style={buttonStyle}
+                        data-test-id="button-test-3" style={buttonStyle}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow =
-                                "0 6px 20px rgba(0, 180, 255, 0.4)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 0.375vw 1.25vw rgba(0, 180, 255, 0.4)";
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow =
-                                "0 4px 15px rgba(0, 180, 255, 0.3)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow =
+                                    isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+                            }
                         }}
                         onClick={handleAddWordSet}
                         data-testid="add-word-set-button"
@@ -140,16 +151,20 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                         {t("addWordSet")}
                     </button>
                     <button
-                        style={buttonStyle}
+                        data-test-id="button-test-2" style={buttonStyle}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow =
-                                "0 6px 20px rgba(0, 180, 255, 0.4)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 0.375vw 1.25vw rgba(0, 180, 255, 0.4)";
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow =
-                                "0 4px 15px rgba(0, 180, 255, 0.3)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow =
+                                    isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+                            }
                         }}
                         data-testid="import-words-button"
                         onClick={handleAddWords}
@@ -157,16 +172,20 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                         {'➕ ' + t("addWords")}
                     </button>
                     <button
-                        style={buttonStyle}
+                        data-test-id="button-test-1" style={buttonStyle}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow =
-                                "0 6px 20px rgba(0, 180, 255, 0.4)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 0.375vw 1.25vw rgba(0, 180, 255, 0.4)";
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow =
-                                "0 4px 15px rgba(0, 180, 255, 0.3)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow =
+                                    isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+                            }
                         }}
                         data-testid="import-words-button"
                         onClick={handleImportWords}
@@ -174,16 +193,20 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                         {t("importWords")}
                     </button>
                     <button
-                        style={buttonStyle}
+                        data-test-id="button-test" style={buttonStyle}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow =
-                                "0 6px 20px rgba(0, 180, 255, 0.4)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                                e.currentTarget.style.boxShadow =
+                                    "0 0.375vw 1.25vw rgba(0, 180, 255, 0.4)";
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow =
-                                "0 4px 15px rgba(0, 180, 255, 0.3)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow =
+                                    isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+                            }
                         }}
                         onClick={handleShowAllWords}
                         data-testid="show-all-words-button"
@@ -193,9 +216,9 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                 </div>
 
             </div>
-            <WordSetsTable wordSets={wordSets} loading={loading} setLoading={setLoading} />
+            <WordSetsTable data-test-id="wordsetstable-test" wordSets={wordSets} loading={loading} setLoading={setLoading} />
             {state.popup === "SET_ADD_WORDS" &&
-                <AddWord closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
+                <AddWord data-test-id="addword-test" closePopup={() => dispatch({ type: "CLOSE_POPUP" })} />
             }
 
         </>

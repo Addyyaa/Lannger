@@ -77,6 +77,69 @@ function ThemeProvider({ children }: { children: React.ReactNode }) {
 // 导出主题钩子
 export const useTheme = () => useContext(ThemeContext)
 
+// 创建竖屏检测上下文
+const OrientationContext = createContext<{
+    isPortrait: boolean;
+    width: number;
+    height: number;
+}>({
+    isPortrait: false,
+    width: 0,
+    height: 0
+})
+
+// 竖屏检测提供者组件
+function OrientationProvider({ children }: { children: React.ReactNode }) {
+    const [orientation, setOrientation] = useState(() => {
+        // 初始化时检测视口尺寸
+        const width = window.innerWidth
+        const height = window.innerHeight
+        return {
+            isPortrait: height > width,
+            width,
+            height
+        }
+    })
+
+    useEffect(() => {
+        // 检测竖屏的函数
+        const checkOrientation = () => {
+            const width = window.innerWidth
+            const height = window.innerHeight
+            const isPortrait = height > width
+
+            setOrientation({
+                isPortrait,
+                width,
+                height
+            })
+        }
+
+        // 初始检测
+        checkOrientation()
+
+        // 监听窗口大小变化
+        window.addEventListener('resize', checkOrientation)
+        // 监听设备方向变化（移动端）
+        window.addEventListener('orientationchange', checkOrientation)
+
+        // 清理监听器
+        return () => {
+            window.removeEventListener('resize', checkOrientation)
+            window.removeEventListener('orientationchange', checkOrientation)
+        }
+    }, [])
+
+    return (
+        <OrientationContext.Provider value={orientation}>
+            {children}
+        </OrientationContext.Provider>
+    )
+}
+
+// 导出竖屏检测钩子
+export const useOrientation = () => useContext(OrientationContext)
+
 // 语言菜单组件
 function LanguageMenu({ setLanguageClicked }: { setLanguageClicked: () => void }) {
     const languageMenuRef = useRef<HTMLUListElement>(null)
@@ -155,7 +218,7 @@ function GlobalHeader() {
     }
     const themeToggleSize = "clamp(40px, 2.8vw, 52px)"
     return (
-        <div style={{
+        <div data-test-id="div-test-1" style={{
             width: '100%',
             display: 'flex',
             height: '100%',
@@ -165,8 +228,8 @@ function GlobalHeader() {
             position: 'absolute',
             top: '4vh',
         }}>
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 'auto', position: 'relative' }}>
-                <button onClick={handleLg_clicked} style={{
+            <div data-test-id="div-test" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'flex-end', width: 'auto', position: 'relative' }}>
+                <button data-test-id="button-test-1" onClick={handleLg_clicked} style={{
                     width: 'auto',
                     fontWeight: 700,
 
@@ -187,9 +250,9 @@ function GlobalHeader() {
 
 
                 }}>{t('language')}</button>
-                {lg_clicked && <LanguageMenu setLanguageClicked={handleLanguageClicked} />}
+                {lg_clicked && <LanguageMenu data-test-id="languagemenu-test" setLanguageClicked={handleLanguageClicked} />}
             </div>
-            <button onClick={toggleTheme} aria-label="toggle-theme" style={{
+            <button data-test-id="button-test" onClick={toggleTheme} aria-label="toggle-theme" style={{
                 width: themeToggleSize,
                 height: themeToggleSize,
                 minWidth: "40px",
@@ -217,20 +280,22 @@ function GlobalHeader() {
                     event.currentTarget.style.transform = "translateY(0)";
                 }}
             >
-                {isDark ? <span style={{ fontSize: '1.5vw' }}>☀️</span> : <span style={{ fontSize: '1.5vw' }}>🌙</span>}
+                {isDark ? <span data-test-id="span-test-1" style={{ fontSize: '1.5vw' }}>☀️</span> : <span data-test-id="span-test" style={{ fontSize: '1.5vw' }}>🌙</span>}
             </button>
         </div>
     )
 }
 
-// 根布局：统一包裹主题、全局头部与侧边栏，并承载子路由
+// 根布局：统一包裹主题、竖屏检测、全局头部与侧边栏，并承载子路由
 function RootLayout() {
     return (
-        <ThemeProvider>
-            <Layout globalComponents={<GlobalHeader />}>
-                <Outlet />
-            </Layout>
-        </ThemeProvider>
+        <OrientationProvider>
+            <ThemeProvider>
+                <Layout globalComponents={<GlobalHeader />}>
+                    <Outlet />
+                </Layout>
+            </ThemeProvider>
+        </OrientationProvider>
     )
 }
 

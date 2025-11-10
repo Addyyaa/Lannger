@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef, useState, useContext } from "react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import * as dbOperator from "../store/wordStore";
 import ConfirmWidget from "./ConfirmWidget";
 import { Tooltip } from "antd";
@@ -24,50 +24,55 @@ export default function WordSetsTable({
 }) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const { isPortrait } = useOrientation();
   const [popup, setPopup] = useState<boolean>(false);
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const { state, dispatch } = useContext(ManageContext);
-  const COLUMN_TEMPLATE = "1fr 2fr 1fr 1fr 1fr 1.5fr";
-  const ROW_HEIGHT = 72;
-  const MAX_LIST_HEIGHT = 320;
+  const COLUMN_TEMPLATE = isPortrait ? "2fr 3fr 1.5fr 1.5fr 1.5fr 2.5fr" : "1fr 2fr 1fr 1fr 1fr 1.5fr";
+  const ROW_HEIGHT = isPortrait ? 90 : 72;
+  const MAX_LIST_HEIGHT = isPortrait ? 400 : 320;
   const emptyStateStyle: React.CSSProperties = {
     textAlign: "center",
-    padding: "6vh 0",
-    borderRadius: "0.7vw",
+    padding: isPortrait ? "8vh 0" : "6vh 0",
+    borderRadius: isPortrait ? "2vw" : "0.7vw",
+    fontSize: isPortrait ? "3.5vw" : "1vw",
   };
 
   const buttonStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
     border: "none",
-    borderRadius: "0.3vw",
-    fontSize: "1vw",
+    borderRadius: isPortrait ? "1.5vw" : "0.3vw",
+    fontSize: isPortrait ? "3vw" : "1vw",
     width: "auto",
     height: "auto",
-    minWidth: "1vw",
+    minWidth: isPortrait ? "12vw" : "1vw",
+    padding: isPortrait ? "2vw 3vw" : "0.5vw 0.8vw",
     color: "#fff",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
+    boxShadow: isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)",
   };
 
   const thStyle: React.CSSProperties = {
-    padding: "1vh",
+    padding: isPortrait ? "2vw 1vw" : "1vh",
     textAlign: "center",
     fontWeight: "bold",
+    fontSize: isPortrait ? "3vw" : "0.9rem",
   };
 
   const listContainerStyle: React.CSSProperties = {
     width: "100%",
-    maxHeight: MAX_LIST_HEIGHT + 56,
+    maxHeight: MAX_LIST_HEIGHT + (isPortrait ? 70 : 56),
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderRadius: "0.7vw",
+    borderRadius: isPortrait ? "2vw" : "0.7vw",
     background: isDark ? "#111" : "#fff",
     boxShadow: isDark
-      ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-      : "0 4px 20px rgba(0, 0, 0, 0.1)",
+      ? isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.3)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+      : isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.1)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+    border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
   };
 
   const stickyThStyle: React.CSSProperties = {
@@ -78,17 +83,17 @@ export default function WordSetsTable({
     position: "sticky",
     top: 0,
     zIndex: 10,
-    boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+    boxShadow: "0 0.125vw 0.25vw rgba(0, 0, 0, 0.1)",
     display: "grid",
     gridTemplateColumns: COLUMN_TEMPLATE,
     alignItems: "center",
-    borderRadius: "1.5vw 1.5vw 0 0",
-    minHeight: "56px",
+    borderRadius: isPortrait ? "2vw 2vw 0 0" : "1.5vw 1.5vw 0 0",
+    minHeight: isPortrait ? "70px" : "56px",
   };
   const markHeaderStyle: React.CSSProperties = {
     textAlign: "center",
     fontWeight: "bold",
-    paddingLeft: "1vw",
+    paddingLeft: isPortrait ? "2vw" : "1vw",
   };
 
   async function deleteWordSet(id: number) {
@@ -144,29 +149,34 @@ export default function WordSetsTable({
       alignItems: "center",
       justifyContent: "center",
       textAlign: "center",
-      fontSize: "0.9rem",
-      padding: "0 1vw",
+      fontSize: isPortrait ? "3vw" : "0.9rem",
+      padding: isPortrait ? "0 2vw" : "0 1vw",
       color: isDark ? "#f5f5f5" : "#333",
       overflow: "hidden",
+      textOverflow: "ellipsis",
+      whiteSpace: "nowrap",
+      width: "100%",
     };
     const markCellStyle = useMemo<React.CSSProperties>(() => ({
       display: "flex",
       alignItems: "center",
       width: "100%",
       height: "100%",
-      padding: "0.4rem 1vw",
+      padding: isPortrait ? "1vw 2vw" : "0.4rem 1vw",
       color: isDark ? "#f5f5f5" : "#333",
       textAlign: "left",
       whiteSpace: "nowrap",
-      overflowX: "auto",
+      overflowX: isPortrait ? "hidden" : "auto",
       overflowY: "hidden",
-      cursor: "grab",
+      textOverflow: isPortrait ? "ellipsis" : "clip",
+      cursor: isPortrait ? "pointer" : "grab",
       userSelect: "none",
       WebkitUserSelect: "none",
       MozUserSelect: "none",
       msUserSelect: "none",
       scrollbarWidth: "thin",
-    }), [isDark]);
+      fontSize: isPortrait ? "3vw" : "0.9rem",
+    }), [isDark, isPortrait]);
     const handleMarkPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
       markPointerIdRef.current = event.pointerId;
       markDragStartXRef.current = event.clientX;
@@ -202,7 +212,8 @@ export default function WordSetsTable({
     const actionCellStyle: React.CSSProperties = {
       ...baseCellStyle,
       justifyContent: "center",
-      gap: "0.8vw",
+      gap: isPortrait ? "2vw" : "0.8vw",
+      flexWrap: isPortrait ? "wrap" : "nowrap",
     };
 
     const rowBackground = isDark ? "rgb(41, 40, 40)" : "rgb(243, 240, 240)";
@@ -210,7 +221,7 @@ export default function WordSetsTable({
     // 使用虚拟列表渲染，避免在大数据量时一次性渲染所有行导致卡顿
     return (
       <div
-        {...ariaAttributes}
+        data-test-id="div-test-6" {...ariaAttributes}
         role="row"
         aria-rowindex={index + 2}
         style={{
@@ -220,16 +231,16 @@ export default function WordSetsTable({
           gridTemplateColumns: COLUMN_TEMPLATE,
           alignItems: "stretch",
           boxSizing: "border-box",
-          padding: "0 16px",
+          padding: isPortrait ? "0 2vw" : "0 16px",
           height: ROW_HEIGHT,
           background: rowBackground,
           borderBottom: isDark
-            ? "1px solid rgba(255,255,255,0.06)"
-            : "1px solid rgba(0,0,0,0.05)",
+            ? `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(255,255,255,0.06)`
+            : `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(0,0,0,0.05)`,
         }}
       >
         <Tooltip
-          title={
+          data-test-id="tooltip-test-3" title={
             <div>
               {currentSet?.name
                 ? currentSet.name
@@ -251,12 +262,12 @@ export default function WordSetsTable({
           }}
 
         >
-          <div style={{ ...baseCellStyle, justifyContent: "center", overflow: "hidden" }}>
-            <Link to={`/wordsList/${currentSet?.id}`}>{currentSet?.name ?? t("noName")}</Link>
+          <div data-test-id="div-test-5" style={{ ...baseCellStyle, justifyContent: "center", overflow: "hidden" }}>
+            <Link data-test-id="link-test" to={`/wordsList/${currentSet?.id}`}>{currentSet?.name ?? t("noName")}</Link>
           </div>
         </Tooltip>
         <Tooltip
-          title={
+          data-test-id="tooltip-test-2" title={
             <div>
               {currentSet?.id === DEFAULT_WORD_SET_ID
                 ? t("defaultWordSetMark")
@@ -266,39 +277,40 @@ export default function WordSetsTable({
               }
             </div>
           }
-          mouseEnterDelay={0.5}
-          placement="right"
+          mouseEnterDelay={isPortrait ? 0.1 : 0.5}
+          placement={isPortrait ? "top" : "right"}
           styles={{
             body: {
-              backgroundColor: isDark ? "black" : "pink",
-              color: isDark ? "white" : "black",
+              backgroundColor: isDark ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              color: isDark ? "#fff" : "#333",
               maxHeight: "30vh",
-              width: "100%",
+              maxWidth: isPortrait ? "80vw" : "400px",
               overflow: "auto",
               scrollbarWidth: "thin",
+              padding: "8px 12px",
+              borderRadius: "8px",
             },
           }}
-
         >
           <div
-            style={markCellStyle}
+            data-test-id="div-test-4" style={markCellStyle}
             data-testid="word-set-mark"
             ref={markElementRef}
-            onPointerDown={handleMarkPointerDown}
-            onPointerMove={handleMarkPointerMove}
-            onPointerUp={finalizeMarkDrag}
-            onPointerCancel={finalizeMarkDrag}
-            onPointerLeave={finalizeMarkDrag}
-            onWheel={handleWheel}
+            onPointerDown={isPortrait ? undefined : handleMarkPointerDown}
+            onPointerMove={isPortrait ? undefined : handleMarkPointerMove}
+            onPointerUp={isPortrait ? undefined : finalizeMarkDrag}
+            onPointerCancel={isPortrait ? undefined : finalizeMarkDrag}
+            onPointerLeave={isPortrait ? undefined : finalizeMarkDrag}
+            onWheel={isPortrait ? undefined : handleWheel}
           >
             {currentSet?.id === DEFAULT_WORD_SET_ID
               ? t("defaultWordSetMark")
               : currentSet?.mark ?? t("noMark")}
           </div>
         </Tooltip>
-        <div style={baseCellStyle}>{currentSet?.words?.length || 0}</div>
+        <div data-test-id="div-test-3" style={baseCellStyle}>{currentSet?.words?.length || 0}</div>
         <Tooltip
-          title={
+          data-test-id="tooltip-test-1" title={
             <div>
               {currentSet?.createdAt
                 ? new Date(currentSet.createdAt).toLocaleDateString()
@@ -306,28 +318,37 @@ export default function WordSetsTable({
               }
             </div>
           }
-          mouseEnterDelay={0.5}
-          placement="right"
+          mouseEnterDelay={isPortrait ? 0.1 : 0.5}
+          placement={isPortrait ? "top" : "right"}
           styles={{
             body: {
-              backgroundColor: isDark ? "black" : "pink",
-              color: isDark ? "white" : "black",
+              backgroundColor: isDark ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              color: isDark ? "#fff" : "#333",
               maxHeight: "30vh",
-              width: "100%",
+              maxWidth: isPortrait ? "80vw" : "400px",
               overflow: "auto",
               scrollbarWidth: "thin",
+              padding: "8px 12px",
+              borderRadius: "8px",
             },
           }}
-
         >
-          <div style={baseCellStyle}>
+          <div
+            data-test-id="div-test-2"
+            style={{
+              ...baseCellStyle,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {currentSet?.createdAt
               ? new Date(currentSet.createdAt).toLocaleDateString()
               : t("unknown")}
           </div>
         </Tooltip>
         <Tooltip
-          title={
+          data-test-id="tooltip-test" title={
             <div>
               {currentSet?.updatedAt
                 ? new Date(currentSet.updatedAt).toLocaleDateString()
@@ -335,50 +356,83 @@ export default function WordSetsTable({
               }
             </div>
           }
-          mouseEnterDelay={0.5}
-          placement="right"
+          mouseEnterDelay={isPortrait ? 0.1 : 0.5}
+          placement={isPortrait ? "top" : "right"}
           styles={{
             body: {
-              backgroundColor: isDark ? "black" : "pink",
-              color: isDark ? "white" : "black",
+              backgroundColor: isDark ? "rgba(0, 0, 0, 0.9)" : "rgba(255, 255, 255, 0.95)",
+              color: isDark ? "#fff" : "#333",
               maxHeight: "30vh",
-              width: "100%",
+              maxWidth: isPortrait ? "80vw" : "400px",
               overflow: "auto",
               scrollbarWidth: "thin",
+              padding: "8px 12px",
+              borderRadius: "8px",
             },
           }}
         >
-          <div style={baseCellStyle}>
+          <div
+            data-test-id="div-test-1"
+            style={{
+              ...baseCellStyle,
+              overflow: "hidden",
+              textOverflow: "ellipsis",
+              whiteSpace: "nowrap",
+            }}
+          >
             {currentSet?.updatedAt
               ? new Date(currentSet.updatedAt).toLocaleDateString()
               : t("noUpdate")}
           </div>
-
         </Tooltip>
-        <div style={actionCellStyle}>
+        <div data-test-id="div-test" style={actionCellStyle}>
           <button
-            style={{
+            data-test-id="button-test-1" style={{
               ...buttonStyle,
-              fontSize: "0.9rem",
+              fontSize: isPortrait ? "2.8vw" : "0.9rem",
             }}
             onClick={() => {
               setEditIndex(index);
               dispatch({ type: "SET_EDIT_WORD_SET", payload: {} });
             }}
+            onMouseEnter={(e) => {
+              if (!isPortrait) {
+                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                e.currentTarget.style.boxShadow = "0 0.375vw 1.25vw rgba(0, 180, 255, 0.4)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isPortrait) {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+              }
+            }}
           >
             {t("edit")}
           </button>
           <button
-            style={{
+            data-test-id="button-test" style={{
               ...buttonStyle,
               background: "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
-              fontSize: "0.9rem",
+              fontSize: isPortrait ? "2.8vw" : "0.9rem",
             }}
             onClick={() => {
               setDeleteId(currentSet?.id ?? null);
               setPopup(true);
             }}
             data-testid="delete-word-set-button"
+            onMouseEnter={(e) => {
+              if (!isPortrait) {
+                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                e.currentTarget.style.boxShadow = "0 0.375vw 1.25vw rgba(255, 71, 87, 0.4)";
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (!isPortrait) {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(255, 71, 87, 0.3)" : "0 0.25vw 0.9375vw rgba(255, 71, 87, 0.3)";
+              }
+            }}
           >
             {t("delete")}
           </button>
@@ -391,34 +445,34 @@ export default function WordSetsTable({
   return (
     <>
       {loading ? (
-        <div style={emptyStateStyle}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>⏳</div>
-          <p>{t("loading")}</p>
+        <div data-test-id="div-test-12" style={emptyStateStyle}>
+          <div data-test-id="div-test-11" style={{ fontSize: isPortrait ? "12vw" : "48px", marginBottom: isPortrait ? "4vw" : "16px" }}>⏳</div>
+          <p data-test-id="p-test-1">{t("loading")}</p>
         </div>
       ) : wordSets.length === 0 ? (
-        <div style={emptyStateStyle}>
-          <div style={{ fontSize: "48px", marginBottom: "16px" }}>📚</div>
-          <h3 style={{ margin: "0 0 8px 0" }}>{t("noWordSets")}</h3>
-          <p>{t("clickToCreateFirst")}</p>
+        <div data-test-id="div-test-10" style={emptyStateStyle}>
+          <div data-test-id="div-test-9" style={{ fontSize: isPortrait ? "12vw" : "48px", marginBottom: isPortrait ? "4vw" : "16px" }}>📚</div>
+          <h3 data-test-id="h3-test" style={{ margin: `0 0 ${isPortrait ? "2vw" : "8px"} 0`, fontSize: isPortrait ? "4vw" : "1.125rem" }}>{t("noWordSets")}</h3>
+          <p data-test-id="p-test">{t("clickToCreateFirst")}</p>
         </div>
       ) : (
-        <div style={listContainerStyle} role="table" aria-label={t("wordSetManagement")}>
-          <div style={stickyThStyle} role="row" data-testid="word-sets-table-header">
-            <span role="columnheader" data-testid="word-sets-table-header-name">{t("tableName")}</span>
+        <div data-test-id="div-test-8" style={listContainerStyle} role="table" aria-label={t("wordSetManagement")}>
+          <div data-test-id="div-test-7" style={stickyThStyle} role="row" data-testid="word-sets-table-header">
+            <span data-test-id="span-test-5" role="columnheader" data-testid="word-sets-table-header-name">{t("tableName")}</span>
             <span
-              role="columnheader"
+              data-test-id="span-test-4" role="columnheader"
               data-testid="word-sets-table-header-mark"
               style={markHeaderStyle}
             >
               {t("tableMark")}
             </span>
-            <span role="columnheader" data-testid="word-sets-table-header-word-count">{t("tableWordCount")}</span>
-            <span role="columnheader" data-testid="word-sets-table-header-created-at">{t("tableCreatedAt")}</span>
-            <span role="columnheader" data-testid="word-sets-table-header-updated-at">{t("tableUpdatedAt")}</span>
-            <span role="columnheader" data-testid="word-sets-table-header-actions">{t("tableActions")}</span>
+            <span data-test-id="span-test-3" role="columnheader" data-testid="word-sets-table-header-word-count">{t("tableWordCount")}</span>
+            <span data-test-id="span-test-2" role="columnheader" data-testid="word-sets-table-header-created-at">{t("tableCreatedAt")}</span>
+            <span data-test-id="span-test-1" role="columnheader" data-testid="word-sets-table-header-updated-at">{t("tableUpdatedAt")}</span>
+            <span data-test-id="span-test" role="columnheader" data-testid="word-sets-table-header-actions">{t("tableActions")}</span>
           </div>
           <List
-            style={listStyle}
+            data-test-id="list-test" style={listStyle}
             overscanCount={6}
             rowCount={wordSets.length}
             rowHeight={ROW_HEIGHT}
@@ -430,7 +484,7 @@ export default function WordSetsTable({
       )}
       {popup && (
         <ConfirmWidget
-          title={t("deleteWordSet")}
+          data-test-id="confirmwidget-test" title={t("deleteWordSet")}
           message={t("deleteWordSetMessage")}
           onConfirm={async () => {
             if (deleteId !== null) {
@@ -444,7 +498,7 @@ export default function WordSetsTable({
       )}
       {state.popup === "SET_EDIT_WORD_SET" && (
         <EditWordSets
-          setLoading={setLoading}
+          data-test-id="editwordsets-test" setLoading={setLoading}
           outterWordSetList={wordSets}
           index={editIndex as number}
         />

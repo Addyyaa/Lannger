@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import CloseButton from "./CloseButton";
 import { DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME, Word, WordSet } from "../db";
 import * as dbOperator from "../store/wordStore";
@@ -15,6 +15,7 @@ interface EditWordDialogProps {
 export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: EditWordDialogProps) {
     const { t } = useTranslation();
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
 
     const [kana, setKana] = useState<string>("");
     const [kanji, setKanji] = useState<string>("");
@@ -107,12 +108,12 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
     };
 
     return (
-        <div style={overlayStyle} role="dialog" aria-modal="true" aria-labelledby="edit-word-title">
-            <div style={dialogStyle(isDark)}>
-                <div style={headerStyle}>
-                    <h2 id="edit-word-title" style={{ 
-                        margin: 0, 
-                        fontSize: "clamp(1.375vw, 1.375rem, 1.9vw)", 
+        <div data-test-id="div-test-4" style={overlayStyle(isPortrait)} role="dialog" aria-modal="true" aria-labelledby="edit-word-title">
+            <div data-test-id="div-test-3" style={dialogStyle(isDark, isPortrait)}>
+                <div data-test-id="div-test-2" style={headerStyle(isPortrait)}>
+                    <h2 data-test-id="h2-test" id="edit-word-title" style={{
+                        margin: 0,
+                        fontSize: isPortrait ? "5vw" : "clamp(1.375vw, 1.375rem, 1.9vw)",
                         fontWeight: 600,
                         letterSpacing: "-0.01em",
                         color: isDark ? "#ffffff" : "#000000",
@@ -120,17 +121,23 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                     }}>
                         {t("editWord")}
                     </h2>
-                    <CloseButton onClick={onClose} ariaLabel={t("close")} iconColor={isDark ? "#f5f5f5" : "#333"} />
+                    <CloseButton
+                        data-test-id="closebutton-test"
+                        onClick={onClose}
+                        ariaLabel={t("close")}
+                        iconColor={isDark ? "#f5f5f5" : "#333"}
+                        style={{ position: "absolute", top: isPortrait ? "3vw" : "1vw", right: isPortrait ? "3vw" : "1vw" }}
+                    />
                 </div>
-                <form onSubmit={handleSubmit} style={formStyle}>
-                    <label style={labelStyle(isDark)}>
+                <form data-test-id="form-test" onSubmit={handleSubmit} style={formStyle(isPortrait)}>
+                    <label data-test-id="label-test-6" style={labelStyle(isDark, isPortrait)}>
                         {t("kana")}
                         <input
-                            type="text"
+                            data-test-id="input-test-2" type="text"
                             value={kana}
                             onChange={(event) => setKana(event.target.value)}
-                            style={inputStyle(isDark)}
-                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                            style={inputStyle(isDark, isPortrait)}
+                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                             onBlur={(e) => {
                                 e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                 e.currentTarget.style.boxShadow = "none";
@@ -139,14 +146,14 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                             maxLength={64}
                         />
                     </label>
-                    <label style={labelStyle(isDark)}>
+                    <label data-test-id="label-test-5" style={labelStyle(isDark, isPortrait)}>
                         {t("kanji")}
                         <input
-                            type="text"
+                            data-test-id="input-test-1" type="text"
                             value={kanji}
                             onChange={(event) => setKanji(event.target.value)}
-                            style={inputStyle(isDark)}
-                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                            style={inputStyle(isDark, isPortrait)}
+                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                             onBlur={(e) => {
                                 e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                 e.currentTarget.style.boxShadow = "none";
@@ -155,13 +162,13 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                             maxLength={64}
                         />
                     </label>
-                    <label style={labelStyle(isDark)}>
+                    <label data-test-id="label-test-4" style={labelStyle(isDark, isPortrait)}>
                         {t("meaning")}
                         <textarea
-                            value={meaning}
+                            data-test-id="textarea-test-1" value={meaning}
                             onChange={(event) => setMeaning(event.target.value)}
-                            style={textareaStyle(isDark)}
-                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                            style={textareaStyle(isDark, isPortrait)}
+                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                             onBlur={(e) => {
                                 e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                 e.currentTarget.style.boxShadow = "none";
@@ -171,13 +178,13 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                             maxLength={512}
                         />
                     </label>
-                    <label style={labelStyle(isDark)}>
+                    <label data-test-id="label-test-3" style={labelStyle(isDark, isPortrait)}>
                         {t("example")}
                         <textarea
-                            value={example}
+                            data-test-id="textarea-test" value={example}
                             onChange={(event) => setExample(event.target.value)}
-                            style={textareaStyle(isDark)}
-                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                            style={textareaStyle(isDark, isPortrait)}
+                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                             onBlur={(e) => {
                                 e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                 e.currentTarget.style.boxShadow = "none";
@@ -187,14 +194,14 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                             maxLength={512}
                         />
                     </label>
-                    <label style={labelStyle(isDark)}>
+                    <label data-test-id="label-test-2" style={labelStyle(isDark, isPortrait)}>
                         {t("mark")}
                         <input
-                            type="text"
+                            data-test-id="input-test" type="text"
                             value={mark}
                             onChange={(event) => setMark(event.target.value)}
-                            style={inputStyle(isDark)}
-                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                            style={inputStyle(isDark, isPortrait)}
+                            onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                             onBlur={(e) => {
                                 e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                 e.currentTarget.style.boxShadow = "none";
@@ -203,14 +210,14 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                             maxLength={128}
                         />
                     </label>
-                    <div style={rowGroupStyle}>
-                        <label style={{ ...labelStyle(isDark), flex: 1 }}>
+                    <div data-test-id="div-test-1" style={rowGroupStyle(isPortrait)}>
+                        <label data-test-id="label-test-1" style={{ ...labelStyle(isDark, isPortrait), flex: isPortrait ? undefined : 1, width: isPortrait ? "100%" : undefined }}>
                             {t("difficulty")}
                             <select
-                                value={difficulty}
+                                data-test-id="select-test-1" value={difficulty}
                                 onChange={(event) => setDifficulty(Number(event.target.value))}
-                                style={selectStyle(isDark)}
-                                onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                                style={selectStyle(isDark, isPortrait)}
+                                onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                                 onBlur={(e) => {
                                     e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                     e.currentTarget.style.boxShadow = "none";
@@ -218,19 +225,19 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                                 }}
                             >
                                 {[1, 2, 3, 4, 5].map((level) => (
-                                    <option key={level} value={level}>
+                                    <option data-test-id="option-test-1" key={level} value={level}>
                                         {level}
                                     </option>
                                 ))}
                             </select>
                         </label>
-                        <label style={{ ...labelStyle(isDark), flex: 1 }}>
+                        <label data-test-id="label-test" style={{ ...labelStyle(isDark, isPortrait), flex: isPortrait ? undefined : 1, width: isPortrait ? "100%" : undefined }}>
                             {t("wordSet")}
                             <select
-                                value={setId}
+                                data-test-id="select-test" value={setId}
                                 onChange={(event) => setSetId(Number(event.target.value))}
-                                style={selectStyle(isDark)}
-                                onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark))}
+                                style={selectStyle(isDark, isPortrait)}
+                                onFocus={(e) => Object.assign(e.currentTarget.style, getInputFocusStyle(isDark, isPortrait))}
                                 onBlur={(e) => {
                                     e.currentTarget.style.borderColor = getInputBorderColor(isDark);
                                     e.currentTarget.style.boxShadow = "none";
@@ -238,51 +245,67 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
                                 }}
                             >
                                 {wordSetOptions.map((item) => (
-                                    <option key={item.id} value={item.id}>
+                                    <option data-test-id="option-test" key={item.id} value={item.id}>
                                         {item.name}
                                     </option>
                                 ))}
                             </select>
                         </label>
                     </div>
-                    <div style={footerStyle}>
+                    <div data-test-id="div-test" style={footerStyle(isPortrait)}>
                         <button
-                            type="button"
+                            data-test-id="button-test-1" type="button"
                             onClick={onClose}
-                            style={secondaryButtonStyle(isDark)}
-                            onMouseEnter={(e) => Object.assign(e.currentTarget.style, getSecondaryButtonHoverStyle(isDark))}
-                            onMouseLeave={(e) => {
-                                const baseStyle = secondaryButtonStyle(isDark);
-                                e.currentTarget.style.background = baseStyle.background as string;
-                                e.currentTarget.style.transform = "none";
+                            style={secondaryButtonStyle(isDark, isPortrait)}
+                            onMouseEnter={(e) => {
+                                if (!isPortrait) {
+                                    Object.assign(e.currentTarget.style, getSecondaryButtonHoverStyle(isDark, isPortrait));
+                                }
                             }}
-                            onMouseDown={(e) => Object.assign(e.currentTarget.style, getSecondaryButtonActiveStyle(isDark))}
-                            onMouseUp={(e) => Object.assign(e.currentTarget.style, getSecondaryButtonHoverStyle(isDark))}
+                            onMouseLeave={(e) => {
+                                if (!isPortrait) {
+                                    const baseStyle = secondaryButtonStyle(isDark, isPortrait);
+                                    e.currentTarget.style.background = baseStyle.background as string;
+                                    e.currentTarget.style.transform = "none";
+                                }
+                            }}
+                            onMouseDown={(e) => {
+                                if (!isPortrait) {
+                                    Object.assign(e.currentTarget.style, getSecondaryButtonActiveStyle(isDark));
+                                }
+                            }}
+                            onMouseUp={(e) => {
+                                if (!isPortrait) {
+                                    Object.assign(e.currentTarget.style, getSecondaryButtonHoverStyle(isDark, isPortrait));
+                                }
+                            }}
                         >
                             {t("cancel")}
                         </button>
                         <button
-                            type="submit"
-                            style={primaryButtonStyle}
+                            data-test-id="button-test" type="submit"
+                            style={primaryButtonStyle(isPortrait)}
                             disabled={submitting}
                             onMouseEnter={(e) => {
-                                if (!submitting) {
-                                    Object.assign(e.currentTarget.style, getPrimaryButtonHoverStyle());
+                                if (!submitting && !isPortrait) {
+                                    Object.assign(e.currentTarget.style, getPrimaryButtonHoverStyle(isPortrait));
                                 }
                             }}
                             onMouseLeave={(e) => {
-                                const baseStyle = primaryButtonStyle;
-                                e.currentTarget.style.transform = "none";
-                                e.currentTarget.style.boxShadow = baseStyle.boxShadow as string;
+                                if (!isPortrait) {
+                                    const baseStyle = primaryButtonStyle(isPortrait);
+                                    e.currentTarget.style.transform = "none";
+                                    e.currentTarget.style.boxShadow = baseStyle.boxShadow as string;
+                                }
                             }}
                             onMouseDown={(e) => {
-                                if (!submitting) {
-                                    Object.assign(e.currentTarget.style, getPrimaryButtonActiveStyle());
+                                if (!submitting && !isPortrait) {
+                                    Object.assign(e.currentTarget.style, getPrimaryButtonActiveStyle(isPortrait));
                                 }
                             }}
                             onMouseUp={(e) => {
-                                if (!submitting) {
-                                    Object.assign(e.currentTarget.style, getPrimaryButtonHoverStyle());
+                                if (!submitting && !isPortrait) {
+                                    Object.assign(e.currentTarget.style, getPrimaryButtonHoverStyle(isPortrait));
                                 }
                             }}
                         >
@@ -295,7 +318,7 @@ export default function EditWordDialog({ word, wordSets, onClose, onSuccess }: E
     );
 }
 
-const overlayStyle: React.CSSProperties = {
+const overlayStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "fixed",
     top: 0,
     left: 0,
@@ -309,73 +332,80 @@ const overlayStyle: React.CSSProperties = {
     justifyContent: "center",
     zIndex: 1100,
     animation: "fadeIn 0.2s ease-out",
-};
+    padding: isPortrait ? "3vw" : "1vw",
+    boxSizing: "border-box",
+});
 
-const dialogStyle = (isDark: boolean): React.CSSProperties => ({
-    width: "min(40vw, 90vw)",
-    maxWidth: "600px",
+const dialogStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    width: isPortrait ? "90%" : "min(40vw, 90vw)",
+    maxWidth: isPortrait ? "100%" : "600px",
+    maxHeight: isPortrait ? "90vh" : "90vh",
+    overflow: "auto",
     background: isDark ? "rgba(28, 28, 30, 0.95)" : "rgba(255, 255, 255, 0.95)",
-    borderRadius: "1.4vh",
-    boxShadow: isDark 
-        ? "0 2vh 4vh rgba(0, 0, 0, 0.5), 0 0 0 0.05vh rgba(255, 255, 255, 0.1)" 
-        : "0 2vh 4vh rgba(0, 0, 0, 0.15), 0 0 0 0.05vh rgba(0, 0, 0, 0.05)",
-    padding: "3vh 3vw",
+    borderRadius: isPortrait ? "2vw" : "1.4vh",
+    boxShadow: isDark
+        ? isPortrait ? "0 5vw 10vw rgba(0, 0, 0, 0.5), 0 0 0 0.3vw rgba(255, 255, 255, 0.1)" : "0 2vh 4vh rgba(0, 0, 0, 0.5), 0 0 0 0.05vh rgba(255, 255, 255, 0.1)"
+        : isPortrait ? "0 5vw 10vw rgba(0, 0, 0, 0.15), 0 0 0 0.3vw rgba(0, 0, 0, 0.05)" : "0 2vh 4vh rgba(0, 0, 0, 0.15), 0 0 0 0.05vh rgba(0, 0, 0, 0.05)",
+    padding: isPortrait ? "4vw" : "3vh 3vw",
     display: "flex",
     flexDirection: "column",
-    gap: "2.4vh",
+    gap: isPortrait ? "3vw" : "2.4vh",
     position: "relative",
-    fontSize: "clamp(0.875vw, 0.875rem, 1.2vw)",
+    fontSize: isPortrait ? "3.5vw" : "clamp(0.875vw, 0.875rem, 1.2vw)",
     fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif",
     animation: "slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
 });
 
-const headerStyle: React.CSSProperties = {
+const headerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     alignItems: "center",
     justifyContent: "space-between",
-    marginBottom: "0.8vh",
-};
+    marginBottom: isPortrait ? "2vw" : "0.8vh",
+    position: "relative",
+});
 
-const formStyle: React.CSSProperties = {
+const formStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     flexDirection: "column",
-    gap: "2vh",
+    gap: isPortrait ? "3vw" : "2vh",
     width: "100%",
-};
+});
 
-const labelStyle = (isDark: boolean): React.CSSProperties => ({
+const labelStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     flexDirection: "column",
-    gap: "0.6vh",
-    fontSize: "0.9em",
+    gap: isPortrait ? "1.5vw" : "0.6vh",
+    fontSize: isPortrait ? "3.5vw" : "0.9em",
     fontWeight: 500,
     color: isDark ? "rgba(255, 255, 255, 0.9)" : "rgba(0, 0, 0, 0.85)",
     width: "100%",
     letterSpacing: "-0.01em",
 });
 
-const inputStyle = (isDark: boolean): React.CSSProperties => ({
-    padding: "1.2vh 1.4vw",
-    borderRadius: "1vh",
-    border: isDark ? "0.1vh solid rgba(255,255,255,0.15)" : "0.1vh solid rgba(0,0,0,0.15)",
+const inputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    padding: isPortrait ? "3vw 4vw" : "1.2vh 1.4vw",
+    borderRadius: isPortrait ? "2vw" : "1vh",
+    border: isDark
+        ? `${isPortrait ? "0.3vw" : "0.1vh"} solid rgba(255,255,255,0.15)`
+        : `${isPortrait ? "0.3vw" : "0.1vh"} solid rgba(0,0,0,0.15)`,
     background: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.02)",
     color: isDark ? "#ffffff" : "#000000",
     outline: "none",
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     width: "100%",
-    fontSize: "1em",
+    fontSize: isPortrait ? "3.5vw" : "1em",
     boxSizing: "border-box",
     fontFamily: "inherit",
     lineHeight: 1.5,
-    minHeight: "4.4vh",
+    minHeight: isPortrait ? "10vw" : "4.4vh",
 });
 
 // 添加焦点状态样式函数
-const getInputFocusStyle = (isDark: boolean): React.CSSProperties => ({
+const getInputFocusStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     borderColor: isDark ? "rgba(0, 180, 255, 0.6)" : "rgba(0, 150, 212, 0.6)",
-    boxShadow: isDark 
-        ? "0 0 0 0.3vh rgba(0, 180, 255, 0.2)" 
-        : "0 0 0 0.3vh rgba(0, 150, 212, 0.2)",
+    boxShadow: isDark
+        ? isPortrait ? "0 0 0 0.8vw rgba(0, 180, 255, 0.2)" : "0 0 0 0.3vh rgba(0, 180, 255, 0.2)"
+        : isPortrait ? "0 0 0 0.8vw rgba(0, 150, 212, 0.2)" : "0 0 0 0.3vh rgba(0, 150, 212, 0.2)",
     background: isDark ? "rgba(255,255,255,0.1)" : "#ffffff",
 });
 
@@ -394,94 +424,100 @@ const getSelectBackground = (isDark: boolean): string => {
     return isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.02)";
 };
 
-const textareaStyle = (isDark: boolean): React.CSSProperties => ({
-    ...inputStyle(isDark),
+const textareaStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    ...inputStyle(isDark, isPortrait),
     resize: "vertical",
-    minHeight: "8vh",
+    minHeight: isPortrait ? "20vw" : "8vh",
     lineHeight: 1.6,
 });
 
-const selectStyle = (isDark: boolean): React.CSSProperties => ({
-    ...inputStyle(isDark),
+const selectStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    ...inputStyle(isDark, isPortrait),
     appearance: "none",
     WebkitAppearance: "none",
     MozAppearance: "none",
-    backgroundImage: isDark 
+    backgroundImage: isDark
         ? `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='rgba(255,255,255,0.6)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`
         : `url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1L6 6L11 1' stroke='rgba(0,0,0,0.5)' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")`,
     backgroundRepeat: "no-repeat",
-    backgroundPosition: "right 1.4vw center",
-    backgroundSize: "1.2vw",
-    paddingRight: "3.5vw",
+    backgroundPosition: isPortrait ? "right 3vw center" : "right 1.4vw center",
+    backgroundSize: isPortrait ? "3vw" : "1.2vw",
+    paddingRight: isPortrait ? "8vw" : "3.5vw",
     cursor: "pointer",
     backgroundColor: isDark ? "rgba(255,255,255,0.08)" : "rgba(0,0,0,0.02)",
 });
 
-const rowGroupStyle: React.CSSProperties = {
+const rowGroupStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    gap: "2vw",
+    gap: isPortrait ? "3vw" : "2vw",
     flexWrap: "wrap",
     width: "100%",
-};
+    flexDirection: isPortrait ? "column" : "row",
+});
 
-const footerStyle: React.CSSProperties = {
+const footerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    justifyContent: "flex-end",
-    gap: "1.2vw",
-    marginTop: "1.6vh",
-    paddingTop: "2vh",
-    borderTop: "0.05vh solid rgba(0, 0, 0, 0.1)",
+    justifyContent: isPortrait ? "stretch" : "flex-end",
+    flexDirection: isPortrait ? "column" : "row",
+    gap: isPortrait ? "2vw" : "1.2vw",
+    marginTop: isPortrait ? "2vw" : "1.6vh",
+    paddingTop: isPortrait ? "3vw" : "2vh",
+    borderTop: `${isPortrait ? "0.3vw" : "0.05vh"} solid rgba(0, 0, 0, 0.1)`,
     width: "100%",
-};
+});
 
-const primaryButtonStyle: React.CSSProperties = {
+const primaryButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
     background: "linear-gradient(135deg, #007AFF 0%, #0051D5 100%)",
     color: "#ffffff",
     border: "none",
-    borderRadius: "1vh",
-    padding: "1.2vh 2.4vw",
-    fontSize: "1em",
+    borderRadius: isPortrait ? "2vw" : "1vh",
+    padding: isPortrait ? "3vw 6vw" : "1.2vh 2.4vw",
+    fontSize: isPortrait ? "3.5vw" : "1em",
     fontWeight: 600,
     cursor: "pointer",
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-    boxShadow: "0 0.2vh 0.8vh rgba(0, 122, 255, 0.3)",
-    minWidth: "22%",
-    minHeight: "4.4vh",
+    boxShadow: isPortrait ? "0 0.5vw 2vw rgba(0, 122, 255, 0.3)" : "0 0.2vh 0.8vh rgba(0, 122, 255, 0.3)",
+    minWidth: isPortrait ? undefined : "22%",
+    width: isPortrait ? "100%" : undefined,
+    minHeight: isPortrait ? "10vw" : "4.4vh",
     letterSpacing: "-0.01em",
     fontFamily: "inherit",
-};
+});
 
 // 添加按钮悬停和激活状态
-const getPrimaryButtonHoverStyle = (): React.CSSProperties => ({
-    transform: "translateY(-0.1vh)",
-    boxShadow: "0 0.4vh 1.2vh rgba(0, 122, 255, 0.4)",
+const getPrimaryButtonHoverStyle = (isPortrait: boolean): React.CSSProperties => ({
+    transform: isPortrait ? "none" : "translateY(-0.1vh)",
+    boxShadow: isPortrait ? "0 0.5vw 2vw rgba(0, 122, 255, 0.3)" : "0 0.4vh 1.2vh rgba(0, 122, 255, 0.4)",
 });
 
-const getPrimaryButtonActiveStyle = (): React.CSSProperties => ({
+const getPrimaryButtonActiveStyle = (isPortrait: boolean): React.CSSProperties => ({
     transform: "translateY(0)",
-    boxShadow: "0 0.1vh 0.4vh rgba(0, 122, 255, 0.3)",
+    boxShadow: isPortrait ? "0 0.25vw 1vw rgba(0, 122, 255, 0.3)" : "0 0.1vh 0.4vh rgba(0, 122, 255, 0.3)",
 });
 
-const secondaryButtonStyle = (isDark: boolean): React.CSSProperties => ({
+const secondaryButtonStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     background: isDark ? "rgba(255,255,255,0.1)" : "rgba(0,0,0,0.05)",
     color: isDark ? "#ffffff" : "#000000",
-    border: isDark ? "0.1vh solid rgba(255,255,255,0.2)" : "0.1vh solid rgba(0,0,0,0.15)",
-    borderRadius: "1vh",
-    padding: "1.2vh 2.4vw",
-    fontSize: "1em",
+    border: isDark
+        ? `${isPortrait ? "0.3vw" : "0.1vh"} solid rgba(255,255,255,0.2)`
+        : `${isPortrait ? "0.3vw" : "0.1vh"} solid rgba(0,0,0,0.15)`,
+    borderRadius: isPortrait ? "2vw" : "1vh",
+    padding: isPortrait ? "3vw 6vw" : "1.2vh 2.4vw",
+    fontSize: isPortrait ? "3.5vw" : "1em",
     fontWeight: 500,
     cursor: "pointer",
     transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
     boxShadow: "none",
-    minWidth: "22%",
-    minHeight: "4.4vh",
+    minWidth: isPortrait ? undefined : "22%",
+    width: isPortrait ? "100%" : undefined,
+    minHeight: isPortrait ? "10vw" : "4.4vh",
     letterSpacing: "-0.01em",
     fontFamily: "inherit",
 });
 
-const getSecondaryButtonHoverStyle = (isDark: boolean): React.CSSProperties => ({
+const getSecondaryButtonHoverStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     background: isDark ? "rgba(255,255,255,0.15)" : "rgba(0,0,0,0.08)",
-    transform: "translateY(-0.1vh)",
+    transform: isPortrait ? "none" : "translateY(-0.1vh)",
 });
 
 const getSecondaryButtonActiveStyle = (isDark: boolean): React.CSSProperties => ({

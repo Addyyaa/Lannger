@@ -18,7 +18,7 @@ function loadLastSelections() {
   try {
     const lastSetId = localStorage.getItem(STORAGE_KEY_LAST_SET_ID);
     const lastDifficulty = localStorage.getItem(STORAGE_KEY_LAST_DIFFICULTY);
-    
+
     return {
       setId: lastSetId ? parseInt(lastSetId, 10) : undefined,
       difficultyCoefficient: lastDifficulty || "5",
@@ -51,7 +51,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
   const buttonRef = useRef<HTMLDivElement>(null);
   const kanaInputRef = useRef<HTMLInputElement>(null);
   const [wordSets, setWordSets] = useState<WordSet[]>([]);
-  
+
   // 从 localStorage 加载上次的选择
   const lastSelections = loadLastSelections();
   const [word, setWord] = useState({
@@ -70,7 +70,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
       try {
         const sets = await dbOperator.getAllWordSets();
         setWordSets(sets);
-        
+
         // 验证当前选择的 setId 是否仍然有效
         setWord(prev => {
           if (prev.setId !== undefined) {
@@ -132,7 +132,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     await dbOperator.createWord(wordToSave).then(() => {
       // 显示成功提示
       alert(t('addWordSuccess'));
-      
+
       // 重置表单，保留单词集和难度系数设置，方便继续添加
       // 这些值已经保存在 localStorage 中，下次打开会自动恢复
       setWord({
@@ -144,10 +144,10 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
         difficultyCoefficient: word.difficultyCoefficient, // 保留难度系数
         setId: word.setId, // 保留单词集选择
       });
-      
+
       // 确保选择已保存到 localStorage
       saveSelections(word.setId, word.difficultyCoefficient);
-      
+
       // 将焦点设置到第一个输入框（kana），方便继续输入
       setTimeout(() => {
         if (kanaInputRef.current) {

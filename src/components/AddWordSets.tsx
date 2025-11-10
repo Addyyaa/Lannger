@@ -1,4 +1,4 @@
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import * as dbOperator from "../store/wordStore";
 import { useTranslation } from "react-i18next";
 import { useState, Dispatch, SetStateAction } from "react";
@@ -11,6 +11,7 @@ export default function AddWordSets({
     addWordSet: Dispatch<SetStateAction<any[]>>;
 }) {
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
     const { t } = useTranslation();
     const [wordSet, setWordSet] = useState({
         name: "",
@@ -32,47 +33,47 @@ export default function AddWordSets({
     }
     return (
         <div
-            style={{
-                ...AddWordSetsStyle,
+            data-test-id="div-test-2" style={{
+                ...AddWordSetsStyle(isPortrait),
                 backgroundColor: isDark ? "#2d2d2d" : "#f8f9fa",
             }}
         >
             <label
-                style={{ ...AddWordSetTitleStyle, color: isDark ? "#eee" : "#333" }}
+                data-test-id="label-test-2" style={{ ...AddWordSetTitleStyle(isPortrait), color: isDark ? "#eee" : "#333" }}
             >
                 {t("addWordSetTitle")}
             </label>
             <button
-                onClick={closePopup}
-                style={CloseButtonStyle}
+                data-test-id="button-test-1" onClick={closePopup}
+                style={CloseButtonStyle(isPortrait)}
                 data-testid="AddWordSets-close-button"
             >
                 X
             </button>
-            <form style={FormStyle}>
-                <fieldset style={fieldsetStyle}>
-                    <legend style={legendStyle}>{t("wordSet")}</legend>
-                    <div style={nameInputContainerStyle}>
-                        <label style={nameLabelStyle}>{t("setName")}</label>
+            <form data-test-id="form-test" style={FormStyle}>
+                <fieldset data-test-id="fieldset-test" style={fieldsetStyle(isPortrait)}>
+                    <legend data-test-id="legend-test" style={legendStyle(isPortrait)}>{t("wordSet")}</legend>
+                    <div data-test-id="div-test-1" style={nameInputContainerStyle(isPortrait)}>
+                        <label data-test-id="label-test-1" style={nameLabelStyle(isPortrait)}>{t("setName")}</label>
                         <input
-                            type="text"
+                            data-test-id="input-test" type="text"
                             data-testid="AddWordSets-setName-input"
-                            style={nameInputStyle(isDark)}
+                            style={nameInputStyle(isDark, isPortrait)}
                             value={wordSet.name}
                             onChange={(e) => setWordSet({ ...wordSet, name: e.target.value })}
                         />
                     </div>
-                    <div style={setMarkInputContainerStyle}>
-                        <label style={setMarkLabelStyle}>{t("setMark")}</label>
+                    <div data-test-id="div-test" style={setMarkInputContainerStyle(isPortrait)}>
+                        <label data-test-id="label-test" style={setMarkLabelStyle(isPortrait)}>{t("setMark")}</label>
                         <textarea
-                            data-testid="AddWordSets-setMark-input"
-                            style={setMarkInputStyle(isDark)}
+                            data-test-id="textarea-test" data-testid="AddWordSets-setMark-input"
+                            style={setMarkInputStyle(isDark, isPortrait)}
                             value={wordSet.mark}
                             onChange={(e) => setWordSet({ ...wordSet, mark: e.target.value })}
                         />
                     </div>
                 </fieldset>
-                <button style={submitButtonStyle} onClick={handleSubmit}>
+                <button data-test-id="button-test" style={submitButtonStyle(isPortrait)} onClick={handleSubmit}>
                     {t("addWordSet")}
                 </button>
             </form>
@@ -80,55 +81,60 @@ export default function AddWordSets({
     );
 }
 
-const AddWordSetsStyle: React.CSSProperties = {
+const AddWordSetsStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "relative",
-    width: "40vw",
-    aspectRatio: "1.5/1",
+    width: isPortrait ? "90%" : "40vw",
+    aspectRatio: isPortrait ? undefined : "1.5/1",
+    minHeight: isPortrait ? "60vh" : undefined,
     display: "flex",
-    borderRadius: "10px",
+    borderRadius: isPortrait ? "2vw" : "0.625vw",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
-};
+    padding: isPortrait ? "4vw" : "1vw",
+    boxSizing: "border-box",
+});
 
-const CloseButtonStyle: React.CSSProperties = {
+const CloseButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "absolute",
-    top: "1.5vh",
-    right: "1vw",
-    borderRadius: "0.8vw",
-};
+    top: isPortrait ? "3vw" : "1.5vh",
+    right: isPortrait ? "3vw" : "1vw",
+    borderRadius: isPortrait ? "2vw" : "0.8vw",
+    fontSize: isPortrait ? "4vw" : "1.2vw",
+    padding: isPortrait ? "2vw" : "0.5vw 1vw",
+});
 
-const AddWordSetTitleStyle: React.CSSProperties = {
-    fontSize: "1.3vw",
+const AddWordSetTitleStyle = (isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "4.5vw" : "1.3vw",
     position: "absolute",
     fontWeight: "bold",
-    top: "1.5vh",
-    left: "1vw",
+    top: isPortrait ? "3vw" : "1.5vh",
+    left: isPortrait ? "3vw" : "1vw",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-};
+});
 
-const legendStyle: React.CSSProperties = {
-    fontSize: "1.3vw",
+const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "4.5vw" : "1.3vw",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: "7% 0 0 0",
-};
+    padding: isPortrait ? "2vw 0 0 0" : "7% 0 0 0",
+});
 
-const fieldsetStyle: React.CSSProperties = {
+const fieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     position: "absolute",
-    top: "4vh",
+    top: isPortrait ? "12vw" : "4vh",
     width: "88%",
-    height: "70%",
+    height: isPortrait ? "75%" : "70%",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     border: "none",
     outline: "none",
-};
+});
 
 const FormStyle: React.CSSProperties = {
     display: "flex",
@@ -142,76 +148,78 @@ const FormStyle: React.CSSProperties = {
     outline: "none",
 };
 
-const nameLabelStyle: React.CSSProperties = {
-    fontSize: "1.3vw",
+const nameLabelStyle = (isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "4vw" : "1.3vw",
     width: "auto",
     fontWeight: "bold",
-};
+});
 
-const nameInputStyle = (isDark: boolean): React.CSSProperties => ({
+const nameInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     width: "80%",
     height: "100%",
-    borderRadius: "0.8vw",
-    border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+    borderRadius: isPortrait ? "2vw" : "0.8vw",
+    border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
     outline: "none",
-    fontSize: "1.2vw",
+    fontSize: isPortrait ? "3.5vw" : "1.2vw",
     boxSizing: "border-box",
     backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
     color: isDark ? "#eee" : "#333",
+    padding: isPortrait ? "2vw" : "0.5vw",
 });
 
-const nameInputContainerStyle: React.CSSProperties = {
+const nameInputContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    height: "20%",
+    height: isPortrait ? "25%" : "20%",
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    columnGap: "5%",
-};
+    columnGap: isPortrait ? "3vw" : "5%",
+});
 
-const setMarkLabelStyle: React.CSSProperties = {
-    fontSize: "1.3vw",
+const setMarkLabelStyle = (isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "4vw" : "1.3vw",
     width: "auto",
     fontWeight: "bold",
-};
+});
 
-const setMarkInputContainerStyle: React.CSSProperties = {
+const setMarkInputContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    height: "40%",
+    height: isPortrait ? "50%" : "40%",
     width: "100%",
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
-    marginBottom: "6%",
-    columnGap: "5%",
-    marginTop: "5%",
-};
+    marginBottom: isPortrait ? "4vw" : "6%",
+    columnGap: isPortrait ? "3vw" : "5%",
+    marginTop: isPortrait ? "3vw" : "5%",
+});
 
-const setMarkInputStyle = (isDark: boolean): React.CSSProperties => ({
+const setMarkInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     width: "80%",
     height: "100%",
-    borderRadius: "0.8vw",
-    border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+    borderRadius: isPortrait ? "2vw" : "0.8vw",
+    border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
     outline: "none",
     textAlign: "left",
-    padding: "2% 0 2% 0",
+    padding: isPortrait ? "2vw" : "2% 0 2% 0",
     boxSizing: "border-box",
-    fontSize: "1.2vw",
+    fontSize: isPortrait ? "3.5vw" : "1.2vw",
     maxWidth: "80%",
     resize: "none",
     backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
     color: isDark ? "#eee" : "#333",
 });
 
-const submitButtonStyle: React.CSSProperties = {
-    minWidth: "33%",
+const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
+    minWidth: isPortrait ? "50%" : "33%",
     width: "auto",
-    height: "14.5%",
-    borderRadius: "0.8vw",
-    fontSize: "1vw",
+    height: isPortrait ? "8vh" : "14.5%",
+    borderRadius: isPortrait ? "2vw" : "0.8vw",
+    fontSize: isPortrait ? "3.5vw" : "1vw",
     fontWeight: "bold",
     cursor: "pointer",
-    marginTop: "55%",
+    marginTop: isPortrait ? "auto" : "55%",
     zIndex: 2,
-};
+    padding: isPortrait ? "2vw 4vw" : "0.5vw 1vw",
+});

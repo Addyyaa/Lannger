@@ -119,7 +119,7 @@ export default function RestoreData({ close, setPopup, setWordSets }: RestoreDat
     }
     return (
         <ConfirmWidget
-            title={t("restoreData")}
+            data-test-id="confirmwidget-test" title={t("restoreData")}
             message={<Trans i18nKey="restoreDataMessage" values={{ fileName }} components={{ highlight: <span style={{ color: "#00b4ff" }} /> }} />}
             onConfirm={handleConfirm}
             onCancel={selectFile}

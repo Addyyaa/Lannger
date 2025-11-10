@@ -56,7 +56,7 @@ export default function BackButton({
     // 合并外部样式，外部样式优先级更高
     const buttonStyle: React.CSSProperties = useMemo(() => {
         if (!style) return baseButtonStyle;
-        
+
         return {
             ...baseButtonStyle,
             ...style,
@@ -73,14 +73,14 @@ export default function BackButton({
 
     return (
         <button
-            onClick={onClick}
+            data-test-id="button-test" onClick={onClick}
             style={buttonStyle}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             aria-label={ariaLabel || t("back")}
         >
             <svg
-                width="18"
+                data-test-id="svg-test" width="18"
                 height="18"
                 viewBox="0 0 18 18"
                 fill="none"
@@ -88,14 +88,14 @@ export default function BackButton({
                 style={{ display: "block", flexShrink: 0 }}
             >
                 <path
-                    d="M11 13L6 8L11 3"
+                    data-test-id="path-test" d="M11 13L6 8L11 3"
                     stroke={isDark ? "#f5f5f5" : "#333"}
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
                 />
             </svg>
-            {showText && <span>{t("back")}</span>}
+            {showText && <span data-test-id="span-test">{t("back")}</span>}
         </button>
     );
 }

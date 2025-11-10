@@ -96,17 +96,17 @@ export default function StudyModeSelector({ closePopup, onSelectMode }: StudyMod
     ];
 
     return (
-        <div style={containerStyle}>
+        <div data-test-id="div-test-5" style={containerStyle}>
             <CloseButton
-                onClick={closePopup}
+                data-test-id="closebutton-test" onClick={closePopup}
                 style={{ position: "absolute", top: "16px", right: "16px" }}
                 iconColor={isDark ? "#fff" : "#333"}
             />
-            <h2 style={titleStyle}>{t("chooseStudyMode")}</h2>
-            <div style={modesGridStyle}>
+            <h2 data-test-id="h2-test" style={titleStyle}>{t("chooseStudyMode")}</h2>
+            <div data-test-id="div-test-4" style={modesGridStyle}>
                 {modes.map(({ mode, icon, title, desc }) => (
                     <div
-                        key={mode}
+                        data-test-id="div-test-3" key={mode}
                         style={modeCardStyle}
                         onClick={() => onSelectMode(mode)}
                         onMouseEnter={(e) => {
@@ -122,9 +122,9 @@ export default function StudyModeSelector({ closePopup, onSelectMode }: StudyMod
                             e.currentTarget.style.borderColor = isDark ? "#555" : "#e0e0e0";
                         }}
                     >
-                        <div style={modeIconStyle}>{icon}</div>
-                        <div style={modeTitleStyle}>{title}</div>
-                        <div style={modeDescStyle}>{desc}</div>
+                        <div data-test-id="div-test-2" style={modeIconStyle}>{icon}</div>
+                        <div data-test-id="div-test-1" style={modeTitleStyle}>{title}</div>
+                        <div data-test-id="div-test" style={modeDescStyle}>{desc}</div>
                     </div>
                 ))}
             </div>

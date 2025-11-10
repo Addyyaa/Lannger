@@ -84,14 +84,14 @@ export default function CloseButton({
 
     return (
         <button
-            onClick={onClick}
+            data-test-id="button-test" onClick={onClick}
             style={buttonStyle}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             aria-label={ariaLabel}
         >
             <svg
-                width={iconSize}
+                data-test-id="svg-test" width={iconSize}
                 height={iconSize}
                 viewBox="0 0 16 16"
                 fill="none"
@@ -105,7 +105,7 @@ export default function CloseButton({
                 }}
             >
                 <line
-                    x1="4"
+                    data-test-id="line-test-1" x1="4"
                     y1="4"
                     x2="12"
                     y2="12"
@@ -115,7 +115,7 @@ export default function CloseButton({
                     strokeOpacity="1"
                 />
                 <line
-                    x1="12"
+                    data-test-id="line-test" x1="12"
                     y1="4"
                     x2="4"
                     y2="12"

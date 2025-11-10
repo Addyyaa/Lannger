@@ -1,6 +1,6 @@
 import React, { useState, useReducer, useContext, createContext } from "react";
 import { useTranslation } from "react-i18next";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import ComponentAsModel from "../utils/componentAsModel";
 import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
@@ -138,6 +138,7 @@ const ClearDataConfirmWidget = ({ dispatch, setWordSets }: { dispatch: (action: 
 export default function Manage() {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const { isPortrait } = useOrientation();
   const [wordSets, setWordSets] = useState<any[]>([]);
   const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
 
@@ -147,7 +148,7 @@ export default function Manage() {
     overflowY: "auto",
     height: "100%",
     width: "100%",
-    padding: "0 2vw",
+    padding: isPortrait ? "0 3vw" : "0 2vw",
     boxSizing: "border-box",
     scrollbarWidth: "thin", // Firefox：设置滚动条为细样式
     scrollbarColor: "transparent transparent", // Firefox：默认滑块和轨道透明
@@ -158,33 +159,35 @@ export default function Manage() {
     background: isDark
       ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
       : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-    borderRadius: "0.7vw",
-    marginBottom: "20px",
+    borderRadius: isPortrait ? "2vw" : "0.7vw",
+    marginBottom: isPortrait ? "3vw" : "1.25vw",
+    padding: isPortrait ? "4vw" : "1.5vw",
     boxShadow: isDark
-      ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-      : "0 4px 20px rgba(0, 0, 0, 0.1)",
-    border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+      ? isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.3)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+      : isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.1)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+    border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
+    boxSizing: "border-box",
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: "28px",
+    fontSize: isPortrait ? "5.5vw" : "1.75vw",
     fontWeight: "bold",
     color: "#00b4ff",
     textAlign: "center",
-    margin: 0
+    margin: isPortrait ? "0 0 3vw 0" : "0"
   };
 
   const buttonStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
     color: "white",
     border: "none",
-    borderRadius: "8px",
-    padding: "12px 24px",
-    fontSize: "16px",
+    borderRadius: isPortrait ? "2vw" : "0.5vw",
+    padding: isPortrait ? "3vw 6vw" : "0.75vw 1.5vw",
+    fontSize: isPortrait ? "3.5vw" : "1vw",
     fontWeight: "bold",
     cursor: "pointer",
     transition: "all 0.3s ease",
-    boxShadow: "0 4px 15px rgba(0, 180, 255, 0.3)",
+    boxShadow: isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)",
   };
 
   const senction1Style: React.CSSProperties = {
@@ -209,46 +212,50 @@ export default function Manage() {
           <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
         </section>
         <section style={cardStyle} data-testid="system-settings-section">
-          <h2 style={{ marginBottom: "20px", color: isDark ? "#fff" : "#333" }}>
+          <h2 style={{
+            marginBottom: isPortrait ? "3vw" : "1.25vw",
+            fontSize: isPortrait ? "4.5vw" : "1.25vw",
+            color: isDark ? "#fff" : "#333"
+          }}>
             {t("systemSettings")}
           </h2>
 
           <div
             style={{
               display: "grid",
-              gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-              gap: "20px",
+              gridTemplateColumns: isPortrait ? "1fr" : "repeat(auto-fit, minmax(18.75vw, 1fr))",
+              gap: isPortrait ? "3vw" : "1.25vw",
             }}
           >
             <div
               style={{
-                padding: "20px",
+                padding: isPortrait ? "4vw" : "1.25vw",
                 background: isDark
                   ? "rgba(255, 255, 255, 0.05)"
                   : "rgba(0, 0, 0, 0.02)",
-                borderRadius: "8px",
-                border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+                borderRadius: isPortrait ? "2vw" : "0.5vw",
+                border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #555` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
               }}
             >
               <h3
                 style={{
-                  margin: "0 0 16px 0",
+                  margin: `0 0 ${isPortrait ? "3vw" : "1vw"} 0`,
                   color: isDark ? "#fff" : "#333",
-                  fontSize: "18px",
+                  fontSize: isPortrait ? "4vw" : "1.125vw",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: isPortrait ? "2vw" : "0.5vw",
                 }}
               >
                 {t("studySettings")}
               </h3>
-              <div style={{ marginBottom: "12px" }}>
+              <div style={{ marginBottom: isPortrait ? "2vw" : "0.75vw" }}>
                 <label
                   style={{
                     display: "block",
-                    marginBottom: "4px",
+                    marginBottom: isPortrait ? "1.5vw" : "0.25vw",
                     color: isDark ? "#ccc" : "#666",
-                    fontSize: "14px",
+                    fontSize: isPortrait ? "3.5vw" : "0.875vw",
                   }}
                 >
                   {t("dailyGoal")}
@@ -258,11 +265,13 @@ export default function Manage() {
                   defaultValue="20"
                   style={{
                     width: "100%",
-                    padding: "8px",
-                    border: isDark ? "1px solid #555" : "1px solid #ddd",
-                    borderRadius: "4px",
+                    padding: isPortrait ? "3vw" : "0.5vw",
+                    border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #555` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #ddd`,
+                    borderRadius: isPortrait ? "1.5vw" : "0.25vw",
                     background: isDark ? "#3a3a3a" : "#fff",
                     color: isDark ? "#fff" : "#333",
+                    fontSize: isPortrait ? "3.5vw" : "0.875vw",
+                    boxSizing: "border-box",
                   }}
                 />
               </div>
@@ -270,37 +279,48 @@ export default function Manage() {
 
             <div
               style={{
-                padding: "20px",
+                padding: isPortrait ? "4vw" : "1.25vw",
                 background: isDark
                   ? "rgba(255, 255, 255, 0.05)"
                   : "rgba(0, 0, 0, 0.02)",
-                borderRadius: "8px",
-                border: isDark ? "1px solid #555" : "1px solid #e0e0e0",
+                borderRadius: isPortrait ? "2vw" : "0.5vw",
+                border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #555` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
               }}
             >
               <h3
                 style={{
-                  margin: "0 0 16px 0",
+                  margin: `0 0 ${isPortrait ? "3vw" : "1vw"} 0`,
                   color: isDark ? "#fff" : "#333",
-                  fontSize: "18px",
+                  fontSize: isPortrait ? "4vw" : "1.125vw",
                   display: "flex",
                   alignItems: "center",
-                  gap: "8px",
+                  gap: isPortrait ? "2vw" : "0.5vw",
                 }}
               >
                 💾 {t("backupData")}
               </h3>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: "8px" }}
+                style={{ display: "flex", flexDirection: "column", gap: isPortrait ? "2.5vw" : "0.5vw" }}
               >
                 <button
                   style={{
                     ...buttonStyle,
                     width: "100%",
-                    fontSize: "14px",
                   }}
                   onClick={async () => {
                     await dbOperator.backupDatabase();
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(-0.125vw)";
+                      e.currentTarget.style.boxShadow = "0 0.5vw 1.5vw rgba(0, 180, 255, 0.4)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)" : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)";
+                    }
                   }}
                 >
                   {t("backupData")}
@@ -311,10 +331,21 @@ export default function Manage() {
                     width: "100%",
                     background:
                       "linear-gradient(135deg, #ffa502 0%, #ff9500 100%)",
-                    fontSize: "14px",
                   }}
                   onClick={() => {
                     dispatch({ type: "SET_DATA_RESTORE_CONFIRM", payload: {} });
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(-0.125vw)";
+                      e.currentTarget.style.boxShadow = "0 0.5vw 1.5vw rgba(255, 165, 2, 0.4)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(255, 165, 2, 0.3)" : "0 0.25vw 0.9375vw rgba(255, 165, 2, 0.3)";
+                    }
                   }}
                 >
                   {t("restoreData")}
@@ -325,10 +356,21 @@ export default function Manage() {
                     width: "100%",
                     background:
                       "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
-                    fontSize: "14px",
                   }}
                   onClick={() => {
                     dispatch({ type: "SET_CLEAR_DATA", payload: {} });
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(-0.125vw)";
+                      e.currentTarget.style.boxShadow = "0 0.5vw 1.5vw rgba(255, 71, 87, 0.4)";
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isPortrait) {
+                      e.currentTarget.style.transform = "translateY(0)";
+                      e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(255, 71, 87, 0.3)" : "0 0.25vw 0.9375vw rgba(255, 71, 87, 0.3)";
+                    }
                   }}
                 >
                   {t("clearData")}

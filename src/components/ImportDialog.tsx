@@ -1,5 +1,5 @@
 import { useState, useRef } from "react";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import { useTranslation } from "react-i18next";
 import * as XLSX from "xlsx";
 import CloseButton from "./CloseButton";
@@ -21,6 +21,7 @@ type Encoding = "utf-8" | "utf-16" | "gbk";
  */
 export default function ImportDialog({ closePopup, onImportComplete }: ImportDialogProps) {
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
     const { t } = useTranslation();
     const [selectedFile, setSelectedFile] = useState<File | null>(null);
     const [fileName, setFileName] = useState<string>("");
@@ -395,7 +396,7 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
                 console.error("获取单词集失败:", error);
                 wordSets = [];
             }
-            
+
             const wordSetMap = new Map<string, number>();
             // 确保 wordSets 是数组后再遍历
             if (Array.isArray(wordSets)) {
@@ -578,57 +579,63 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
     };
 
     return (
-        <div style={ImportDialogStyle}>
-            <div style={DialogContainerStyle(isDark)}>
-                <CloseButton onClick={closePopup} ariaLabel={t("close")} iconColor={isDark ? "#ffffff" : "#333333"} />
-                <div style={ContentStyle}>
-                    <h2 style={TitleStyle(isDark)}>{t("importWords")}</h2>
+        <div data-test-id="div-test-6" style={ImportDialogStyle}>
+            <div data-test-id="div-test-5" style={DialogContainerStyle(isDark, isPortrait)}>
+                <CloseButton
+                    data-test-id="closebutton-test"
+                    onClick={closePopup}
+                    ariaLabel={t("close")}
+                    iconColor={isDark ? "#ffffff" : "#333333"}
+                    style={{ position: "absolute", top: isPortrait ? "3vw" : "1vw", right: isPortrait ? "3vw" : "1vw" }}
+                />
+                <div data-test-id="div-test-4" style={ContentStyle(isPortrait)}>
+                    <h2 data-test-id="h2-test" style={TitleStyle(isDark, isPortrait)}>{t("importWords")}</h2>
 
                     {/* 文件格式选择 */}
-                    <div style={SelectContainerStyle}>
-                        <label style={LabelStyle(isDark)}>{t("fileFormat")}:</label>
+                    <div data-test-id="div-test-3" style={SelectContainerStyle(isPortrait)}>
+                        <label data-test-id="label-test-1" style={LabelStyle(isDark, isPortrait)}>{t("fileFormat")}:</label>
                         <select
-                            style={SelectStyle(isDark)}
+                            data-test-id="select-test-1" style={SelectStyle(isDark, isPortrait)}
                             value={fileFormat}
                             onChange={(e) => setFileFormat(e.target.value as FileFormat)}
                         >
-                            <option value="json">{t("json")}</option>
-                            <option value="xlsx">{t("xlsx")}</option>
-                            <option value="xls">{t("xls")}</option>
-                            <option value="xml">{t("xml")}</option>
+                            <option data-test-id="option-test-6" value="json">{t("json")}</option>
+                            <option data-test-id="option-test-5" value="xlsx">{t("xlsx")}</option>
+                            <option data-test-id="option-test-4" value="xls">{t("xls")}</option>
+                            <option data-test-id="option-test-3" value="xml">{t("xml")}</option>
                         </select>
                     </div>
 
                     {/* 编码选择 */}
-                    <div style={SelectContainerStyle}>
-                        <label style={LabelStyle(isDark)}>{t("encoding")}:</label>
+                    <div data-test-id="div-test-2" style={SelectContainerStyle(isPortrait)}>
+                        <label data-test-id="label-test" style={LabelStyle(isDark, isPortrait)}>{t("encoding")}:</label>
                         <select
-                            style={SelectStyle(isDark)}
+                            data-test-id="select-test" style={SelectStyle(isDark, isPortrait)}
                             value={encoding}
                             onChange={(e) => setEncoding(e.target.value as Encoding)}
                         >
-                            <option value="utf-8">{t("utf8")}</option>
-                            <option value="utf-16">{t("utf16")}</option>
-                            <option value="gbk">{t("gbk")}</option>
+                            <option data-test-id="option-test-2" value="utf-8">{t("utf8")}</option>
+                            <option data-test-id="option-test-1" value="utf-16">{t("utf16")}</option>
+                            <option data-test-id="option-test" value="gbk">{t("gbk")}</option>
                         </select>
                     </div>
 
-                    <div style={ButtonContainerStyle}>
-                        <button style={ButtonStyle(isDark)} onClick={handleDownloadTemplate}>
+                    <div data-test-id="div-test-1" style={ButtonContainerStyle(isPortrait)}>
+                        <button data-test-id="button-test-2" style={ButtonStyle(isDark, false, isPortrait)} onClick={handleDownloadTemplate}>
                             {t("downloadTemplate")}
                         </button>
-                        <button style={ButtonStyle(isDark)} onClick={handleSelectFile}>
+                        <button data-test-id="button-test-1" style={ButtonStyle(isDark, false, isPortrait)} onClick={handleSelectFile}>
                             {t("selectFile")}
                         </button>
                         <input
-                            ref={fileInputRef}
+                            data-test-id="input-test" ref={fileInputRef}
                             type="file"
                             accept={getAcceptAttribute()}
                             onChange={handleFileSelect}
                             style={{ display: "none" }}
                         />
                         <button
-                            style={ButtonStyle(isDark, !selectedFile)}
+                            data-test-id="button-test" style={ButtonStyle(isDark, !selectedFile, isPortrait)}
                             onClick={handleImport}
                             disabled={!selectedFile}
                         >
@@ -637,7 +644,7 @@ export default function ImportDialog({ closePopup, onImportComplete }: ImportDia
                     </div>
 
                     {fileName && (
-                        <div style={FileNameStyle(isDark)}>
+                        <div data-test-id="div-test" style={FileNameStyle(isDark, isPortrait)}>
                             {t("selectedFile")}: {fileName}
                         </div>
                     )}
@@ -658,81 +665,91 @@ const ImportDialogStyle: React.CSSProperties = {
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
+    padding: "3vw",
+    boxSizing: "border-box",
 };
 
-const DialogContainerStyle = (isDark: boolean): React.CSSProperties => ({
+const DialogContainerStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
     position: "relative",
-    width: "40vw",
-    aspectRatio: "1.5/1",
+    width: isPortrait ? "90%" : "40vw",
+    aspectRatio: isPortrait ? undefined : "1.5/1",
+    minHeight: isPortrait ? "60vh" : undefined,
     display: "flex",
-    borderRadius: "10px",
+    borderRadius: isPortrait ? "2vw" : "0.625vw",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     backgroundColor: isDark ? "#2d2d2d" : "#f8f9fa",
-    padding: "2vw",
+    padding: isPortrait ? "4vw" : "2vw",
     boxSizing: "border-box",
+    maxHeight: isPortrait ? "90vh" : "90vh",
+    overflow: "auto",
 });
 
-const ContentStyle: React.CSSProperties = {
+const ContentStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     width: "100%",
     height: "100%",
-    gap: "1.5vh",
-};
+    gap: isPortrait ? "3vw" : "1.5vh",
+});
 
-const TitleStyle = (isDark: boolean): React.CSSProperties => ({
-    fontSize: "1.5vw",
+const TitleStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "5vw" : "1.5vw",
     fontWeight: "bold",
     color: isDark ? "#eee" : "#333",
     margin: 0,
-    marginBottom: "1vh",
+    marginBottom: isPortrait ? "2vw" : "1vh",
 });
 
-const SelectContainerStyle: React.CSSProperties = {
+const SelectContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     alignItems: "center",
-    gap: "1vw",
+    gap: isPortrait ? "3vw" : "1vw",
     width: "80%",
     justifyContent: "space-between",
-};
-
-const LabelStyle = (isDark: boolean): React.CSSProperties => ({
-    fontSize: "1vw",
-    fontWeight: "500",
-    color: isDark ? "#eee" : "#333",
-    minWidth: "30%",
+    flexDirection: isPortrait ? "column" : "row",
 });
 
-const SelectStyle = (isDark: boolean): React.CSSProperties => ({
-    flex: 1,
-    padding: "8px 12px",
-    fontSize: "0.9vw",
-    borderRadius: "6px",
-    border: isDark ? "1px solid rgba(255, 255, 255, 0.2)" : "1px solid rgba(0, 0, 0, 0.15)",
+const LabelStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "4vw" : "1vw",
+    fontWeight: "500",
+    color: isDark ? "#eee" : "#333",
+    minWidth: isPortrait ? "100%" : "30%",
+    width: isPortrait ? "100%" : "auto",
+});
+
+const SelectStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    flex: isPortrait ? undefined : 1,
+    width: isPortrait ? "100%" : undefined,
+    padding: isPortrait ? "3vw 4vw" : "0.5vw 0.75vw",
+    fontSize: isPortrait ? "3.5vw" : "0.9vw",
+    borderRadius: isPortrait ? "2vw" : "0.375vw",
+    border: isDark
+        ? `${isPortrait ? "0.3vw" : "0.06vw"} solid rgba(255, 255, 255, 0.2)`
+        : `${isPortrait ? "0.3vw" : "0.06vw"} solid rgba(0, 0, 0, 0.15)`,
     backgroundColor: isDark ? "#3a3a3a" : "#fff",
     color: isDark ? "#eee" : "#333",
     outline: "none",
     cursor: "pointer",
 });
 
-const ButtonContainerStyle: React.CSSProperties = {
+const ButtonContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     flexDirection: "column",
-    gap: "1.5vh",
+    gap: isPortrait ? "3vw" : "1.5vh",
     width: "80%",
     alignItems: "stretch",
-    marginTop: "1vh",
-};
+    marginTop: isPortrait ? "2vw" : "1vh",
+});
 
-const ButtonStyle = (isDark: boolean, disabled?: boolean): React.CSSProperties => ({
-    padding: "12px 24px",
-    fontSize: "1vw",
+const ButtonStyle = (isDark: boolean, disabled?: boolean, isPortrait?: boolean): React.CSSProperties => ({
+    padding: isPortrait ? "3vw 6vw" : "0.75vw 1.5vw",
+    fontSize: isPortrait ? "3.5vw" : "1vw",
     fontWeight: "bold",
-    borderRadius: "8px",
+    borderRadius: isPortrait ? "2vw" : "0.5vw",
     cursor: disabled ? "not-allowed" : "pointer",
     backgroundColor: disabled
         ? isDark
@@ -750,14 +767,14 @@ const ButtonStyle = (isDark: boolean, disabled?: boolean): React.CSSProperties =
             : "#333",
     transition: "all 0.3s ease",
     border: isDark
-        ? `1px solid ${disabled ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.2)"}`
-        : `1px solid ${disabled ? "rgba(0, 0, 0, 0.1)" : "rgba(0, 0, 0, 0.15)"}`,
+        ? `${isPortrait ? "0.3vw" : "0.06vw"} solid ${disabled ? "rgba(255, 255, 255, 0.1)" : "rgba(255, 255, 255, 0.2)"}`
+        : `${isPortrait ? "0.3vw" : "0.06vw"} solid ${disabled ? "rgba(0, 0, 0, 0.1)" : "rgba(0, 0, 0, 0.15)"}`,
 });
 
-const FileNameStyle = (isDark: boolean): React.CSSProperties => ({
-    fontSize: "0.9vw",
+const FileNameStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+    fontSize: isPortrait ? "3.5vw" : "0.9vw",
     color: isDark ? "#ccc" : "#666",
-    marginTop: "0.5vh",
+    marginTop: isPortrait ? "2vw" : "0.5vh",
     textAlign: "center",
 });
 

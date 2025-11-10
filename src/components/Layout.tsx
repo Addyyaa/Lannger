@@ -64,20 +64,20 @@ export default function Layout({ globalComponents, children, showSidebar = true 
     }
 
     return (
-        <div style={layoutStyle} data-testid="layout">
+        <div data-test-id="div-test-3" style={layoutStyle} data-testid="layout">
             {showSidebar && (
                 <Sidebar
-                    isCollapsed={isSidebarCollapsed}
+                    data-test-id="sidebar-test" isCollapsed={isSidebarCollapsed}
                     onToggle={handleSidebarToggle}
                 />
             )}
-            <div style={mainContentStyle} data-testid="layout-content1">
+            <div data-test-id="div-test-2" style={mainContentStyle} data-testid="layout-content1">
                 {globalComponents && (
-                    <div style={headerStyle} data-testid="layout-header">
+                    <div data-test-id="div-test-1" style={headerStyle} data-testid="layout-header">
                         {globalComponents}
                     </div>
                 )}
-                <div style={contentStyle} data-testid="layout-content2">
+                <div data-test-id="div-test" style={contentStyle} data-testid="layout-content2">
                     {children}
                 </div>
             </div>

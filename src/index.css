@@ -295,3 +295,15 @@ body.dark .example-scroll-container::-webkit-scrollbar-thumb {
 body.dark .example-scroll-container::-webkit-scrollbar-thumb:hover {
   background: rgba(255, 255, 255, 0.3);
 }
+
+/* 隐藏滚动条但保持滚动功能 - 用于闪卡答案面 */
+.flashcard-back-container::-webkit-scrollbar {
+  display: none; /* Chrome, Safari, Opera */
+  width: 0;
+  height: 0;
+}
+
+.flashcard-back-container {
+  -ms-overflow-style: none; /* IE and Edge */
+  scrollbar-width: none; /* Firefox */
+}

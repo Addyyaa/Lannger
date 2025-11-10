@@ -5,7 +5,7 @@ import { Tooltip } from "antd";
 import { List, RowComponentProps } from "react-window";
 import { Word, WordSet } from "../db";
 import * as dbOperator from "../store/wordStore";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import BackButton from "../components/BackButton";
 import ConfirmWidget from "../components/ConfirmWidget";
 import EditWordDialog from "../components/EditWordDialog";
@@ -19,6 +19,7 @@ export default function WordsList() {
     const navigate = useNavigate();
     const { t } = useTranslation();
     const { isDark } = useTheme();
+    const { isPortrait } = useOrientation();
     const wordSetId = id ? parseInt(id, 10) : null;
     const [words, setWords] = useState<Word[]>([]);
     const [wordSets, setWordSets] = useState<WordSet[]>([]);
@@ -30,9 +31,9 @@ export default function WordsList() {
     const [editingWord, setEditingWord] = useState<Word | null>(null);
 
     // 虚拟列表配置常量
-    const COLUMN_TEMPLATE = "0.5fr 1.4fr 1.4fr 2fr 1.4fr 1.4fr 1fr 1.2fr";
-    const ROW_HEIGHT = 60;
-    const MAX_LIST_HEIGHT = 600;
+    const COLUMN_TEMPLATE = isPortrait ? "0.8fr 1.8fr 1.8fr 2.5fr 1.5fr 1.5fr 1fr 1.5fr" : "0.5fr 1.4fr 1.4fr 2fr 1.4fr 1.4fr 1fr 1.2fr";
+    const ROW_HEIGHT = isPortrait ? 80 : 60;
+    const MAX_LIST_HEIGHT = isPortrait ? 500 : 600;
 
     // 创建单词集ID到名称的映射
     const wordSetMap = useMemo(() => {
@@ -85,7 +86,7 @@ export default function WordsList() {
 
     // 页面容器样式
     const containerStyle: React.CSSProperties = {
-        padding: "20px",
+        padding: isPortrait ? "3vw" : "1.25vw",
         width: "100%",
         height: "100%",
         boxSizing: "border-box",
@@ -95,8 +96,8 @@ export default function WordsList() {
     const headerStyle: React.CSSProperties = {
         display: "flex",
         alignItems: "center",
-        gap: "16px",
-        marginBottom: "24px",
+        gap: isPortrait ? "3vw" : "1vw",
+        marginBottom: isPortrait ? "4vw" : "1.5vw",
         flexWrap: "wrap",
         position: "relative",
     };
@@ -105,17 +106,17 @@ export default function WordsList() {
     const batchActionBarStyle: React.CSSProperties = {
         display: "flex",
         alignItems: "center",
-        gap: "12px",
-        marginBottom: "16px",
-        padding: "12px 16px",
-        borderRadius: "8px",
+        gap: isPortrait ? "2.5vw" : "0.75vw",
+        marginBottom: isPortrait ? "3vw" : "1vw",
+        padding: isPortrait ? "3vw 4vw" : "0.75vw 1vw",
+        borderRadius: isPortrait ? "2vw" : "0.5vw",
         background: isDark ? "rgba(255, 71, 87, 0.1)" : "rgba(255, 71, 87, 0.05)",
-        border: isDark ? "1px solid rgba(255, 71, 87, 0.3)" : "1px solid rgba(255, 71, 87, 0.2)",
+        border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(255, 71, 87, 0.3)` : `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(255, 71, 87, 0.2)`,
     };
 
     // 标题样式
     const titleStyle: React.CSSProperties = {
-        fontSize: "24px",
+        fontSize: isPortrait ? "4.5vw" : "1.5vw",
         fontWeight: "bold",
         color: isDark ? "#f5f5f5" : "#333",
         margin: 0,
@@ -124,35 +125,36 @@ export default function WordsList() {
     // 列表容器样式
     const listContainerStyle: React.CSSProperties = {
         width: "100%",
-        maxHeight: MAX_LIST_HEIGHT + 56,
+        maxHeight: MAX_LIST_HEIGHT + (isPortrait ? 70 : 56),
         display: "flex",
         flexDirection: "column",
         overflow: "hidden",
-        borderRadius: "8px",
+        borderRadius: isPortrait ? "2vw" : "0.5vw",
         background: isDark ? "#111" : "#fff",
         boxShadow: isDark
-            ? "0 4px 20px rgba(0, 0, 0, 0.3)"
-            : "0 4px 20px rgba(0, 0, 0, 0.1)",
+            ? isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.3)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+            : isPortrait ? "0 1vw 5vw rgba(0, 0, 0, 0.1)" : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+        border: isDark ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
     };
 
     // 粘性表头样式
     const stickyThStyle: React.CSSProperties = {
-        padding: "12px",
+        padding: isPortrait ? "2vw 1.5vw" : "0.75vw",
         textAlign: "left",
         fontWeight: "bold",
-        fontSize: "16px",
+        fontSize: isPortrait ? "3vw" : "1vw",
         color: isDark ? "#f5f5f5" : "#333",
         background: isDark ? "rgba(0, 0, 0, 0.8)" : "#f8f9fa",
         position: "sticky",
         top: 0,
         zIndex: 10,
-        boxShadow: "0 2px 4px rgba(0, 0, 0, 0.1)",
+        boxShadow: "0 0.125vw 0.25vw rgba(0, 0, 0, 0.1)",
         display: "grid",
         gridTemplateColumns: COLUMN_TEMPLATE,
         alignItems: "center",
-        borderRadius: "8px 8px 0 0",
-        minHeight: "56px",
-        borderBottom: isDark ? "2px solid rgba(255,255,255,0.2)" : "2px solid #ddd",
+        borderRadius: isPortrait ? "2vw 2vw 0 0" : "0.5vw 0.5vw 0 0",
+        minHeight: isPortrait ? "70px" : "56px",
+        borderBottom: isDark ? `${isPortrait ? "0.25vw" : "0.125vw"} solid rgba(255,255,255,0.2)` : `${isPortrait ? "0.25vw" : "0.125vw"} solid #ddd`,
     };
 
     // 计算列表高度
@@ -178,12 +180,13 @@ export default function WordsList() {
         alignItems: "center",
         justifyContent: "flex-start",
         textAlign: "left",
-        fontSize: "14px",
-        padding: "0 12px",
+        fontSize: isPortrait ? "3vw" : "0.875vw",
+        padding: isPortrait ? "0 2vw" : "0 0.75vw",
         color: isDark ? "#f5f5f5" : "#333",
         overflow: "hidden",
         textOverflow: "ellipsis",
         whiteSpace: "nowrap",
+        width: "100%",
     };
 
     // 可点击单元格样式（用于显示例句）
@@ -191,6 +194,15 @@ export default function WordsList() {
         ...baseCellStyle,
         cursor: "pointer",
         transition: "background-color 0.2s ease",
+    };
+
+    // 假名和汉字单元格样式（不使用省略号）
+    const kanaKanjiCellStyle: React.CSSProperties = {
+        ...baseCellStyle,
+        textOverflow: "clip",
+        overflow: "visible",
+        whiteSpace: "normal",
+        wordBreak: "break-all",
     };
 
     // 获取单词集名称
@@ -219,8 +231,9 @@ export default function WordsList() {
     // 空状态样式
     const emptyStateStyle: React.CSSProperties = {
         textAlign: "center",
-        padding: "6vh 0",
-        borderRadius: "8px",
+        padding: isPortrait ? "8vh 0" : "6vh 0",
+        borderRadius: isPortrait ? "2vw" : "0.5vw",
+        fontSize: isPortrait ? "3.5vw" : "1vw",
     };
 
     // 处理返回按钮点击
@@ -322,39 +335,39 @@ export default function WordsList() {
         const actionContainerStyle: React.CSSProperties = {
             ...baseCellStyle,
             justifyContent: "center",
-            gap: "12px",
+            gap: isPortrait ? "2vw" : "0.75vw",
         };
 
         const editButtonStyle: React.CSSProperties = {
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
+            width: isPortrait ? "7vw" : "2.25vw",
+            height: isPortrait ? "7vw" : "2.25vw",
+            borderRadius: isPortrait ? "2vw" : "0.625vw",
             border: "none",
             cursor: "pointer",
             background: isDark ? "rgba(0, 180, 255, 0.18)" : "rgba(0, 180, 255, 0.12)",
             color: isDark ? "#8dd9ff" : "#0096d4",
-            fontSize: "18px",
+            fontSize: isPortrait ? "3.5vw" : "1.125vw",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            boxShadow: isDark ? "0 4px 12px rgba(0,180,255,0.25)" : "0 4px 12px rgba(0,150,212,0.18)",
+            boxShadow: isDark ? (isPortrait ? "0 1vw 3vw rgba(0,180,255,0.25)" : "0 0.25vw 0.75vw rgba(0,180,255,0.25)") : (isPortrait ? "0 1vw 3vw rgba(0,150,212,0.18)" : "0 0.25vw 0.75vw rgba(0,150,212,0.18)"),
         };
 
         const deleteButtonStyle: React.CSSProperties = {
-            width: "36px",
-            height: "36px",
-            borderRadius: "10px",
+            width: isPortrait ? "7vw" : "2.25vw",
+            height: isPortrait ? "7vw" : "2.25vw",
+            borderRadius: isPortrait ? "2vw" : "0.625vw",
             border: "none",
             cursor: "pointer",
             background: isDark ? "rgba(255, 107, 107, 0.18)" : "rgba(255, 71, 87, 0.12)",
             color: isDark ? "#ff8a8a" : "#ff4757",
-            fontSize: "18px",
+            fontSize: isPortrait ? "3.5vw" : "1.125vw",
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
             transition: "transform 0.2s ease, box-shadow 0.2s ease",
-            boxShadow: isDark ? "0 4px 12px rgba(255,107,107,0.25)" : "0 4px 12px rgba(255,71,87,0.18)",
+            boxShadow: isDark ? (isPortrait ? "0 1vw 3vw rgba(255,107,107,0.25)" : "0 0.25vw 0.75vw rgba(255,107,107,0.25)") : (isPortrait ? "0 1vw 3vw rgba(255,71,87,0.18)" : "0 0.25vw 0.75vw rgba(255,71,87,0.18)"),
         };
 
         return (
@@ -369,7 +382,7 @@ export default function WordsList() {
                     gridTemplateColumns: COLUMN_TEMPLATE,
                     alignItems: "stretch",
                     boxSizing: "border-box",
-                    padding: "0 16px",
+                    padding: isPortrait ? "0 2vw" : "0 1vw",
                     height: ROW_HEIGHT,
                     background: isSelected
                         ? isDark
@@ -377,8 +390,8 @@ export default function WordsList() {
                             : "rgba(0, 180, 255, 0.1)"
                         : rowBackground,
                     borderBottom: isDark
-                        ? "1px solid rgba(255,255,255,0.06)"
-                        : "1px solid rgba(0,0,0,0.05)",
+                        ? `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(255,255,255,0.06)`
+                        : `${isPortrait ? "0.25vw" : "0.06vw"} solid rgba(0,0,0,0.05)`,
                 }}
             >
                 <div style={checkboxStyle}>
@@ -392,10 +405,10 @@ export default function WordsList() {
                             }
                         }}
                         style={{
-                            width: "18px",
-                            height: "18px",
+                            width: isPortrait ? "4.5vw" : "1.125vw",
+                            height: isPortrait ? "4.5vw" : "1.125vw",
                             cursor: "pointer",
-                            borderRadius: "4px",
+                            borderRadius: isPortrait ? "1vw" : "0.25vw",
                             outline: "none",
                         }}
                         onMouseEnter={(e) => {
@@ -449,7 +462,7 @@ export default function WordsList() {
                         {word.kana || "-"}
                     </div>
                 </Tooltip>
-                <div style={baseCellStyle}>{word.kanji || "-"}</div>
+                <div style={kanaKanjiCellStyle}>{word.kanji || "-"}</div>
                 <Tooltip
                     title={
                         <div
@@ -504,10 +517,14 @@ export default function WordsList() {
                         style={editButtonStyle}
                         onClick={() => setEditingWord(word)}
                         onMouseEnter={(event) => {
-                            event.currentTarget.style.transform = "translateY(-2px)";
+                            if (!isPortrait) {
+                                event.currentTarget.style.transform = "translateY(-0.125vw)";
+                            }
                         }}
                         onMouseLeave={(event) => {
-                            event.currentTarget.style.transform = "translateY(0)";
+                            if (!isPortrait) {
+                                event.currentTarget.style.transform = "translateY(0)";
+                            }
                         }}
                         aria-label={t("edit")}
                         title={t("edit") || "edit"}
@@ -524,10 +541,14 @@ export default function WordsList() {
                             }
                         }}
                         onMouseEnter={(event) => {
-                            event.currentTarget.style.transform = "translateY(-2px)";
+                            if (!isPortrait) {
+                                event.currentTarget.style.transform = "translateY(-0.125vw)";
+                            }
                         }}
                         onMouseLeave={(event) => {
-                            event.currentTarget.style.transform = "translateY(0)";
+                            if (!isPortrait) {
+                                event.currentTarget.style.transform = "translateY(0)";
+                            }
                         }}
                         aria-label={t("delete")}
                         title={t("delete") || "delete"}
@@ -542,8 +563,8 @@ export default function WordsList() {
     if (loading) {
         return (
             <div style={containerStyle}>
-                <div style={{ textAlign: "center", padding: "40px" }}>
-                    <p style={{ color: isDark ? "#f5f5f5" : "#333" }}>{t("loading")}</p>
+                <div style={{ textAlign: "center", padding: isPortrait ? "8vw" : "2.5vw" }}>
+                    <p style={{ color: isDark ? "#f5f5f5" : "#333", fontSize: isPortrait ? "3.5vw" : "1vw" }}>{t("loading")}</p>
                 </div>
             </div>
         );
@@ -559,7 +580,7 @@ export default function WordsList() {
             </div>
             {selectedWordIds.size > 0 && (
                 <div style={batchActionBarStyle}>
-                    <span style={{ color: isDark ? "#f5f5f5" : "#333", fontWeight: "500" }}>
+                    <span style={{ color: isDark ? "#f5f5f5" : "#333", fontWeight: "500", fontSize: isPortrait ? "3.5vw" : "0.875vw" }}>
                         {t("selectedCount")}: {selectedWordIds.size}
                     </span>
                     <button
@@ -568,21 +589,25 @@ export default function WordsList() {
                             background: "linear-gradient(135deg, #ff4757 0%, #ff3742 100%)",
                             color: "white",
                             border: "none",
-                            borderRadius: "8px",
-                            padding: "8px 16px",
-                            fontSize: "14px",
+                            borderRadius: isPortrait ? "2vw" : "0.5vw",
+                            padding: isPortrait ? "2vw 4vw" : "0.5vw 1vw",
+                            fontSize: isPortrait ? "3.5vw" : "0.875vw",
                             fontWeight: "bold",
                             cursor: "pointer",
                             transition: "all 0.3s ease",
-                            boxShadow: "0 4px 15px rgba(255, 71, 87, 0.3)",
+                            boxShadow: isPortrait ? "0 1vw 3.75vw rgba(255, 71, 87, 0.3)" : "0 0.25vw 0.9375vw rgba(255, 71, 87, 0.3)",
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.transform = "translateY(-2px)";
-                            e.currentTarget.style.boxShadow = "0 6px 20px rgba(255, 71, 87, 0.4)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(-0.125vw)";
+                                e.currentTarget.style.boxShadow = "0 0.375vw 1.25vw rgba(255, 71, 87, 0.4)";
+                            }
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.transform = "translateY(0)";
-                            e.currentTarget.style.boxShadow = "0 4px 15px rgba(255, 71, 87, 0.3)";
+                            if (!isPortrait) {
+                                e.currentTarget.style.transform = "translateY(0)";
+                                e.currentTarget.style.boxShadow = isPortrait ? "0 1vw 3.75vw rgba(255, 71, 87, 0.3)" : "0 0.25vw 0.9375vw rgba(255, 71, 87, 0.3)";
+                            }
                         }}
                     >
                         {t("batchDelete")}
@@ -591,7 +616,7 @@ export default function WordsList() {
             )}
             {words.length === 0 ? (
                 <div style={emptyStateStyle}>
-                    <div style={{ fontSize: "48px", marginBottom: "16px" }}>📚</div>
+                    <div style={{ fontSize: isPortrait ? "12vw" : "3vw", marginBottom: isPortrait ? "4vw" : "1vw" }}>📚</div>
                     <p style={{ color: isDark ? "#ccc" : "#666" }}>{t("noWords")}</p>
                 </div>
             ) : (
