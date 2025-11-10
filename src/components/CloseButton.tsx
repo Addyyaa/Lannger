@@ -4,7 +4,7 @@ import { useTheme } from "../main";
 interface CloseButtonProps {
     onClick: () => void;
     ariaLabel?: string;
-    size?: number;
+    size?: number | string;
     position?: "absolute" | "relative" | "static";
     top?: string;
     right?: string;
@@ -32,12 +32,19 @@ export default function CloseButton({
     // 确定图标颜色：优先使用外部传入的颜色，否则使用默认主题颜色
     const finalIconColor = iconColor || (isDark ? "#ffffff" : "#000000");
 
+    const resolvedButtonSize = typeof size === "number" ? `${size}px` : size;
+    const iconDimension = typeof size === "number" ? `${Math.floor(size * 0.5)}px` : "50%";
+
     const baseButtonStyle: React.CSSProperties = {
         position,
         top: position === "absolute" ? top : undefined,
         right: position === "absolute" ? right : undefined,
-        width: `${size}px`,
-        height: `${size}px`,
+        width: resolvedButtonSize,
+        height: resolvedButtonSize,
+        padding: 0,
+        minWidth: resolvedButtonSize,
+        minHeight: resolvedButtonSize,
+        aspectRatio: "1 / 1",
         borderRadius: "50%",
         border: isDark
             ? "1.5px solid rgba(255, 255, 255, 0.4)"
@@ -45,6 +52,7 @@ export default function CloseButton({
         outline: "none",
         cursor: "pointer",
         display: "flex",
+        flexShrink: 0,
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: isHovered
@@ -80,8 +88,6 @@ export default function CloseButton({
                 : "scale(1)",
     };
 
-    const iconSize = Math.floor(size * 0.5); // 图标大小为按钮的50%，增大可见性
-
     return (
         <button
             data-test-id="button-test" onClick={onClick}
@@ -91,8 +97,8 @@ export default function CloseButton({
             aria-label={ariaLabel}
         >
             <svg
-                data-test-id="svg-test" width={iconSize}
-                height={iconSize}
+                data-test-id="svg-test" width={iconDimension}
+                height={iconDimension}
                 viewBox="0 0 16 16"
                 fill="none"
                 xmlns="http://www.w3.org/2000/svg"
@@ -100,8 +106,8 @@ export default function CloseButton({
                     display: "block",
                     pointerEvents: "none",
                     flexShrink: 0,
-                    width: `${iconSize}px`,
-                    height: `${iconSize}px`,
+                    width: iconDimension,
+                    height: iconDimension,
                 }}
             >
                 <line

@@ -353,7 +353,6 @@ export default function FlashcardStudy({
         justifyContent: "flex-start",
         top: 0,
         transform: "rotateY(180deg)",
-        padding: isPortrait ? "2vh 2vw" : "1vh 1vw",
         boxSizing: "border-box",
         scrollbarWidth: "none", // Firefox: 隐藏滚动条
         msOverflowStyle: "none", // IE/Edge: 隐藏滚动条
@@ -362,7 +361,6 @@ export default function FlashcardStudy({
     const labelStyle: React.CSSProperties = {
         fontSize: isPortrait ? "calc(1.4vw + 1.4vh)" : "calc(0.7vw + 0.7vh)",
         color: isDark ? "#999" : "#666",
-        marginBottom: isPortrait ? "0.5vh" : "0.4vh",
         textAlign: "center",
         width: "100%",
         fontWeight: "500",
@@ -549,10 +547,10 @@ export default function FlashcardStudy({
 
     return (
         <div data-test-id="div-test-21" style={outerContainerStyle} data-testid="FlashcardStudy-0">
-            <div data-test-id="div-test-20" style={{ position: "absolute", top: isPortrait ? "4vh" : "2vh", right: isPortrait ? "4vw" : "2vw", zIndex: 10 }} data-testid="FlashcardStudy-1">
-                <CloseButton data-test-id="closebutton-test" onClick={closePopup} iconColor={isDark ? "#fff" : "#333"} />
+            <div data-test-id="div-test-20" style={{ position: "absolute", top: isPortrait ? "1.5vh" : "1vh", right: isPortrait ? "4vw" : "2vw", zIndex: 10 }} data-testid="FlashcardStudy-1">
+                <CloseButton data-test-id="closebutton-test" onClick={closePopup} iconColor={isDark ? "#fff" : "#333"} size={isPortrait ? "6.7vw" : 40} />
             </div>
-            <div data-test-id="div-test-19" style={{ position: "absolute", top: isPortrait ? "4vh" : "2vh", left: isPortrait ? "4vw" : "2vw", zIndex: 10, ...progressStyle }} data-testid="FlashcardStudy-2">
+            <div data-test-id="div-test-19" style={{ position: "absolute", top: isPortrait ? "1.5vh" : "1vh", left: isPortrait ? "4vw" : "2vw", zIndex: 10, ...progressStyle }} data-testid="FlashcardStudy-2">
                 {currentIndex + 1} / {wordIds.length}
             </div>
             {/* 卡片容器包装 */}
@@ -581,20 +579,21 @@ export default function FlashcardStudy({
                             boxSizing: "border-box",
                             flexShrink: 0,
                             minHeight: "fit-content",
-                            padding: isPortrait ? "1.5vh 0" : "0.75vh 0",
+                            padding: isPortrait ? "0 0" : "0.75vh 0",
                         };
 
                         const fixedContentContainerStyle: React.CSSProperties = {
                             display: "flex",
                             flexDirection: "column",
-                            height: hasExample || hasMark ? (isPortrait ? "52%" : "70%") : "auto",
+                            height: hasExample || hasMark ? (isPortrait ? "auto" : "70%") : "auto",
                             width: "100%",
                             flexShrink: 0,
                             minHeight: 0,
-                            justifyContent: hasExample || hasMark ? "flex-start" : "center",
+                            justifyContent: "center",
                             alignItems: "center",
                             gap: isPortrait ? "1vh" : "0.5vh",
-                            padding: hasExample || hasMark ? 0 : (isPortrait ? "4vh 0" : "2vh 0"),
+                            boxSizing: "border-box",
+                            marginTop: isPortrait ? "12%" : "0"
                         };
 
                         // 可滚动的例句容器样式
@@ -643,14 +642,14 @@ export default function FlashcardStudy({
                                     {currentWord.kanji && (
                                         <div data-test-id="div-test-12" style={fixedContentItemStyle}>
                                             <div data-test-id="div-test-11" style={labelStyle}>{t("kanji")}</div>
-                                            <div data-test-id="div-test-10" style={{ fontSize: isPortrait ? "calc(3vw + 3vh)" : "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: isPortrait ? 0 : "0.5vh", wordBreak: "break-all" }}>
+                                            <div data-test-id="div-test-10" style={{ fontSize: isPortrait ? "calc(2.2vw + 2.2vh)" : "calc(2.3vw + 2vh)", fontWeight: "bold", color: isDark ? "#fff" : "#333", marginTop: isPortrait ? 0 : "0.5vh", wordBreak: "break-all" }}>
                                                 {currentWord.kanji}
                                             </div>
                                         </div>
                                     )}
                                     <div data-test-id="div-test-9" style={fixedContentItemStyle}>
                                         <div data-test-id="div-test-8" style={labelStyle}>{t("kana")}</div>
-                                        <div data-test-id="div-test-7" style={{ fontSize: isPortrait ? "calc(3vw + 3vh)" : "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: isPortrait ? 0 : "0.5vh", wordBreak: "break-all" }}>
+                                        <div data-test-id="div-test-7" style={{ fontSize: isPortrait ? "calc(2.2vw + 2.2vh)" : "calc(1.6vw + 1.6vh)", color: isDark ? "#fff" : "#333", fontWeight: "500", marginTop: isPortrait ? 0 : "0.5vh", wordBreak: "break-all" }}>
                                             {currentWord.kana}
                                         </div>
                                     </div>

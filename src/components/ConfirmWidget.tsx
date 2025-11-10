@@ -61,7 +61,7 @@ export default function ConfirmWidget({ title, message, confirmText, cancelText,
                 )}
                 <h1 data-test-id="h1-test" style={{ ...titleStyleInner(isDark, isPortrait), ...titleStyle }} data-testid="confirm-widget-title">{title}</h1>
                 <p data-test-id="p-test" style={{ ...messageStyleInner(isPortrait), ...messageStyle }} data-testid="confirm-widget-message">{message}</p>
-                <div style={{ display: "flex", flexDirection: isPortrait ? "column" : "row", gap: isPortrait ? "2vw" : "1vw", width: "100%", justifyContent: "center", alignItems: "center" }}>
+                <div data-test-id="div-test-2" style={{ display: "flex", flexDirection: isPortrait ? "column" : "row", gap: isPortrait ? "2vw" : "1vw", width: "100%", justifyContent: "center", alignItems: "center" }}>
                     <button
                         data-test-id="button-test-1" style={{ ...confirmButtonStyleInner(isDark, isPortrait), ...confirmButtonStyle, ...disabledStyles }}
                         disabled={confirmDisabled}
