@@ -423,36 +423,116 @@ async function restoreFromBackupFormat(wordSets: WordSet[], words: Word[]): Prom
   await resetDB();
   await ensureDBOpen();
 
-  const sanitizedWordSets = wordSets.map((set) => {
-    const cloned = { ...set } as any;
-    delete cloned.id;
+  const parseNumericId = (value: unknown): number | undefined => {
+    if (typeof value === "number" && Number.isFinite(value)) {
+      return value;
+    }
+    if (typeof value === "string" && value.trim() !== "") {
+      const parsed = Number(value);
+      if (Number.isFinite(parsed)) {
+        return parsed;
+      }
+    }
+    return undefined;
+  };
+
+  const wordSetIdMap = new Map<number, number>();
+  wordSetIdMap.set(DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_ID);
+
+  const wordSetsWithId: WordSet[] = [];
+  const wordSetsWithoutId: Array<{ data: WordSet; originalId?: number }> = [];
+
+  for (const rawSet of wordSets) {
+    const cloned = { ...rawSet } as Partial<WordSet>;
+    const originalId = parseNumericId((rawSet as any)?.id);
+
     if (typeof cloned.name !== "string" || cloned.name.trim() === "") {
       cloned.name = generateFallbackWordSetName();
+    } else {
+      cloned.name = cloned.name.trim();
     }
+
+    if (typeof cloned.mark !== "string") {
+      cloned.mark = cloned.mark ? String(cloned.mark) : "";
+    }
+
     cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
     cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
-    return cloned;
-  });
 
-  if (sanitizedWordSets.length > 0) {
-    await db.wordSets.bulkPut(sanitizedWordSets as any);
-  } else {
-    await getOrCreateDefaultWordSet();
+    if (originalId !== undefined) {
+      cloned.id = originalId;
+      wordSetIdMap.set(originalId, originalId);
+      wordSetsWithId.push(cloned as WordSet);
+    } else {
+      delete (cloned as any).id;
+      wordSetsWithoutId.push({ data: cloned as WordSet });
+    }
+  }
+
+  if (wordSetsWithId.length > 0) {
+    await db.wordSets.bulkPut(wordSetsWithId as WordSet[]);
+  }
+
+  if (wordSetsWithoutId.length > 0) {
+    for (const item of wordSetsWithoutId) {
+      const newId = await db.wordSets.add(item.data as WordSet);
+      if (item.originalId !== undefined) {
+        wordSetIdMap.set(item.originalId, newId);
+      }
+    }
+  }
+
+  // 确保映射包含当前数据库中的所有词集 ID
+  const existingWordSets = await db.wordSets.toArray();
+  for (const set of existingWordSets) {
+    if (typeof set.id === "number" && !wordSetIdMap.has(set.id)) {
+      wordSetIdMap.set(set.id, set.id);
+    }
   }
 
   const sanitizedWords = words.map((word) => {
-    const cloned = { ...word } as any;
-    delete cloned.id;
-    if (typeof cloned.setId !== "number") {
+    const cloned = { ...word } as Partial<Word>;
+
+    const originalWordId = parseNumericId((word as any)?.id);
+    if (originalWordId !== undefined) {
+      cloned.id = originalWordId;
+    } else {
+      delete (cloned as any).id;
+    }
+
+    const originalSetId = parseNumericId((word as any)?.setId);
+    if (originalSetId !== undefined) {
+      cloned.setId = wordSetIdMap.get(originalSetId) ?? originalSetId ?? DEFAULT_WORD_SET_ID;
+    } else {
       cloned.setId = DEFAULT_WORD_SET_ID;
     }
+
+    cloned.kana = typeof cloned.kana === "string" ? cloned.kana : "";
+    cloned.kanji = typeof cloned.kanji === "string" ? cloned.kanji : "";
+    cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
+    cloned.example = typeof cloned.example === "string" ? cloned.example : "";
+    cloned.mark = typeof cloned.mark === "string" ? cloned.mark : "";
+    cloned.type = typeof cloned.type === "string" && cloned.type.trim() !== "" ? cloned.type : DEFAULT_WORD_TYPE;
+
+    if (cloned.review && typeof cloned.review === "object") {
+      const review = cloned.review as Word["review"];
+      cloned.review = {
+        times: typeof review?.times === "number" ? review.times : 0,
+        nextReview: typeof review?.nextReview === "string" ? review.nextReview : undefined,
+        difficulty: typeof review?.difficulty === "number" ? review.difficulty : undefined,
+      };
+    } else {
+      cloned.review = undefined;
+    }
+
     cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
     cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
-    return cloned;
+
+    return cloned as Word;
   });
 
   if (sanitizedWords.length > 0) {
-    await db.words.bulkPut(sanitizedWords as any);
+    await db.words.bulkPut(sanitizedWords as Word[]);
   }
 
   return true;

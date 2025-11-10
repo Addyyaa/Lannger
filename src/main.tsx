@@ -232,7 +232,7 @@ function GlobalHeader() {
                 <button data-test-id="button-test-1" onClick={handleLg_clicked} style={{
                     width: 'auto',
                     fontWeight: 700,
-                    fontSize: isPortrait ? "3vw" : "1.5vw",
+                    fontSize: isPortrait ? "3vw" : "1vw",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
