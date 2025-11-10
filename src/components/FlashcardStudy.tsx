@@ -415,45 +415,6 @@ export default function FlashcardStudy({
         minWidth: isPortrait ? "40vw" : "18vw",
     };
 
-    const showAnswerButtonStyle: React.CSSProperties = {
-        ...buttonStyle,
-        background: isDark
-            ? "linear-gradient(135deg, #0A84FF 0%, #0051D5 100%)"
-            : "linear-gradient(135deg, #007AFF 0%, #0051D5 100%)",
-        color: "white",
-    };
-
-    const correctButtonStyle: React.CSSProperties = {
-        ...buttonStyle,
-        background: isDark
-            ? "linear-gradient(135deg, #34C759 0%, #30D158 100%)"
-            : "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
-        color: "white",
-    };
-
-    const wrongButtonStyle: React.CSSProperties = {
-        ...buttonStyle,
-        background: isDark
-            ? "linear-gradient(135deg, #FF3B30 0%, #FF2D55 100%)"
-            : "linear-gradient(135deg, #f44336 0%, #d32f2f 100%)",
-        color: "white",
-    };
-
-    const skipButtonStyle: React.CSSProperties = {
-        ...buttonStyle,
-        background: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.05)",
-        color: isDark ? "#ccc" : "#666",
-        border: isDark ? "0.1vh solid rgba(255,255,255,0.2)" : "0.1vh solid rgba(0,0,0,0.15)",
-    };
-
-    const learnedButtonStyle: React.CSSProperties = {
-        ...buttonStyle,
-        background: isDark
-            ? "linear-gradient(135deg, #34C759 0%, #30D158 100%)"
-            : "linear-gradient(135deg, #4caf50 0%, #45a049 100%)",
-        color: "white",
-    };
-
     const progressStyle: React.CSSProperties = {
         fontSize: isPortrait ? "calc(2vw + 2vh)" : "calc(0.7vw + 0.7vh)",
         color: isDark ? "#ccc" : "#666",
@@ -498,12 +459,19 @@ export default function FlashcardStudy({
     };
 
     const buttonGroupItemStyle: React.CSSProperties = {
-        border: "none",
-        flex: 1,
-        padding: "0 1%",
-        textAlign: "center",
+        ...buttonStyle,
+        flex: isPortrait ? "1 1 0" : "0 0 auto",
+        padding: isPortrait ? "2.2vh 0" : "1.2vh 2.4vw",
+        width: isPortrait ? "100%" : "auto",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
         cursor: "pointer",
-        aspectRatio: "1.2/0.5",
+        ...(isPortrait
+            ? {
+                aspectRatio: "2.6 / 1",
+            }
+            : {}),
     };
 
 
@@ -780,7 +748,7 @@ export default function FlashcardStudy({
                             {t("wrong")}
                         </button>
                         <button
-                            data-test-id="button-test" style={{ ...buttonGroupItemStyle, backgroundColor: "rgb(0, 0, 0)" }}
+                            data-test-id="button-test" style={buttonGroupItemStyle}
                             onClick={() => handleResult("skip")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
