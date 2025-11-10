@@ -209,7 +209,7 @@ function GlobalHeader() {
     const { isDark, toggleTheme } = useTheme()
     const { t } = useTranslation()
     const [lg_clicked, setLg_clicked] = useState(false)
-
+    const { isPortrait } = useOrientation()
     const handleLg_clicked = () => {
         setLg_clicked(!lg_clicked)
     }
@@ -232,13 +232,12 @@ function GlobalHeader() {
                 <button data-test-id="button-test-1" onClick={handleLg_clicked} style={{
                     width: 'auto',
                     fontWeight: 700,
-
+                    fontSize: isPortrait ? "3vw" : "1.5vw",
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
-                    padding: "8px 16px",
                     marginBottom: '3px',
-                    borderRadius: "8px",
+                    borderRadius: isPortrait ? "2vw" : "0.5vw",
                     background: "transparent",
                     color: "#00b4ff", // 主体颜色
                     boxShadow: `
@@ -280,7 +279,7 @@ function GlobalHeader() {
                     event.currentTarget.style.transform = "translateY(0)";
                 }}
             >
-                {isDark ? <span data-test-id="span-test-1" style={{ fontSize: '1.5vw' }}>☀️</span> : <span data-test-id="span-test" style={{ fontSize: '1.5vw' }}>🌙</span>}
+                {isDark ? <span data-test-id="span-test-1" style={{ fontSize: isPortrait ? "3vw" : "1.5vw", padding: 0, margin: 0 }}>☀️</span> : <span data-test-id="span-test" style={{ fontSize: isPortrait ? "3vw" : "1.5vw", padding: 0, margin: 0 }}>🌙</span>}
             </button>
         </div>
     )

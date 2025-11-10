@@ -490,11 +490,22 @@ export default function FlashcardStudy({
     const optionalContentStyle: React.CSSProperties = {
         display: "flex",
         width: "100%",
+        paddingTop: "2%",
         flex: 1,
         flexDirection: "column",
         alignItems: "center",
         justifyContent: "center",
     };
+
+    const buttonGroupItemStyle: React.CSSProperties = {
+        border: "none",
+        flex: 1,
+        padding: "0 1%",
+        textAlign: "center",
+        cursor: "pointer",
+        aspectRatio: "1.2/0.5",
+    };
+
 
 
     if (loading) {
@@ -655,7 +666,7 @@ export default function FlashcardStudy({
                                     </div>
                                     <div data-test-id="div-test-6" style={fixedContentItemStyle}>
                                         <div data-test-id="div-test-5" style={labelStyle}>{t("meaning")}</div>
-                                        <div data-test-id="div-test-4" style={{ fontSize: isPortrait ? "calc(2.2vw + 2.2vh)" : "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: isPortrait ? 0 : "0.5vh", lineHeight: "1.5", textAlign: "center", padding: isPortrait ? "0 3vw" : "0 2vw", wordBreak: "break-word" }}>
+                                        <div data-test-id="div-test-4" style={{ fontSize: isPortrait ? "calc(1.2vw + 1.2vh)" : "calc(1.1vw + 1.1vh)", color: isDark ? "#ccc" : "#666", marginTop: isPortrait ? 0 : "0.5vh", lineHeight: "1.5", textAlign: "center", padding: isPortrait ? "0 3vw" : "0 2vw", wordBreak: "break-word" }}>
                                             {currentWord.meaning}
                                         </div>
                                     </div>
@@ -698,7 +709,7 @@ export default function FlashcardStudy({
                 {!showAnswer ? (
                     <>
                         <button
-                            data-test-id="button-test-4" style={learnedButtonStyle}
+                            data-test-id="button-test-4" style={{ ...buttonGroupItemStyle, backgroundColor: "green" }}
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -715,7 +726,7 @@ export default function FlashcardStudy({
                             {t("learned")}
                         </button>
                         <button
-                            data-test-id="button-test-3" style={showAnswerButtonStyle}
+                            data-test-id="button-test-3" style={{ ...buttonGroupItemStyle, backgroundColor: "rgb(197, 150, 241)" }}
                             onClick={handleShowAnswer}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -735,7 +746,7 @@ export default function FlashcardStudy({
                 ) : (
                     <>
                         <button
-                            data-test-id="button-test-2" style={correctButtonStyle}
+                            data-test-id="button-test-2" style={{ ...buttonGroupItemStyle, backgroundColor: "rgb(52, 199, 89)" }}
                             onClick={() => handleResult("correct")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -752,7 +763,7 @@ export default function FlashcardStudy({
                             {t("correct")}
                         </button>
                         <button
-                            data-test-id="button-test-1" style={wrongButtonStyle}
+                            data-test-id="button-test-1" style={{ ...buttonGroupItemStyle, backgroundColor: "rgb(255, 59, 48)" }}
                             onClick={() => handleResult("wrong")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
@@ -769,7 +780,7 @@ export default function FlashcardStudy({
                             {t("wrong")}
                         </button>
                         <button
-                            data-test-id="button-test" style={skipButtonStyle}
+                            data-test-id="button-test" style={{ ...buttonGroupItemStyle, backgroundColor: "rgb(0, 0, 0)" }}
                             onClick={() => handleResult("skip")}
                             onMouseEnter={(e) => {
                                 e.currentTarget.style.transform = "translateY(-0.2vh)";
