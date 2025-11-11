@@ -147,6 +147,43 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     };
 
     const buildTimeDisplay = new Date(APP_BUILD_TIME).toLocaleString();
+    useEffect(() => {
+        if (!('serviceWorker' in navigator)) {
+            return
+        }
+        const handleSwMessage = (event: MessageEvent) => {
+            if (event.data?.type === 'CACHE_CLEARED') {
+                console.log('Service Worker 已清空缓存')
+            }
+        }
+        navigator.serviceWorker.addEventListener('message', handleSwMessage)
+        return () => {
+            navigator.serviceWorker.removeEventListener('message', handleSwMessage)
+        }
+    }, [])
+
+    const versionBadgeClick = () => {
+        // 清空本地存储
+        localStorage.clear();
+        sessionStorage.clear();
+
+        // 清空 Cache API
+        caches.keys()
+            .then(keys => Promise.all(keys.map(key => caches.delete(key))))
+            .catch(err => console.error('清理缓存失败', err));
+
+        // 通知 Service Worker
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready
+                .then((registration) => {
+                    registration.active?.postMessage({ type: 'CLEAR_CACHE' });
+                })
+                .catch((error) => {
+                    console.error('发送清理缓存消息失败', error);
+                });
+        }
+    };
+
 
     return (
         <>
@@ -155,7 +192,7 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                 AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
 
             <div data-test-id="div-test-1" style={cardStyle} data-testid="word-sets-manage-card">
-                <div style={headerRowStyle}>
+                <div data-test-id="div-test-3" style={headerRowStyle}>
                     <h2 data-test-id="h2-test" style={{
                         margin: 0,
                         fontSize: isPortrait ? "4.5vw" : "1.25vw",
@@ -163,9 +200,9 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                     }}>
                         {t("wordSetManagement")}
                     </h2>
-                    <div style={versionContainerStyle}>
-                        <span style={versionBadgeStyle}>{t("currentVersion", { version: APP_VERSION })}</span>
-                        <span style={buildInfoStyle}>{t("buildTime", { time: buildTimeDisplay })}</span>
+                    <div data-test-id="div-test-2" style={versionContainerStyle}>
+                        <button data-test-id="span-test-1" style={versionBadgeStyle} onClick={versionBadgeClick}>{t("currentVersion", { version: APP_VERSION })}</button>
+                        <span data-test-id="span-test" style={buildInfoStyle}>{t("buildTime", { time: buildTimeDisplay })}</span>
                     </div>
                 </div>
 

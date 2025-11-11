@@ -201,18 +201,18 @@ export default function Manage() {
 
   return (
     <ManageContext.Provider value={{ state, dispatch }}>
-      <div style={containerStyle}>
-        <section style={senction1Style} data-testid="word-sets-manage-section">
-          <h1 style={titleStyle}>{t("manage")}</h1>
+      <div data-test-id="div-test-5" style={containerStyle}>
+        <section data-test-id="section-test-1" style={senction1Style} data-testid="word-sets-manage-section">
+          <h1 data-test-id="h1-test" style={titleStyle}>{t("manage")}</h1>
 
           {state.popup === "SET_ADD_WORD_SETS" &&
             AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
           {state.popup === "SET_IMPORT_WORDS" &&
             ImportWordsAction(dispatch as (action: Action) => void, setWordSets)}
-          <WordSetsManage manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
+          <WordSetsManage data-test-id="word-sets-manage-test" manageReducer={manageReducer} setWordSets={setWordSets} wordSets={wordSets} />
         </section>
-        <section style={cardStyle} data-testid="system-settings-section">
-          <h2 style={{
+        <section data-test-id="section-test" style={cardStyle} data-testid="system-settings-section">
+          <h2 data-test-id="h2-test" style={{
             marginBottom: isPortrait ? "3vw" : "1.25vw",
             fontSize: isPortrait ? "4.5vw" : "1.25vw",
             color: isDark ? "#fff" : "#333"
@@ -221,14 +221,14 @@ export default function Manage() {
           </h2>
 
           <div
-            style={{
+            data-test-id="div-test-4" style={{
               display: "grid",
               gridTemplateColumns: isPortrait ? "1fr" : "repeat(auto-fit, minmax(18.75vw, 1fr))",
               gap: isPortrait ? "3vw" : "1.25vw",
             }}
           >
             <div
-              style={{
+              data-test-id="div-test-3" style={{
                 padding: isPortrait ? "4vw" : "1.25vw",
                 background: isDark
                   ? "rgba(255, 255, 255, 0.05)"
@@ -238,7 +238,7 @@ export default function Manage() {
               }}
             >
               <h3
-                style={{
+                data-test-id="h3-test-1" style={{
                   margin: `0 0 ${isPortrait ? "3vw" : "1vw"} 0`,
                   color: isDark ? "#fff" : "#333",
                   fontSize: isPortrait ? "4vw" : "1.125vw",
@@ -249,9 +249,9 @@ export default function Manage() {
               >
                 {t("studySettings")}
               </h3>
-              <div style={{ marginBottom: isPortrait ? "2vw" : "0.75vw" }}>
+              <div data-test-id="div-test-2" style={{ marginBottom: isPortrait ? "2vw" : "0.75vw" }}>
                 <label
-                  style={{
+                  data-test-id="label-test" style={{
                     display: "block",
                     marginBottom: isPortrait ? "1.5vw" : "0.25vw",
                     color: isDark ? "#ccc" : "#666",
@@ -261,7 +261,7 @@ export default function Manage() {
                   {t("dailyGoal")}
                 </label>
                 <input
-                  type="number"
+                  data-test-id="input-test" type="number"
                   defaultValue="20"
                   style={{
                     width: "100%",
@@ -278,7 +278,7 @@ export default function Manage() {
             </div>
 
             <div
-              style={{
+              data-test-id="div-test-1" style={{
                 padding: isPortrait ? "4vw" : "1.25vw",
                 background: isDark
                   ? "rgba(255, 255, 255, 0.05)"
@@ -288,7 +288,7 @@ export default function Manage() {
               }}
             >
               <h3
-                style={{
+                data-test-id="h3-test" style={{
                   margin: `0 0 ${isPortrait ? "3vw" : "1vw"} 0`,
                   color: isDark ? "#fff" : "#333",
                   fontSize: isPortrait ? "4vw" : "1.125vw",
@@ -300,10 +300,10 @@ export default function Manage() {
                 💾 {t("backupData")}
               </h3>
               <div
-                style={{ display: "flex", flexDirection: "column", gap: isPortrait ? "2.5vw" : "0.5vw" }}
+                data-test-id="div-test" style={{ display: "flex", flexDirection: "column", gap: isPortrait ? "2.5vw" : "0.5vw" }}
               >
                 <button
-                  style={{
+                  data-test-id="button-test-2" style={{
                     ...buttonStyle,
                     width: "100%",
                   }}
@@ -326,7 +326,7 @@ export default function Manage() {
                   {t("backupData")}
                 </button>
                 <button
-                  style={{
+                  data-test-id="button-test-1" style={{
                     ...buttonStyle,
                     width: "100%",
                     background:
@@ -351,7 +351,7 @@ export default function Manage() {
                   {t("restoreData")}
                 </button>
                 <button
-                  style={{
+                  data-test-id="button-test" style={{
                     ...buttonStyle,
                     width: "100%",
                     background:
@@ -376,10 +376,10 @@ export default function Manage() {
                   {t("clearData")}
                 </button>
                 {state.popup === "SET_CLEAR_DATA" &&
-                  <ClearDataConfirmWidget dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
+                  <ClearDataConfirmWidget data-test-id="clear-data-confirm-widget-test" dispatch={dispatch as (action: Action) => void} setWordSets={setWordSets} />
                 }
                 {state.popup === "SET_DATA_RESTORE_CONFIRM" &&
-                  <RestoreData close={() => dispatch({ type: "CLOSE_POPUP" } as Action)} setPopup={dispatch} setWordSets={setWordSets} />
+                  <RestoreData data-test-id="restore-data-test" close={() => dispatch({ type: "CLOSE_POPUP" } as Action)} setPopup={dispatch} setWordSets={setWordSets} />
                 }
               </div>
             </div>
