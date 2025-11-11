@@ -8,6 +8,7 @@ import WordSetsTable from "../components/WordSetsTable";
 import * as dbOperator from "../store/wordStore";
 import AddWord from "../components/AddWord";
 import { useNavigate } from "react-router-dom";
+import { APP_BUILD_TIME, APP_VERSION } from "../version";
 
 interface WordSetsManageProps {
     manageReducer: (state: ManageState, action: Action) => ManageState;
@@ -112,6 +113,41 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
         width: isPortrait ? "100%" : "auto",
     };
 
+    const headerRowStyle: React.CSSProperties = {
+        display: "flex",
+        flexDirection: isPortrait ? "column" : "row",
+        alignItems: isPortrait ? "flex-start" : "center",
+        justifyContent: "space-between",
+        gap: isPortrait ? "2vw" : "1vw",
+        marginBottom: isPortrait ? "3vw" : "1.5vh",
+        paddingLeft: isPortrait ? "0" : "1vw",
+    };
+
+    const versionContainerStyle: React.CSSProperties = {
+        display: "flex",
+        flexDirection: "column",
+        alignItems: isPortrait ? "flex-start" : "flex-end",
+        gap: isPortrait ? "1vw" : "0.25vw",
+        color: isDark ? "#fff" : "#333",
+        fontSize: isPortrait ? "3.4vw" : "0.9vw",
+    };
+
+    const versionBadgeStyle: React.CSSProperties = {
+        padding: isPortrait ? "1.2vw 2.4vw" : "0.35vw 0.8vw",
+        borderRadius: "999px",
+        background: "rgba(0, 180, 255, 0.12)",
+        border: "1px solid rgba(0, 180, 255, 0.35)",
+        fontWeight: 600,
+        color: "#00b4ff",
+    };
+
+    const buildInfoStyle: React.CSSProperties = {
+        fontSize: isPortrait ? "3.2vw" : "0.85vw",
+        color: isDark ? "rgba(255,255,255,0.75)" : "rgba(0,0,0,0.55)",
+    };
+
+    const buildTimeDisplay = new Date(APP_BUILD_TIME).toLocaleString();
+
     return (
         <>
 
@@ -119,14 +155,19 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
                 AddWordSetsAction(dispatch as (action: Action) => void, setWordSets)}
 
             <div data-test-id="div-test-1" style={cardStyle} data-testid="word-sets-manage-card">
-                <h2 data-test-id="h2-test" style={{
-                    marginBottom: isPortrait ? "3vw" : "1.5vh",
-                    paddingLeft: isPortrait ? "0" : "1vw",
-                    fontSize: isPortrait ? "4.5vw" : "1.25vw",
-                    color: isDark ? "#fff" : "#333",
-                }}>
-                    {t("wordSetManagement")}
-                </h2>
+                <div style={headerRowStyle}>
+                    <h2 data-test-id="h2-test" style={{
+                        margin: 0,
+                        fontSize: isPortrait ? "4.5vw" : "1.25vw",
+                        color: isDark ? "#fff" : "#333",
+                    }}>
+                        {t("wordSetManagement")}
+                    </h2>
+                    <div style={versionContainerStyle}>
+                        <span style={versionBadgeStyle}>{t("currentVersion", { version: APP_VERSION })}</span>
+                        <span style={buildInfoStyle}>{t("buildTime", { time: buildTimeDisplay })}</span>
+                    </div>
+                </div>
 
                 <div data-test-id="div-test" style={actionButtonsStyle}>
                     <button

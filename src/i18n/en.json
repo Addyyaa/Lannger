@@ -172,5 +172,11 @@
     "installLanggerToDesktop": "Install Langger to desktop",
     "addApplicationToDevice": "Add application to device, you can continue learning offline and get a complete experience.",
     "installNow": "Install Now",
-    "remindLater": "Remind Later"
+    "remindLater": "Remind Later",
+    "updateAvailable": "New version available",
+    "updateDescription": "A newer version is ready. Refresh now to enjoy the latest improvements.",
+    "refreshNow": "Refresh Now",
+    "ignoreUpdate": "Maybe Later",
+    "currentVersion": "Version {{version}}",
+    "buildTime": "Build at {{time}}"
 }

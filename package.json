@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "prebuild": "node scripts/bump-version.mjs",
     "build": "vite build",
     "preview:https": "vite preview --host --https",
     "lint": "eslint .",

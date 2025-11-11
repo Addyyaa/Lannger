@@ -14,6 +14,14 @@ import i18n from './i18n/i18n'
 import languages from './i18n/languages.json'
 import { ensureDBOpen } from './db'
 
+declare global {
+    interface Window {
+        __lanngerSwWaiting?: ServiceWorker
+    }
+}
+
+let swListenersBound = false
+
 // PWA 相关初始化：确保 manifest 与 Service Worker 正确注册
 function setupPWAAssets() {
     if (typeof window === 'undefined') {
@@ -34,7 +42,28 @@ function setupPWAAssets() {
     if ('serviceWorker' in navigator) {
         const swUrl = `${import.meta.env.BASE_URL}sw.js`
         const register = () => {
-            navigator.serviceWorker.register(swUrl).catch((error) => {
+            navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL }).then((registration) => {
+                const notifyUpdate = (waitingWorker: ServiceWorker) => {
+                    window.__lanngerSwWaiting = waitingWorker
+                    window.dispatchEvent(new CustomEvent('sw-update-available'))
+                }
+
+                if (registration.waiting) {
+                    notifyUpdate(registration.waiting)
+                }
+
+                registration.addEventListener('updatefound', () => {
+                    const newWorker = registration.installing
+                    if (!newWorker) {
+                        return
+                    }
+                    newWorker.addEventListener('statechange', () => {
+                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                            notifyUpdate(newWorker as ServiceWorker)
+                        }
+                    })
+                })
+            }).catch((error) => {
                 console.error('Service Worker 注册失败:', error)
             })
         }
@@ -42,6 +71,22 @@ function setupPWAAssets() {
             register()
         } else {
             window.addEventListener('load', register, { once: true })
+        }
+        if (!swListenersBound) {
+            let refreshing = false
+            navigator.serviceWorker.addEventListener('controllerchange', () => {
+                if (refreshing) {
+                    return
+                }
+                refreshing = true
+                window.location.reload()
+            })
+            navigator.serviceWorker.addEventListener('message', (event) => {
+                if (event.data && event.data.type === 'SW_ACTIVATED') {
+                    window.__lanngerSwWaiting = undefined
+                }
+            })
+            swListenersBound = true
         }
     }
 }

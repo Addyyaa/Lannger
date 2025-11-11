@@ -4,6 +4,7 @@ import { useTheme } from '../main'
 import { useTranslation } from 'react-i18next'
 import { db, ensureDBOpen } from '../db'
 import { usePWAInstallPrompt } from '../hooks/usePWAInstallPrompt'
+import { useServiceWorkerUpdate } from '../hooks/useServiceWorkerUpdate'
 
 export default function Home() {
     const [learnningProgress, setLearnningProgress] = useState<{ totalVocabulary: number, masteredVocabulary: number, totalSentences: number, masteredSentences: number }>({ totalVocabulary: 0, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
@@ -13,6 +14,7 @@ export default function Home() {
     const { isDark } = useTheme()
     const { t } = useTranslation()
     const { isInstallable, isPromptVisible, isInstalled, promptInstall, dismissPrompt } = usePWAInstallPrompt()
+    const { isUpdateAvailable, applyUpdate, dismissUpdate } = useServiceWorkerUpdate()
     const shouldShowInstallPrompt = isInstallable && !isInstalled && isPromptVisible
     useEffect(() => {
         // TODO 从数据库获取进度
@@ -27,6 +29,35 @@ export default function Home() {
     return (
 
         <div data-test-id="div-test-1" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            {isUpdateAvailable && (
+                <div
+                    data-test-id="pwa-update-banner"
+                    style={updatePromptStyle}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', rowGap: '0.5rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '1.1rem' }}>{t('updateAvailable')}</span>
+                        <span style={{ color: 'var(--langger-text-secondary, #555)', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                            {t('updateDescription')}
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', columnGap: '0.75rem' }}>
+                        <button
+                            data-test-id="pwa-update-confirm"
+                            onClick={applyUpdate}
+                            style={updatePrimaryButtonStyle}
+                        >
+                            {t('refreshNow')}
+                        </button>
+                        <button
+                            data-test-id="pwa-update-dismiss"
+                            onClick={dismissUpdate}
+                            style={ghostButtonStyle}
+                        >
+                            {t('ignoreUpdate')}
+                        </button>
+                    </div>
+                </div>
+            )}
             {shouldShowInstallPrompt && (
                 <div
                     data-test-id="pwa-install-banner"
@@ -98,6 +129,36 @@ const installPromptStyle: React.CSSProperties = {
 }
 
 const primaryButtonStyle: React.CSSProperties = {
+    padding: '0.6rem 1.4rem',
+    borderRadius: '999px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #00b4ff 0%, #007bff 100%)',
+    color: '#fff',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+}
+
+const updatePromptStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '90%',
+    maxWidth: '960px',
+    padding: '1rem 1.5rem',
+    marginBottom: '1.25rem',
+    borderRadius: '16px',
+    background: 'rgba(0, 180, 255, 0.08)',
+    border: '1px solid rgba(0, 180, 255, 0.35)',
+    boxShadow: '0 10px 24px rgba(0, 0, 0, 0.06)',
+    gap: '1rem',
+    flexWrap: 'wrap',
+}
+
+const updatePrimaryButtonStyle: React.CSSProperties = {
     padding: '0.6rem 1.4rem',
     borderRadius: '999px',
     border: 'none',
