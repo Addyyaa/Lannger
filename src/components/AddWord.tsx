@@ -1,4 +1,4 @@
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import { useTranslation } from "react-i18next";
 import { useState, useRef, useEffect } from "react";
 import { Form } from "antd";
@@ -46,6 +46,7 @@ function saveSelections(setId: number | undefined, difficultyCoefficient: string
 
 export default function AddWord({ closePopup }: { closePopup: () => void }) {
   const { isDark } = useTheme();
+  const { isPortrait } = useOrientation();
   const { t } = useTranslation();
   const [isHovered, setIsHovered] = useState(false);
   const buttonRef = useRef<HTMLDivElement>(null);
@@ -163,44 +164,98 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
 
   return (
     <div data-test-id="div-test-2" style={AddWordStyle}>
-      <div data-test-id="div-test-1" style={FormContainer(isDark)}>
+      <div data-test-id="div-test-1" style={FormContainer(isDark, isPortrait)}>
         <CloseButton
-          data-test-id="closebutton-test" onClick={closePopup}
+          data-test-id="closebutton-test"
+          onClick={closePopup}
           ariaLabel={t("close")}
           iconColor="#333333"
+          size={isPortrait ? "12vw" : 40}
+          style={{
+            top: isPortrait ? "4vw" : "1.5%",
+            right: isPortrait ? "4vw" : "1.2%",
+          }}
         />
-        <Form data-test-id="form-test" style={FormStyle} data-testid="word-info-form">
-          <fieldset data-test-id="fieldset-test-1" style={{ ...fieldsetStyle, height: "65%" }} data-testid="word-info-must">
-            <legend data-test-id="legend-test" style={{ color: isDark ? "black" : "black", borderColor: "rgb(177, 169, 169)", padding: "1% 0 0 1.5%", boxSizing: "border-box" }}>{t('word')}</legend>
-            <section data-test-id="section-test-6" style={sectionStyle}>
-
-              <label data-test-id="label-test-6" style={labelStyle(isDark)}>{t('kana')} <span data-test-id="span-test-3" style={{ color: 'red' }}>*</span></label>
-              <input ref={kanaInputRef} data-test-id="input-test-2" type="text" style={inputStyle} required value={word.kana} onChange={(e) => setWord({ ...word, kana: e.target.value })} />
+        <Form data-test-id="form-test" style={FormStyle(isPortrait)} data-testid="word-info-form">
+          <fieldset data-test-id="fieldset-test-1" style={wordFieldsetStyle(isPortrait)} data-testid="word-info-must">
+            <legend data-test-id="legend-test" style={legendStyle(isPortrait)}>{t('word')}</legend>
+            <section data-test-id="section-test-6" style={sectionStyle(isPortrait)}>
+              <label data-test-id="label-test-6" style={labelStyle(isDark, isPortrait)}>
+                {t('kana')} <span data-test-id="span-test-3" style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                ref={kanaInputRef}
+                data-test-id="input-test-2"
+                type="text"
+                style={textInputStyle(isPortrait)}
+                required
+                value={word.kana}
+                onChange={(e) => setWord({ ...word, kana: e.target.value })}
+              />
             </section>
-            <section data-test-id="section-test-5" style={sectionStyle}>
-              <label data-test-id="label-test-5" style={labelStyle(isDark)}>{t('kanji')} <span data-test-id="span-test-2" style={{ color: 'red' }}>*</span></label>
-              <input data-test-id="input-test-1" type="text" style={inputStyle} required value={word.kanji} onChange={(e) => setWord({ ...word, kanji: e.target.value })} />
+            <section data-test-id="section-test-5" style={sectionStyle(isPortrait)}>
+              <label data-test-id="label-test-5" style={labelStyle(isDark, isPortrait)}>
+                {t('kanji')} <span data-test-id="span-test-2" style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                data-test-id="input-test-1"
+                type="text"
+                style={textInputStyle(isPortrait)}
+                required
+                value={word.kanji}
+                onChange={(e) => setWord({ ...word, kanji: e.target.value })}
+              />
             </section>
-            <section data-test-id="section-test-4" style={sectionStyle}>
-              <label data-test-id="label-test-4" style={labelStyle(isDark)}>{t('meaning')} <span data-test-id="span-test-1" style={{ color: 'red' }}>*</span></label>
-              <input data-test-id="input-test" type="text" style={inputStyle} required value={word.meaning} onChange={(e) => setWord({ ...word, meaning: e.target.value })} />
+            <section data-test-id="section-test-4" style={sectionStyle(isPortrait)}>
+              <label data-test-id="label-test-4" style={labelStyle(isDark, isPortrait)}>
+                {t('meaning')} <span data-test-id="span-test-1" style={{ color: 'red' }}>*</span>
+              </label>
+              <input
+                data-test-id="input-test"
+                type="text"
+                style={textInputStyle(isPortrait)}
+                required
+                value={word.meaning}
+                onChange={(e) => setWord({ ...word, meaning: e.target.value })}
+              />
             </section>
-            <section data-test-id="section-test-3" style={{ ...sectionStyle, height: "40%" }}>
-              <label data-test-id="label-test-3" style={labelStyle(isDark)}>{t('example')} <span data-test-id="span-test" style={{ color: 'red' }}>*</span>  </label>
-              <TextArea data-test-id="textarea-test-1" style={{ ...inputStyle, height: "100%" }} placeholder={t('examplePlaceholder')} required value={word.example} onChange={(e) => setWord({ ...word, example: e.target.value })} />
+            <section
+              data-test-id="section-test-3"
+              style={{
+                ...sectionStyle(isPortrait),
+                minHeight: isPortrait ? undefined : "40%",
+              }}
+            >
+              <label data-test-id="label-test-3" style={labelStyle(isDark, isPortrait)}>
+                {t('example')} <span data-test-id="span-test" style={{ color: 'red' }}>*</span>
+              </label>
+              <TextArea
+                data-test-id="textarea-test-1"
+                style={textAreaStyle(isPortrait)}
+                placeholder={t('examplePlaceholder')}
+                required
+                value={word.example}
+                onChange={(e) => setWord({ ...word, example: e.target.value })}
+              />
             </section>
           </fieldset>
-          <fieldset data-test-id="fieldset-test" style={{ ...fieldsetStyle, height: "35%" }} data-testid="word-info-optional">
-            <section data-test-id="section-test-2" style={{ ...sectionStyle, height: "33%" }}>
-              <label data-test-id="label-test-2" style={labelStyle(isDark)}>{t('wordSet')}</label>
+          <fieldset data-test-id="fieldset-test" style={optionalFieldsetStyle(isPortrait)} data-testid="word-info-optional">
+            <section
+              data-test-id="section-test-2"
+              style={{
+                ...sectionStyle(isPortrait),
+                minHeight: isPortrait ? undefined : "33%",
+              }}
+            >
+              <label data-test-id="label-test-2" style={labelStyle(isDark, isPortrait)}>{t('wordSet')}</label>
               <select
-                data-test-id="select-test-1" id="wordSet"
-                style={selectStyle}
+                data-test-id="select-test-1"
+                id="wordSet"
+                style={selectStyle(isPortrait)}
                 value={word.setId !== undefined ? word.setId.toString() : DEFAULT_WORD_SET_ID.toString()}
                 onChange={(e) => {
                   const setId = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
                   setWord({ ...word, setId });
-                  // 保存选择到 localStorage
                   saveSelections(setId, word.difficultyCoefficient);
                 }}
               >
@@ -211,18 +266,41 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 ))}
               </select>
             </section>
-            <section data-test-id="section-test-1" style={{ ...sectionStyle, height: "33%" }}>
-              <label data-test-id="label-test-1" style={labelStyle(isDark)}>{t('mark')}</label>
-              <TextArea data-test-id="textarea-test" style={{ ...inputStyle, height: "100%" }} placeholder={t('markPlaceholder')} value={word.mark} onChange={(e) => setWord({ ...word, mark: e.target.value })} />
+            <section
+              data-test-id="section-test-1"
+              style={{
+                ...sectionStyle(isPortrait),
+                minHeight: isPortrait ? undefined : "33%",
+              }}
+            >
+              <label data-test-id="label-test-1" style={labelStyle(isDark, isPortrait)}>{t('mark')}</label>
+              <TextArea
+                data-test-id="textarea-test"
+                style={textAreaStyle(isPortrait)}
+                placeholder={t('markPlaceholder')}
+                value={word.mark}
+                onChange={(e) => setWord({ ...word, mark: e.target.value })}
+              />
             </section>
-            <section data-test-id="section-test" style={{ ...sectionStyle, height: "34%" }}>
-              <label data-test-id="label-test" style={labelStyle(isDark)}>{t('difficultyCoefficient')}</label>
-              <select data-test-id="select-test" id="difficultyCoefficient" style={selectStyle} value={word.difficultyCoefficient} onChange={(e) => {
-                const difficultyCoefficient = e.target.value;
-                setWord({ ...word, difficultyCoefficient });
-                // 保存选择到 localStorage
-                saveSelections(word.setId, difficultyCoefficient);
-              }}>
+            <section
+              data-test-id="section-test"
+              style={{
+                ...sectionStyle(isPortrait),
+                minHeight: isPortrait ? undefined : "34%",
+              }}
+            >
+              <label data-test-id="label-test" style={labelStyle(isDark, isPortrait)}>{t('difficultyCoefficient')}</label>
+              <select
+                data-test-id="select-test"
+                id="difficultyCoefficient"
+                style={selectStyle(isPortrait)}
+                value={word.difficultyCoefficient}
+                onChange={(e) => {
+                  const difficultyCoefficient = e.target.value;
+                  setWord({ ...word, difficultyCoefficient });
+                  saveSelections(word.setId, difficultyCoefficient);
+                }}
+              >
                 <option data-test-id="option-test-4" value="1">{t('n1')}</option>
                 <option data-test-id="option-test-3" value="2">{t('n2')}</option>
                 <option data-test-id="option-test-2" value="3">{t('n3')}</option>
@@ -232,8 +310,9 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             </section>
           </fieldset>
           <div
-            data-test-id="div-test" ref={buttonRef}
-            style={submitButtonStyle}
+            data-test-id="div-test"
+            ref={buttonRef}
+            style={submitButtonStyle(isPortrait)}
             onClick={handleSubmit}
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
@@ -246,15 +325,20 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
               }
             }}
           >
-            <Submmit data-test-id="submmit-test" {...{
-              width: "80%",
-              height: "80%",
-              filter: isHovered
-                ? "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))"
-                : "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
-              transform: isHovered ? "translateY(-8px)" : "translateY(0)",
-              transition: "transform 0.3s ease, filter 0.3s ease",
-            } as React.CSSProperties} />
+            <Submmit
+              data-test-id="submmit-test"
+              {...{
+                width: isPortrait ? "100%" : "80%",
+                height: isPortrait ? "100%" : "80%",
+                filter: isHovered
+                  ? "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))"
+                  : "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
+                transform: isHovered
+                  ? (isPortrait ? "translateY(-6px)" : "translateY(-8px)")
+                  : "translateY(0)",
+                transition: "transform 0.3s ease, filter 0.3s ease",
+              } as React.CSSProperties}
+            />
           </div>
         </Form>
       </div>
@@ -267,6 +351,7 @@ const AddWordStyle: React.CSSProperties = {
   width: "100vw",
   height: "100vh",
   backgroundColor: "rgba(0, 0, 0, 0.9)",
+  backdropFilter: "blur(4px)",
   top: 0,
   left: 0,
   zIndex: 1000,
@@ -275,96 +360,140 @@ const AddWordStyle: React.CSSProperties = {
   justifyContent: "center",
 };
 
-const FormContainer = (isDark: boolean): React.CSSProperties => ({
+const FormContainer = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
   position: "relative",
-  width: "60%",
-  aspectRatio: "1.5/1",
+  width: isPortrait ? "94%" : "60%",
+  minHeight: isPortrait ? "90vh" : undefined,
+  maxHeight: isPortrait ? "94vh" : undefined,
+  overflowY: isPortrait ? "auto" : "visible",
+  aspectRatio: isPortrait ? undefined : "1.5/1",
   display: "flex",
-  borderRadius: "0.8vw",
+  borderRadius: isPortrait ? "4vw" : "0.8vw",
   flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
+  alignItems: "stretch",
+  justifyContent: isPortrait ? "flex-start" : "center",
   backgroundColor: isDark ? "rgb(236, 235, 235)" : "white",
+  padding: isPortrait ? "8vw 6vw 12vw" : "2vw",
+  boxSizing: "border-box",
+  rowGap: isPortrait ? "6vw" : "2vh",
 })
 
-const FormStyle: React.CSSProperties = {
+const FormStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
   width: "100%",
   height: "100%",
   flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-}
+  alignItems: "stretch",
+  justifyContent: isPortrait ? "flex-start" : "space-between",
+  position: "relative",
+  rowGap: isPortrait ? "6vw" : "2vh",
+  paddingBottom: isPortrait ? "10vw" : 0,
+})
 
-const fieldsetStyle: React.CSSProperties = {
+const fieldsetBaseStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
   width: "100%",
-  height: "100%",
-  gap: "2%",
-  padding: 0,
+  gap: isPortrait ? "4vw" : "2%",
+  padding: isPortrait ? "5vw 4vw 6vw" : "0",
   flexDirection: "column",
-  alignItems: "center",
-  justifyContent: "center",
-  paddingBottom: "2%",
+  alignItems: "stretch",
+  justifyContent: isPortrait ? "flex-start" : "center",
+  paddingBottom: isPortrait ? "0" : "2%",
   border: "none",
-}
+  backgroundColor: isPortrait ? "rgba(255,255,255,0.88)" : "transparent",
+  boxSizing: "border-box",
+  borderRadius: isPortrait ? "3vw" : "0",
+  boxShadow: isPortrait ? "0 6px 18px rgba(0,0,0,0.08)" : "none",
+})
 
-const labelStyle = (isDark: boolean): React.CSSProperties => ({
-  fontSize: "1vw",
-  width: "auto",
+const wordFieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
+  ...fieldsetBaseStyle(isPortrait),
+  flex: isPortrait ? "0 0 auto" : "0 0 65%",
+  minHeight: isPortrait ? "auto" : "65%",
+})
+
+const optionalFieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
+  ...fieldsetBaseStyle(isPortrait),
+  flex: isPortrait ? "0 0 auto" : "0 0 35%",
+  minHeight: isPortrait ? "auto" : "35%",
+})
+
+const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
+  color: "black",
+  borderColor: "rgb(177, 169, 169)",
+  padding: isPortrait ? "0 0 1.5vw 0" : "1% 0 0 1.5%",
+  boxSizing: "border-box",
+  fontSize: isPortrait ? "4.5vw" : "1.1vw",
+  alignSelf: "flex-start",
+})
+
+const labelStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+  fontSize: isPortrait ? "3.5vw" : "1vw",
+  width: isPortrait ? "100%" : "auto",
   fontWeight: "bold",
   color: isDark ? "black" : "black",
-  marginRight: "1vw",
+  marginRight: isPortrait ? "0" : "1vw",
 })
 
-const sectionStyle: React.CSSProperties = {
+const sectionStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
   width: "100%",
-  height: "20%",
-  flexDirection: "row",
-  justifyContent: "space-between",
-  alignItems: "center",
+  flexDirection: isPortrait ? "column" : "row",
+  justifyContent: isPortrait ? "flex-start" : "space-between",
+  alignItems: isPortrait ? "stretch" : "center",
   boxSizing: "border-box",
-  paddingLeft: "8%",
-}
+  paddingLeft: isPortrait ? "0" : "8%",
+  rowGap: isPortrait ? "3vw" : 0,
+  columnGap: isPortrait ? 0 : "3%",
+  paddingRight: isPortrait ? "0" : "5%",
+})
 
-const inputStyle: React.CSSProperties = {
-  width: "70%",
-  height: "60%",
-  borderRadius: "0.4vw",
-  marginRight: "10%",
+const textInputStyle = (isPortrait: boolean): React.CSSProperties => ({
+  width: isPortrait ? "100%" : "70%",
+  height: isPortrait ? "auto" : "60%",
+  minHeight: isPortrait ? "10vw" : undefined,
+  borderRadius: isPortrait ? "2.2vw" : "0.4vw",
+  marginRight: isPortrait ? "0" : "10%",
   border: "1px solid #e0e0e0",
   outline: "none",
-  fontSize: "1.2vw",
+  fontSize: isPortrait ? "3.5vw" : "1.2vw",
   boxSizing: "border-box",
   color: "black",
   backgroundColor: "white",
-}
+  padding: isPortrait ? "2.5vw" : "0 1vw",
+  boxShadow: isPortrait ? "0 3px 12px rgba(0,0,0,0.05)" : "none",
+})
 
-const selectStyle: React.CSSProperties = {
-  width: "70%",
-  height: "60%",
-  borderRadius: "0.4vw",
-  marginRight: "10%",
-  padding: "0 0 0 1%",
+const textAreaStyle = (isPortrait: boolean): React.CSSProperties => ({
+  ...textInputStyle(isPortrait),
+  height: isPortrait ? "24vw" : "100%",
+  resize: "none",
+})
+
+const selectStyle = (isPortrait: boolean): React.CSSProperties => ({
+  width: isPortrait ? "100%" : "70%",
+  height: isPortrait ? "auto" : "60%",
+  minHeight: isPortrait ? "10vw" : undefined,
+  borderRadius: isPortrait ? "2.2vw" : "0.4vw",
+  marginRight: isPortrait ? "0" : "10%",
+  padding: isPortrait ? "2.5vw" : "0 0 0 1%",
   border: "1px solid #e0e0e0",
   outline: "none",
-  fontSize: "1.2vw",
+  fontSize: isPortrait ? "3.5vw" : "1.2vw",
   boxSizing: "border-box",
   color: "black",
   backgroundColor: "white",
-}
+})
 
-// 按钮容器样式：完全透明，只负责定位和点击区域
-// 使用 div 代替 button 以避免全局按钮样式的影响
-const submitButtonStyle: React.CSSProperties = {
-  width: "8%",
-  aspectRatio: "1/1",
-  position: "absolute",
-  top: "50%",
-  right: "0.8%",
-  transform: "translateY(-50%)",
-  borderRadius: "0.4vw",
+const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
+  width: isPortrait ? "100%" : "8%",
+  height: isPortrait ? "14vw" : "auto",
+  aspectRatio: isPortrait ? undefined : "1/1",
+  position: isPortrait ? "relative" : "absolute",
+  top: isPortrait ? undefined : "50%",
+  right: isPortrait ? undefined : "0.8%",
+  transform: isPortrait ? "none" : "translateY(-50%)",
+  borderRadius: isPortrait ? "3vw" : "0.4vw",
   border: "none",
   outline: "none",
   cursor: "pointer",
@@ -373,4 +502,6 @@ const submitButtonStyle: React.CSSProperties = {
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
-}
+  marginTop: isPortrait ? "6vw" : 0,
+  alignSelf: isPortrait ? "center" : "flex-end",
+})

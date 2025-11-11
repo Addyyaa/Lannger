@@ -73,7 +73,7 @@ export default function AddWordSets({
                         />
                     </div>
                 </fieldset>
-                <button data-test-id="button-test" style={submitButtonStyle(isPortrait)} onClick={handleSubmit}>
+                <button data-test-id="add-word-sets-button-test" style={submitButtonStyle(isPortrait)} onClick={handleSubmit}>
                     {t("addWordSet")}
                 </button>
             </form>
