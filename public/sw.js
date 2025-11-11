@@ -1,5 +1,5 @@
 // PWA Service Worker：负责缓存核心资源并检测新版本
-const CACHE_NAME = 'langger-cache-v4'
+const CACHE_NAME = 'langger-cache-0.0.5'
 const CORE_ASSETS = ['index.html', 'manifest.webmanifest']
 
 const BASE_PATH = (() => {

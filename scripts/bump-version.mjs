@@ -3,6 +3,7 @@ import { resolve } from 'node:path'
 
 const VERSION_FILE = resolve('version.json')
 const OUTPUT_TS_FILE = resolve('src/version.ts')
+const SW_FILE = resolve('public/sw.js')
 
 function readVersionFile() {
     if (!existsSync(VERSION_FILE)) {
@@ -44,7 +45,28 @@ function main() {
     const tsContent = `export const APP_VERSION = '${nextVersion}'\nexport const APP_BUILD_TIME = '${now}'\n`
     writeFileSync(OUTPUT_TS_FILE, tsContent, 'utf-8')
 
+    updateServiceWorkerCacheName(nextVersion)
+
     console.log(`[bump-version] 版本号已更新: ${currentVersion} -> ${nextVersion}`)
+    console.log(`[bump-version] 构建时间: ${now}`)
+    console.log(`[bump-version] Service Worker 缓存名同步完成`)
+}
+
+function updateServiceWorkerCacheName(version) {
+    try {
+        const swContent = readFileSync(SW_FILE, 'utf-8')
+        const updated = swContent.replace(
+            /const CACHE_NAME = 'langger-cache-[^']*'/,
+            `const CACHE_NAME = 'langger-cache-${version}'`
+        )
+        if (swContent !== updated) {
+            writeFileSync(SW_FILE, updated, 'utf-8')
+        } else {
+            console.warn('[bump-version] 未能在 sw.js 中找到 CACHE_NAME 字段，请检查文件结构。')
+        }
+    } catch (error) {
+        console.warn('[bump-version] 更新 Service Worker 缓存名失败:', error)
+    }
 }
 
 main()

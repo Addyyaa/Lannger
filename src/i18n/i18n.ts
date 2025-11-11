@@ -35,6 +35,8 @@ i18n
     .init({
         resources: buildResources(),
         fallbackLng: "en",
+        load: "languageOnly",
+        supportedLngs: Object.keys(languages),
         interpolation: { escapeValue: false },
     });
 
