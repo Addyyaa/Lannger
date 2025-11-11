@@ -1,0 +1,6 @@
+---
+alwaysApply: true
+---
+1. Before writing code related to algorithms and databases, please read the dbIntruduce.md file first.
+
+2. Before writing the algorithm, please read the file "dbIntruduce.md" and design the algorithm based on the current database structure and fields.
