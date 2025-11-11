@@ -7,11 +7,7 @@ export default defineConfig({
     react({
       babel: {
         plugins: [
-          "react-data-testid",
           "babel-plugin-react-compiler",
-          ...(process.env.NODE_ENV === "production"
-            ? ["babel-plugin-react-remove-data-test-id-attribute"]
-            : []),
         ].filter(Boolean),
       },
     }),
@@ -21,4 +17,5 @@ export default defineConfig({
     port: 5173, // 开发服务器端口
     strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
   },
+  base: '/langger/',
 });

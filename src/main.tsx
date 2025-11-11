@@ -322,7 +322,9 @@ function createRoutes() {
 }
 
 const existingRouter = (window as any).__lanngerRouter
-const router = existingRouter || createBrowserRouter(createRoutes())
+const router = existingRouter || createBrowserRouter(createRoutes(), {
+    basename: import.meta.env.BASE_URL,
+})
     ; (window as any).__lanngerRouter = router
 
 const rootElement = document.getElementById('root')
