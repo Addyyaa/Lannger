@@ -1,5 +1,5 @@
 // 简单的缓存优先服务工作线程，实现基础离线能力
-const CACHE_NAME = 'langger-cache-v1'
+const CACHE_NAME = 'langger-cache-v2'
 const CORE_ASSETS = [
     './',
     './index.html',
@@ -7,6 +7,7 @@ const CORE_ASSETS = [
 ]
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting()
     // @ts-ignore
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => {
@@ -24,6 +25,7 @@ self.addEventListener('activate', (event) => {
             )
         )
     )
+    self.clients.claim()
 })
 
 self.addEventListener('fetch', (event) => {
