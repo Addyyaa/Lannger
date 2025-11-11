@@ -14,6 +14,38 @@ import i18n from './i18n/i18n'
 import languages from './i18n/languages.json'
 import { ensureDBOpen } from './db'
 
+// PWA 相关初始化：确保 manifest 与 Service Worker 正确注册
+function setupPWAAssets() {
+    if (typeof window === 'undefined') {
+        return
+    }
+    const manifestHref = `${import.meta.env.BASE_URL}manifest.webmanifest`
+    const existingManifest = document.querySelector<HTMLLinkElement>('link[rel="manifest"]')
+    if (existingManifest) {
+        if (existingManifest.getAttribute('href') !== manifestHref) {
+            existingManifest.setAttribute('href', manifestHref)
+        }
+    } else {
+        const link = document.createElement('link')
+        link.rel = 'manifest'
+        link.href = manifestHref
+        document.head.appendChild(link)
+    }
+    if ('serviceWorker' in navigator) {
+        const swUrl = `${import.meta.env.BASE_URL}sw.js`
+        const register = () => {
+            navigator.serviceWorker.register(swUrl).catch((error) => {
+                console.error('Service Worker 注册失败:', error)
+            })
+        }
+        if (document.readyState === 'complete') {
+            register()
+        } else {
+            window.addEventListener('load', register, { once: true })
+        }
+    }
+}
+
 // 创建主题上下文
 const ThemeContext = createContext<{
     isDark: boolean;
@@ -329,10 +361,11 @@ const router = existingRouter || createBrowserRouter(createRoutes(), {
 
 const rootElement = document.getElementById('root')
 
-
 if (!rootElement) {
     throw new Error('Root element #root not found')
 }
+
+setupPWAAssets()
 
 // 在应用启动时初始化数据库
 ensureDBOpen().catch((error) => {

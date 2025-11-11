@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react'
 import { useTheme } from '../main'
 import { useTranslation } from 'react-i18next'
 import { db, ensureDBOpen } from '../db'
+import { usePWAInstallPrompt } from '../hooks/usePWAInstallPrompt'
 
 export default function Home() {
     const [learnningProgress, setLearnningProgress] = useState<{ totalVocabulary: number, masteredVocabulary: number, totalSentences: number, masteredSentences: number }>({ totalVocabulary: 0, masteredVocabulary: 0, totalSentences: 0, masteredSentences: 0 })
@@ -11,6 +12,8 @@ export default function Home() {
     // 使用主题上下文
     const { isDark } = useTheme()
     const { t } = useTranslation()
+    const { isInstallable, isPromptVisible, isInstalled, promptInstall, dismissPrompt } = usePWAInstallPrompt()
+    const shouldShowInstallPrompt = isInstallable && !isInstalled && isPromptVisible
     useEffect(() => {
         // TODO 从数据库获取进度
         ensureDBOpen().then(() => {
@@ -24,6 +27,35 @@ export default function Home() {
     return (
 
         <div data-test-id="div-test-1" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+            {shouldShowInstallPrompt && (
+                <div
+                    data-test-id="pwa-install-banner"
+                    style={installPromptStyle}
+                >
+                    <div style={{ display: 'flex', flexDirection: 'column', rowGap: '0.5rem' }}>
+                        <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>安装 Langger 到桌面</span>
+                        <span style={{ color: 'var(--langger-text-secondary, #555)', fontSize: '0.95rem', lineHeight: 1.5 }}>
+                            将应用添加到设备，可在离线时继续学习并获得完整体验。
+                        </span>
+                    </div>
+                    <div style={{ display: 'flex', columnGap: '0.75rem' }}>
+                        <button
+                            data-test-id="pwa-install-confirm"
+                            onClick={() => { void promptInstall() }}
+                            style={primaryButtonStyle}
+                        >
+                            立即安装
+                        </button>
+                        <button
+                            data-test-id="pwa-install-dismiss"
+                            onClick={dismissPrompt}
+                            style={ghostButtonStyle}
+                        >
+                            稍后提醒
+                        </button>
+                    </div>
+                </div>
+            )}
             <h1 data-test-id="h1-test" style={title1Style} data-testid="today-progress-title">{t('title1')}</h1>
             <div data-test-id="div-test" data-testid="today-progress-vocabulary-containner" className={styles.todayProgress}>
                 <p data-test-id="p-test-1">{t('todayLearningPlan', { totalVocabulary: learnningProgress.totalVocabulary, masteredVocabulary: dailyLearningPlan.masteredVocabulary })}</p>
@@ -46,4 +78,48 @@ const title1Style: React.CSSProperties = {
     fontSize: 'clamp(1.5rem, 4vw, 3rem)', // 根据视窗宽度动态计算，最小1.5rem，最大3rem
     fontWeight: 700, // 加粗显示
     lineHeight: 1.5, // 设置行高以提高可读性
+}
+
+const installPromptStyle: React.CSSProperties = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '90%',
+    maxWidth: '960px',
+    padding: '1.25rem 1.5rem',
+    marginBottom: '1.5rem',
+    borderRadius: '16px',
+    background: 'rgba(0, 180, 255, 0.12)',
+    border: '1px solid rgba(0, 180, 255, 0.35)',
+    boxShadow: '0 12px 32px rgba(0, 0, 0, 0.08)',
+    backdropFilter: 'blur(6px)',
+    gap: '1rem',
+    flexWrap: 'wrap',
+}
+
+const primaryButtonStyle: React.CSSProperties = {
+    padding: '0.6rem 1.4rem',
+    borderRadius: '999px',
+    border: 'none',
+    background: 'linear-gradient(135deg, #00b4ff 0%, #007bff 100%)',
+    color: '#fff',
+    fontWeight: 600,
+    cursor: 'pointer',
+    transition: 'transform 0.2s ease, box-shadow 0.2s ease',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+}
+
+const ghostButtonStyle: React.CSSProperties = {
+    padding: '0.6rem 1.4rem',
+    borderRadius: '999px',
+    border: '1px solid rgba(0, 0, 0, 0.15)',
+    background: 'transparent',
+    color: 'inherit',
+    fontWeight: 500,
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
 }
