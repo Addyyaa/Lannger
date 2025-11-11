@@ -33,9 +33,9 @@ export default function Home() {
                     style={installPromptStyle}
                 >
                     <div style={{ display: 'flex', flexDirection: 'column', rowGap: '0.5rem' }}>
-                        <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>安装 Langger 到桌面</span>
+                        <span style={{ fontWeight: 700, fontSize: '1.25rem' }}>{t('installLanggerToDesktop')}</span>
                         <span style={{ color: 'var(--langger-text-secondary, #555)', fontSize: '0.95rem', lineHeight: 1.5 }}>
-                            将应用添加到设备，可在离线时继续学习并获得完整体验。
+                            {t('addApplicationToDevice', { device: t('desktop') })}
                         </span>
                     </div>
                     <div style={{ display: 'flex', columnGap: '0.75rem' }}>
@@ -44,14 +44,14 @@ export default function Home() {
                             onClick={() => { void promptInstall() }}
                             style={primaryButtonStyle}
                         >
-                            立即安装
+                            {t('installNow')}
                         </button>
                         <button
                             data-test-id="pwa-install-dismiss"
                             onClick={dismissPrompt}
                             style={ghostButtonStyle}
                         >
-                            稍后提醒
+                            {t('remindLater')}
                         </button>
                     </div>
                 </div>
