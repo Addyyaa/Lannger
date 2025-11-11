@@ -30,10 +30,17 @@ self.addEventListener('activate', (event) => {
     self.clients.claim()
 })
 
-self.addEventListener('message', (event) => {
+self.addEventListener('message', async (event) => {
     if (event.data && event.data.type === 'SKIP_WAITING') {
         self.skipWaiting()
     }
+    if (event.data?.type === 'CLEAR_CACHE') {
+        const keys = await caches.keys();
+        await Promise.all(keys.map(key => caches.delete(key)));
+        console.log('所有缓存已清空');
+        event.source?.postMessage?.({ type: 'CACHE_CLEARED' })
+    }
+
 })
 
 self.addEventListener('fetch', (event) => {
