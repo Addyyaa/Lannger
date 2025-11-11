@@ -1,9 +1,12 @@
 name: Deploy React App to GitHub Pages
 
+permissions:
+  contents: write   # ✅ 给 GitHub Actions 推送权限
+
 on:
   push:
     branches:
-      - main   # 如果你的主分支是 master，请改为 master
+      - main
 
 jobs:
   build-and-deploy:
@@ -12,20 +15,22 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+        with:
+          persist-credentials: false  # ✅ 避免使用默认 token 导致权限不生效
 
       - name: Setup Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: 22
+          node-version: 22   # ✅ 使用支持 Vite 的 Node 版本
 
       - name: Install dependencies
         run: npm install
 
       - name: Build project
-        run: npm run build   # 如果构建目录是 dist，会自动识别
+        run: npm run build
 
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist   # Vue 或 Vite 改为 dist
+          publish_dir: ./dist   # ✅ Vite 的构建目录
