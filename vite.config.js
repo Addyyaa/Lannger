@@ -4,7 +4,7 @@ import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
   const isProd = mode === 'production'
-  const repoBase = '/Langger/'
+  const repoBase = '/Lannger/'
 
   return {
     plugins: [
