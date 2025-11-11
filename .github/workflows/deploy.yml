@@ -29,8 +29,14 @@ jobs:
       - name: Build project
         run: npm run build
 
+      - name: Copy 404 fallback
+        run: cp dist/index.html dist/404.html
+
       - name: Deploy to GitHub Pages
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
           publish_dir: ./dist   # ✅ Vite 的构建目录
+          destination_dir: langger
+          enable_jekyll: false
