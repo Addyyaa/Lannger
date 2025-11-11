@@ -168,9 +168,5 @@
     "enterAnswer": "请输入答案",
     "learned": "标记为掌握",
     "fileTooLarge": "文件过大",
-    "invalidFileType": "不支持的文件类型",
-    "installLanggerToDesktop": "安装 Langger 到桌面",
-    "addApplicationToDevice": "将应用添加到设备，可在离线时继续学习并获得完整体验。",
-    "installNow": "立即安装",
-    "remindLater": "稍后提醒"
+    "invalidFileType": "不支持的文件类型"
 }

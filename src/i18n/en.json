@@ -168,9 +168,5 @@
     "enterAnswer": "Enter answer",
     "learned": "Mark as mastered",
     "fileTooLarge": "File too large",
-    "invalidFileType": "Unsupported file type",
-    "installLanggerToDesktop": "Install Langger to desktop",
-    "addApplicationToDevice": "Add application to device, you can continue learning offline and get a complete experience.",
-    "installNow": "Install Now",
-    "remindLater": "Remind Later"
+    "invalidFileType": "Unsupported file type"
 }
