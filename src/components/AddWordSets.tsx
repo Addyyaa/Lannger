@@ -83,36 +83,41 @@ export default function AddWordSets({
 
 const AddWordSetsStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "relative",
-    width: isPortrait ? "90%" : "40vw",
+    width: isPortrait ? "92%" : "40vw",
     aspectRatio: isPortrait ? undefined : "1.5/1",
-    minHeight: isPortrait ? "60vh" : undefined,
+    minHeight: isPortrait ? "65vh" : undefined,
     display: "flex",
     borderRadius: isPortrait ? "2vw" : "0.625vw",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: "center",
-    padding: isPortrait ? "4vw" : "1vw",
+    justifyContent: isPortrait ? "flex-start" : "center",
+    padding: isPortrait ? "6vw 5vw 7vw" : "1vw",
     boxSizing: "border-box",
+    rowGap: isPortrait ? "5vw" : "1.5vh",
 });
 
 const CloseButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "absolute",
-    top: isPortrait ? "3vw" : "1.5vh",
-    right: isPortrait ? "3vw" : "1vw",
+    top: isPortrait ? "4vw" : "1.5vh",
+    right: isPortrait ? "4vw" : "1vw",
     borderRadius: isPortrait ? "2vw" : "0.8vw",
+    aspectRatio: "1 / 1",
     fontSize: isPortrait ? "4vw" : "1.2vw",
     padding: isPortrait ? "2vw" : "0.5vw 1vw",
+    zIndex: 5,
 });
 
 const AddWordSetTitleStyle = (isPortrait: boolean): React.CSSProperties => ({
-    fontSize: isPortrait ? "4.5vw" : "1.3vw",
-    position: "absolute",
+    fontSize: isPortrait ? "4.8vw" : "1.3vw",
+    position: isPortrait ? "static" : "absolute",
     fontWeight: "bold",
-    top: isPortrait ? "3vw" : "1.5vh",
-    left: isPortrait ? "3vw" : "1vw",
+    top: isPortrait ? undefined : "1.5vh",
+    left: isPortrait ? undefined : "1vw",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
+    alignSelf: isPortrait ? "flex-start" : "center",
+    marginTop: isPortrait ? "2vw" : 0,
 });
 
 const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
@@ -120,25 +125,27 @@ const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    padding: isPortrait ? "2vw 0 0 0" : "7% 0 0 0",
+    padding: isPortrait ? "0" : "7% 0 0 0",
+    alignSelf: isPortrait ? "flex-start" : "center",
 });
 
 const fieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    position: "absolute",
-    top: isPortrait ? "12vw" : "4vh",
+    position: isPortrait ? "static" : "absolute",
+    top: isPortrait ? undefined : "4vh",
     width: "88%",
-    height: isPortrait ? "75%" : "70%",
+    height: isPortrait ? "auto" : "70%",
     flexDirection: "column",
     alignItems: "center",
     justifyContent: "center",
     border: "none",
     outline: "none",
+    rowGap: isPortrait ? "5vw" : "2vh",
 });
 
 const FormStyle: React.CSSProperties = {
     display: "flex",
-    width: "75%",
+    width: "100%",
     position: "relative",
     height: "100%",
     flexDirection: "column",
@@ -155,8 +162,8 @@ const nameLabelStyle = (isPortrait: boolean): React.CSSProperties => ({
 });
 
 const nameInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
-    width: "80%",
-    height: "100%",
+    width: isPortrait ? "100%" : "80%",
+    minHeight: isPortrait ? "9vw" : undefined,
     borderRadius: isPortrait ? "2vw" : "0.8vw",
     border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
     outline: "none",
@@ -169,12 +176,14 @@ const nameInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperti
 
 const nameInputContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    height: isPortrait ? "25%" : "20%",
+    height: isPortrait ? "auto" : "20%",
     width: "100%",
-    flexDirection: "row",
+    flexDirection: isPortrait ? "column" : "row",
     alignItems: "center",
     justifyContent: "center",
-    columnGap: isPortrait ? "3vw" : "5%",
+    columnGap: isPortrait ? 0 : "5%",
+    rowGap: isPortrait ? "2vw" : 0,
+    alignSelf: "stretch",
 });
 
 const setMarkLabelStyle = (isPortrait: boolean): React.CSSProperties => ({
@@ -185,19 +194,20 @@ const setMarkLabelStyle = (isPortrait: boolean): React.CSSProperties => ({
 
 const setMarkInputContainerStyle = (isPortrait: boolean): React.CSSProperties => ({
     display: "flex",
-    height: isPortrait ? "50%" : "40%",
+    height: isPortrait ? "auto" : "40%",
     width: "100%",
-    flexDirection: "row",
+    flexDirection: isPortrait ? "column" : "row",
     alignItems: "center",
     justifyContent: "center",
     marginBottom: isPortrait ? "4vw" : "6%",
-    columnGap: isPortrait ? "3vw" : "5%",
+    columnGap: isPortrait ? 0 : "5%",
+    rowGap: isPortrait ? "2vw" : 0,
     marginTop: isPortrait ? "3vw" : "5%",
 });
 
 const setMarkInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
-    width: "80%",
-    height: "100%",
+    width: isPortrait ? "100%" : "80%",
+    minHeight: isPortrait ? "24vw" : undefined,
     borderRadius: isPortrait ? "2vw" : "0.8vw",
     border: isDark ? `${isPortrait ? "0.3vw" : "0.06vw"} solid #444` : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
     outline: "none",
@@ -212,14 +222,14 @@ const setMarkInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSPrope
 });
 
 const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
-    minWidth: isPortrait ? "50%" : "33%",
+    minWidth: isPortrait ? "70%" : "33%",
     width: "auto",
-    height: isPortrait ? "8vh" : "14.5%",
+    height: isPortrait ? "auto" : "14.5%",
     borderRadius: isPortrait ? "2vw" : "0.8vw",
     fontSize: isPortrait ? "3.5vw" : "1vw",
     fontWeight: "bold",
     cursor: "pointer",
-    marginTop: isPortrait ? "auto" : "55%",
+    marginTop: isPortrait ? "8vw" : "55%",
     zIndex: 2,
-    padding: isPortrait ? "2vw 4vw" : "0.5vw 1vw",
+    padding: isPortrait ? "3vw 6vw" : "0.5vw 1vw",
 });

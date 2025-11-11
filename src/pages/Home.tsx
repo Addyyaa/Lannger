@@ -28,7 +28,7 @@ export default function Home() {
     }, [])
     return (
 
-        <div data-test-id="div-test-1" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+        <div data-test-id="home-div-test" style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
             {isUpdateAvailable && (
                 <div
                     data-test-id="pwa-update-banner"
@@ -40,7 +40,7 @@ export default function Home() {
                             {t('updateDescription')}
                         </span>
                     </div>
-                    <div style={{ display: 'flex', columnGap: '0.75rem' }}>
+                    <div data-test-id="home-div-test-1" style={{ display: 'flex', columnGap: '0.75rem' }}>
                         <button
                             data-test-id="pwa-update-confirm"
                             onClick={applyUpdate}

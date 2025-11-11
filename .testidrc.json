@@ -17,5 +17,7 @@
     "Suspense",
     "Portal"
   ],
-  "defaultTestId": "test"
+  "defaultTestId": "test",
+  "modulePrefixEnabled": true,
+  "modulePrefixSeparator": "-"
 }
