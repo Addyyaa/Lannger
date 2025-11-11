@@ -38,5 +38,4 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_branch: gh-pages
           publish_dir: ./dist   # ✅ Vite 的构建目录
-          destination_dir: Lannger
           enable_jekyll: false
