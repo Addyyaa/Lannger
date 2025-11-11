@@ -31,42 +31,20 @@ self.addEventListener('fetch', (event) => {
     if (request.method !== 'GET') {
         return
     }
-    let url
-    try {
-        url = new URL(request.url)
-    } catch {
-        return
-    }
-    const isHttp = url.protocol === 'http:' || url.protocol === 'https:'
-    if (!isHttp) {
-        return
-    }
-    const shouldCache = url.origin === self.location.origin
     // @ts-ignore
     event.respondWith(
-        (async () => {
-            const cached = await caches.match(request)
+        caches.match(request).then((cached) => {
             if (cached) {
                 return cached
             }
-            try {
-                const response = await fetch(request)
-                if (shouldCache && response.ok && response.type === 'basic') {
-                    const clone = response.clone()
-                    caches.open(CACHE_NAME).then((cache) => {
-                        cache.put(request, clone).catch(() => {
-                            // ignore put errors
-                        })
-                    })
-                }
+            return fetch(request).then((response) => {
+                const clone = response.clone()
+                caches.open(CACHE_NAME).then((cache) => {
+                    cache.put(request, clone)
+                })
                 return response
-            } catch (error) {
-                if (cached) {
-                    return cached
-                }
-                throw error
-            }
-        })()
+            }).catch(() => cached)
+        })
     )
 })
 
