@@ -17,5 +17,5 @@ export default defineConfig({
     port: 5173, // 开发服务器端口
     strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
   },
-  base: '/Langger/',
+  base: '/assets/',
 });
