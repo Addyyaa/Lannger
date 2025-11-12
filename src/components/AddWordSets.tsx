@@ -90,7 +90,7 @@ const AddWordSetsStyle = (isPortrait: boolean): React.CSSProperties => ({
     borderRadius: isPortrait ? "2vw" : "0.625vw",
     flexDirection: "column",
     alignItems: "center",
-    justifyContent: isPortrait ? "flex-start" : "center",
+    justifyContent: "center",
     padding: isPortrait ? "6vw 5vw 7vw" : "1vw",
     boxSizing: "border-box",
     rowGap: isPortrait ? "5vw" : "1.5vh",
@@ -98,26 +98,28 @@ const AddWordSetsStyle = (isPortrait: boolean): React.CSSProperties => ({
 
 const CloseButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
     position: "absolute",
-    top: isPortrait ? "4vw" : "1.5vh",
-    right: isPortrait ? "4vw" : "1vw",
-    borderRadius: isPortrait ? "2vw" : "0.8vw",
+    display: "flex",
+    justifyContent: "center",
+    width: isPortrait ? "8%" : "2vw",
+    alignItems: "center",
+    top: isPortrait ? "2.8%" : "1.5vh",
+    right: isPortrait ? "4%" : "1vw",
+    borderRadius: "50%",
     aspectRatio: "1 / 1",
     fontSize: isPortrait ? "4vw" : "1.2vw",
-    padding: isPortrait ? "2vw" : "0.5vw 1vw",
     zIndex: 5,
 });
 
 const AddWordSetTitleStyle = (isPortrait: boolean): React.CSSProperties => ({
     fontSize: isPortrait ? "4.8vw" : "1.3vw",
-    position: isPortrait ? "static" : "absolute",
+    position: "absolute",
     fontWeight: "bold",
-    top: isPortrait ? undefined : "1.5vh",
-    left: isPortrait ? undefined : "1vw",
+    top: isPortrait ? "3%" : "1.5vh",
+    left: isPortrait ? "5%" : "1vw",
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    alignSelf: isPortrait ? "flex-start" : "center",
-    marginTop: isPortrait ? "2vw" : 0,
+    alignSelf: "center",
 });
 
 const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
@@ -215,7 +217,6 @@ const setMarkInputStyle = (isDark: boolean, isPortrait: boolean): React.CSSPrope
     padding: isPortrait ? "2vw" : "2% 0 2% 0",
     boxSizing: "border-box",
     fontSize: isPortrait ? "3.5vw" : "1.2vw",
-    maxWidth: "80%",
     resize: "none",
     backgroundColor: isDark ? "#2d2d2d" : "#eeeeee",
     color: isDark ? "#eee" : "#333",
@@ -229,7 +230,7 @@ const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
     fontSize: isPortrait ? "3.5vw" : "1vw",
     fontWeight: "bold",
     cursor: "pointer",
-    marginTop: isPortrait ? "8vw" : "55%",
+    marginTop: isPortrait ? "4%" : "55%",
     zIndex: 2,
     padding: isPortrait ? "3vw 6vw" : "0.5vw 1vw",
 });

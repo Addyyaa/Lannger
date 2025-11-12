@@ -172,8 +172,20 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
           iconColor="#333333"
           size={isPortrait ? "12vw" : 40}
           style={{
-            top: isPortrait ? "4vw" : "1.5%",
-            right: isPortrait ? "4vw" : "1.2%",
+            display: "flex",
+            justifyContent: "center",
+            alignItems: "center",
+            width: "8%",
+            height: "none",
+            aspectRatio: "1 / 1",
+            borderRadius: "50%",
+            position: "absolute",
+            top: "2%",
+            right: "4.2%",
+            minWidth: "none",
+            minHeight: "none",
+            padding: 0,
+            margin: 0,
           }}
         />
         <Form data-test-id="form-test" style={FormStyle(isPortrait)} data-testid="word-info-form">
