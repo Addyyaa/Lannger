@@ -245,7 +245,6 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 data-test-id="textarea-test-1"
                 style={textAreaStyle(isPortrait)}
                 placeholder={t('examplePlaceholder')}
-                required
                 value={word.example}
                 onChange={(e) => setWord({ ...word, example: e.target.value })}
               />
