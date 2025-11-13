@@ -239,13 +239,12 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
               }}
             >
               <label data-test-id="label-test-3" style={labelStyle(isDark, isPortrait)}>
-                {t('example')} <span data-test-id="span-test" style={{ color: 'red' }}>*</span>
+                {t('example')}
               </label>
               <TextArea
                 data-test-id="textarea-test-1"
                 style={textAreaStyle(isPortrait)}
                 placeholder={t('examplePlaceholder')}
-                required
                 value={word.example}
                 onChange={(e) => setWord({ ...word, example: e.target.value })}
               />
@@ -350,6 +349,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                   : "translateY(0)",
                 transition: "transform 0.3s ease, filter 0.3s ease",
               } as React.CSSProperties}
+              
             />
           </div>
         </Form>
@@ -433,7 +433,7 @@ const optionalFieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
 const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
   color: "black",
   borderColor: "rgb(177, 169, 169)",
-  padding: isPortrait ? "0 0 1.5vw 0" : "1% 0 0 1.5%",
+  padding: isPortrait ? "10% 0 0 0" : "1% 0 0 1.5%",
   boxSizing: "border-box",
   fontSize: isPortrait ? "4.5vw" : "1.1vw",
   alignSelf: "flex-start",
