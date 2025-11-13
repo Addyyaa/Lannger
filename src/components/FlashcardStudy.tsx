@@ -433,6 +433,8 @@ export default function FlashcardStudy({
     msOverflowStyle: "none", // IE/Edge: 隐藏滚动条
   };
 
+  const isMeaningFront = cardFrontMode === "meaning";
+
   const frontModeToggleContainerStyle: React.CSSProperties = {
     position: "absolute",
     top: isPortrait ? "4%" : "6%",
@@ -452,8 +454,37 @@ export default function FlashcardStudy({
     width: isPortrait ? "30%" : "12%",
     aspectRatio: isPortrait ? "3/1.2" : "3/1",
     borderRadius: isPortrait ? "7vw" : "3vw",
-    background: isDark ? "rgba(255,255,255,0.08)" : "#eeeeee",
+    background: isDark ? "rgba(34, 34, 36, 0.45)" : "rgba(255, 255, 255, 0.32)",
+    border: isDark
+      ? "1px solid rgba(255, 255, 255, 0.16)"
+      : "1px solid rgba(255, 255, 255, 0.45)",
+    boxShadow: isDark
+      ? "0 12px 28px rgba(0, 0, 0, 0.45)"
+      : "0 12px 26px rgba(31, 38, 135, 0.22)",
+    backdropFilter: "blur(18px)",
+    WebkitBackdropFilter: "blur(18px)",
+    transition: "background 0.35s ease, border 0.35s ease",
     overflow: "hidden",
+  };
+
+  const frontModeToggleHighlightStyle: React.CSSProperties = {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    width: "50%",
+    height: "100%",
+    borderRadius: isPortrait ? "7vw" : "3vw",
+    background: isDark
+      ? "rgba(255, 255, 255, 0.12)"
+      : "rgba(255, 255, 255, 0.68)",
+    boxShadow: isDark
+      ? "inset 0 0 0 1px rgba(255, 255, 255, 0.2)"
+      : "inset 0 0 0 1px rgba(255, 255, 255, 0.35)",
+    transition:
+      "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease",
+    transform: isMeaningFront ? "translateX(0%)" : "translateX(100%)",
+    willChange: "transform",
+    zIndex: 0,
   };
 
   const frontModeToggleIconStyle: React.CSSProperties = {
@@ -592,6 +623,9 @@ export default function FlashcardStudy({
     background: "transparent",
     padding: 0,
     borderRadius: "0",
+    position: "relative",
+    zIndex: 1,
+    transition: "background-color 0.35s ease",
   };
 
   if (loading) {
@@ -661,7 +695,6 @@ export default function FlashcardStudy({
     );
   }
 
-  const isMeaningFront = cardFrontMode === "meaning";
   const hasMark = Boolean(currentWord.mark);
   const hasExample = Boolean(currentWord.example);
   const frontDisplayText = isMeaningFront
@@ -725,19 +758,18 @@ export default function FlashcardStudy({
             style={frontModeToggleWrapperStyle}
             data-testid="FlashcardStudy-toggleMode"
           >
+            <div
+              data-test-id="flashcard-study-div-highlight"
+              style={frontModeToggleHighlightStyle}
+              aria-hidden="true"
+            />
             <button
               data-test-id="flashcard-study-button-test-1"
               type="button"
               style={{
                 ...switchModeItemButtonStyle,
                 paddingLeft: isPortrait ? "8%" : "10%",
-                backgroundColor: isDark
-                  ? isMeaningFront
-                    ? "rgb(128, 126, 120)"
-                    : "transparent"
-                  : isMeaningFront
-                  ? "rgb(0, 0, 0)"
-                  : "rgb(255, 255, 255)",
+                backgroundColor: "transparent",
               }}
               onClick={() => handleChangeFrontMode("meaning")}
               title={t("flashcardFrontToggleToMeaning")}
@@ -771,13 +803,7 @@ export default function FlashcardStudy({
               style={{
                 ...switchModeItemButtonStyle,
                 paddingRight: isPortrait ? "12%" : "10%",
-                backgroundColor: isDark
-                  ? !isMeaningFront
-                    ? "rgb(128, 126, 120)"
-                    : "transparent"
-                  : !isMeaningFront
-                  ? "rgb(0, 0, 0)"
-                  : "rgb(255, 255, 255)",
+                backgroundColor: "transparent",
               }}
               onClick={() => handleChangeFrontMode("writing")}
               title={t("flashcardFrontToggleToWriting")}
