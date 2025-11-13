@@ -1,4 +1,10 @@
-import React, { useState, useEffect, useRef, useCallback } from "react";
+import React, {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useMemo,
+} from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { Word } from "../db";
@@ -30,6 +36,70 @@ export default function FlashcardStudy({
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { isPortrait } = useOrientation();
+  /**
+   * 针对明暗主题提取的视觉令牌，确保磨砂玻璃和卡片在不同模式下风格统一
+   */
+  const themeTokens = useMemo(() => {
+    if (isDark) {
+      return {
+        containerGradient:
+          "linear-gradient(135deg, rgba(28, 28, 30, 0.96) 0%, rgba(44, 44, 46, 0.92) 100%)",
+        containerBorderColor: "rgba(118, 118, 128, 0.35)",
+        containerShadowPortrait: "0 4vw 8vw rgba(0, 0, 0, 0.55)",
+        containerShadowLandscape: "0 1.5vw 3vw rgba(0, 0, 0, 0.55)",
+        cardSurface:
+          "linear-gradient(160deg, rgba(50, 50, 52, 0.7) 0%, rgba(30, 30, 32, 0.5) 100%)",
+        cardBorderColor: "rgba(255, 255, 255, 0.08)",
+        cardShadowPortrait: "0 2.5vw 6vw rgba(0, 0, 0, 0.45)",
+        cardShadowLandscape: "0 1vw 2.5vw rgba(0, 0, 0, 0.45)",
+        glassBackground:
+          "linear-gradient(135deg, rgba(44, 44, 46, 0.65) 0%, rgba(22, 22, 24, 0.4) 100%)",
+        glassBorder: "1px solid rgba(255, 255, 255, 0.16)",
+        glassShadow: "0 18px 44px rgba(0, 0, 0, 0.55)",
+        glassHighlightBackground:
+          "linear-gradient(135deg, rgba(255, 255, 255, 0.16) 0%, rgba(99, 102, 241, 0.08) 100%)",
+        glassHighlightShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.18)",
+        highlightFluidColor: "rgba(108, 126, 255, 0.34)",
+        highlightFluidSheen: "rgba(255, 255, 255, 0.42)",
+        highlightHaloShadow: "rgba(15, 23, 42, 0.28)",
+        lightbulbActivePrimary: "rgba(255, 255, 255, 0.92)",
+        lightbulbInactivePrimary: "rgba(142, 142, 147, 0.55)",
+        lightbulbActiveAccent: "rgba(255, 232, 100, 1)",
+        lightbulbInactiveAccent: "rgba(255, 232, 100, 0.25)",
+        wandActivePrimary: "rgba(124, 116, 255, 1)",
+        wandInactivePrimary: "rgba(124, 116, 255, 0.28)",
+      };
+    }
+    return {
+      containerGradient:
+        "linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 246, 255, 0.92) 100%)",
+      containerBorderColor: "rgba(141, 153, 174, 0.25)",
+      containerShadowPortrait: "0 4vw 8vw rgba(15, 23, 42, 0.15)",
+      containerShadowLandscape: "0 1.5vw 3vw rgba(15, 23, 42, 0.12)",
+      cardSurface:
+        "linear-gradient(160deg, rgba(255, 255, 255, 0.88) 0%, rgba(235, 242, 255, 0.6) 100%)",
+      cardBorderColor: "rgba(120, 144, 156, 0.16)",
+      cardShadowPortrait: "0 2.5vw 6vw rgba(15, 23, 42, 0.12)",
+      cardShadowLandscape: "0 1vw 2.5vw rgba(15, 23, 42, 0.1)",
+      glassBackground:
+        "linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(232, 237, 255, 0.35) 100%)",
+      glassBorder: "1px solid rgba(255, 255, 255, 0.65)",
+      glassShadow: "0 18px 40px rgba(15, 23, 42, 0.15)",
+      glassHighlightBackground:
+        "linear-gradient(135deg, rgba(255, 255, 255, 0.85) 0%, rgba(210, 215, 255, 0.45) 100%)",
+      glassHighlightShadow: "inset 0 0 0 1px rgba(255, 255, 255, 0.45)",
+      highlightFluidColor:
+        "linear-gradient(150deg, rgba(102, 126, 255, 0.95) 0%, rgba(78, 101, 255, 0.88) 42%, rgba(0, 174, 255, 0.72) 78%, rgba(181, 235, 255, 0.78) 100%)",
+      highlightFluidSheen: "rgba(255, 255, 255, 0.88)",
+      highlightHaloShadow: "rgba(96, 122, 255, 0.38)",
+      lightbulbActivePrimary: "#3a3a3c",
+      lightbulbInactivePrimary: "rgba(60, 60, 67, 0.45)",
+      lightbulbActiveAccent: "rgba(255, 209, 67, 1)",
+      lightbulbInactiveAccent: "rgba(255, 209, 67, 0.28)",
+      wandActivePrimary: "#6f4bff",
+      wandInactivePrimary: "rgba(111, 75, 255, 0.32)",
+    };
+  }, [isDark]);
   const [currentWord, setCurrentWord] = useState<Word | null>(null);
   const [wordIds, setWordIds] = useState<number[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
@@ -46,6 +116,9 @@ export default function FlashcardStudy({
   const [isResetting, setIsResetting] = useState(false);
   const [resetFeedback, setResetFeedback] = useState<string | null>(null);
   const shouldPersistRef = useRef(true);
+  const highlightAnimationTimeoutRef = useRef<number | null>(null);
+  const hasMountedRef = useRef(false);
+  const [highlightAnimationClass, setHighlightAnimationClass] = useState("");
 
   const clearPersistedSessionState = useCallback(async () => {
     try {
@@ -286,28 +359,18 @@ export default function FlashcardStudy({
 
   // 外层容器（不翻转，包含 perspective）
   const outerContainerStyle: React.CSSProperties = {
-    background: isDark
-      ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
-      : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
+    background: themeTokens.containerGradient,
     borderRadius: isPortrait ? "4vw" : "1.5vw",
     width: isPortrait ? "85vw" : "60vw",
     height: isPortrait ? "75vh" : "auto",
     aspectRatio: isPortrait ? undefined : "1/0.63",
     maxHeight: isPortrait ? "75vh" : "none",
-    boxShadow: isDark
-      ? isPortrait
-        ? "0 4vw 8vw rgba(0, 0, 0, 0.4)"
-        : "0 1.5vw 3vw rgba(0, 0, 0, 0.4)"
-      : isPortrait
-      ? "0 4vw 8vw rgba(0, 0, 0, 0.15)"
-      : "0 1.5vw 3vw rgba(0, 0, 0, 0.15)",
-    border: isDark
-      ? isPortrait
-        ? "0.4vw solid #444"
-        : "0.15vw solid #444"
-      : isPortrait
-      ? "0.4vw solid #e0e0e0"
-      : "0.15vw solid #e0e0e0",
+    boxShadow: isPortrait
+      ? themeTokens.containerShadowPortrait
+      : themeTokens.containerShadowLandscape,
+    border: isPortrait
+      ? `0.4vw solid ${themeTokens.containerBorderColor}`
+      : `0.15vw solid ${themeTokens.containerBorderColor}`,
     position: "relative",
     display: "flex",
     flexDirection: "column",
@@ -349,22 +412,14 @@ export default function FlashcardStudy({
     left: 0,
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
-    background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.02)",
+    background: themeTokens.cardSurface,
     borderRadius: isPortrait ? "3.5vw" : "1.4vw",
-    border: isDark
-      ? isPortrait
-        ? "0.3vw solid #555"
-        : "0.12vw solid #555"
-      : isPortrait
-      ? "0.3vw solid #e0e0e0"
-      : "0.12vw solid #e0e0e0",
-    boxShadow: isDark
-      ? isPortrait
-        ? "0 2.5vw 6vw rgba(0, 0, 0, 0.3)"
-        : "0 1vw 2.5vw rgba(0, 0, 0, 0.3)"
-      : isPortrait
-      ? "0 2.5vw 6vw rgba(0, 0, 0, 0.1)"
-      : "0 1vw 2.5vw rgba(0, 0, 0, 0.1)",
+    border: isPortrait
+      ? `0.3vw solid ${themeTokens.cardBorderColor}`
+      : `0.12vw solid ${themeTokens.cardBorderColor}`,
+    boxShadow: isPortrait
+      ? themeTokens.cardShadowPortrait
+      : themeTokens.cardShadowLandscape,
   };
 
   const cardFaceStyle: React.CSSProperties = {
@@ -392,27 +447,12 @@ export default function FlashcardStudy({
     textAlign: "center",
   };
 
-  const frontModeLabelStyle: React.CSSProperties = {
-    fontSize: isPortrait ? "calc(1.4vw + 1.4vh)" : "calc(0.7vw + 0.7vh)",
-    color: isDark ? "#B0B0B0" : "#888",
-    fontWeight: 500,
-    letterSpacing: isPortrait ? "0.18vw" : "0.1vw",
-    textTransform: "uppercase",
-  };
-
   const frontMeaningTextStyle: React.CSSProperties = {
     fontSize: isPortrait ? "calc(3vw + 3vh)" : "calc(1.6vw + 1.6vh)",
     fontWeight: 600,
     color: isDark ? "#f5f5f5" : "#333",
     lineHeight: 1.6,
     wordBreak: "break-word",
-  };
-
-  const frontKanaStyle: React.CSSProperties = {
-    fontSize: isPortrait ? "calc(2.4vw + 2.4vh)" : "calc(1.2vw + 1.2vh)",
-    color: isDark ? "#ddd" : "#555",
-    fontWeight: 500,
-    wordBreak: "break-all",
   };
 
   const cardBackStyle: React.CSSProperties = {
@@ -454,16 +494,14 @@ export default function FlashcardStudy({
     width: isPortrait ? "30%" : "12%",
     aspectRatio: isPortrait ? "3/1.2" : "3/1",
     borderRadius: isPortrait ? "7vw" : "3vw",
-    background: isDark ? "rgba(34, 34, 36, 0.45)" : "rgba(255, 255, 255, 0.32)",
-    border: isDark
-      ? "1px solid rgba(255, 255, 255, 0.16)"
-      : "1px solid rgba(255, 255, 255, 0.45)",
-    boxShadow: isDark
-      ? "0 12px 28px rgba(0, 0, 0, 0.45)"
-      : "0 12px 26px rgba(31, 38, 135, 0.22)",
-    backdropFilter: "blur(18px)",
-    WebkitBackdropFilter: "blur(18px)",
-    transition: "background 0.35s ease, border 0.35s ease",
+    background: themeTokens.glassBackground,
+    border: themeTokens.glassBorder,
+    boxShadow: themeTokens.glassShadow,
+    backdropFilter: "blur(22px) saturate(135%)",
+    WebkitBackdropFilter: "blur(22px) saturate(135%)",
+    backgroundClip: "padding-box",
+    transition:
+      "background 0.35s ease, border 0.35s ease, box-shadow 0.35s ease",
     overflow: "hidden",
   };
 
@@ -474,17 +512,12 @@ export default function FlashcardStudy({
     width: "50%",
     height: "100%",
     borderRadius: isPortrait ? "7vw" : "3vw",
-    background: isDark
-      ? "rgba(255, 255, 255, 0.12)"
-      : "rgba(255, 255, 255, 0.68)",
-    boxShadow: isDark
-      ? "inset 0 0 0 1px rgba(255, 255, 255, 0.2)"
-      : "inset 0 0 0 1px rgba(255, 255, 255, 0.35)",
-    transition:
-      "transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), background 0.4s ease",
-    transform: isMeaningFront ? "translateX(0%)" : "translateX(100%)",
-    willChange: "transform",
+    background: themeTokens.glassHighlightBackground,
+    boxShadow: themeTokens.glassHighlightShadow,
     zIndex: 0,
+    ["--mode-fluid-color" as any]: themeTokens.highlightFluidColor,
+    ["--mode-fluid-sheen" as any]: themeTokens.highlightFluidSheen,
+    ["--mode-fluid-halo" as any]: themeTokens.highlightHaloShadow,
   };
 
   const frontModeToggleIconStyle: React.CSSProperties = {
@@ -626,7 +659,33 @@ export default function FlashcardStudy({
     position: "relative",
     zIndex: 1,
     transition: "background-color 0.35s ease",
+    color: isDark ? "#f5f5f7" : "#202022",
+    outline: "none",
+    boxShadow: "none",
   };
+  const switchModeButtonClassName = "flashcard-mode-button";
+
+  useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+    if (highlightAnimationTimeoutRef.current) {
+      window.clearTimeout(highlightAnimationTimeoutRef.current);
+    }
+    const nextAnimationClass = isMeaningFront
+      ? "flashcard-mode-highlight--animate-left"
+      : "flashcard-mode-highlight--animate-right";
+    setHighlightAnimationClass(nextAnimationClass);
+    highlightAnimationTimeoutRef.current = window.setTimeout(() => {
+      setHighlightAnimationClass("");
+    }, 520);
+    return () => {
+      if (highlightAnimationTimeoutRef.current) {
+        window.clearTimeout(highlightAnimationTimeoutRef.current);
+      }
+    };
+  }, [isMeaningFront]);
 
   if (loading) {
     return (
@@ -701,15 +760,10 @@ export default function FlashcardStudy({
     ? (currentWord.meaning ? currentWord.meaning.trim() : "") || t("meaning")
     : (currentWord.kanji ? currentWord.kanji.trim() : "") ||
       (currentWord.kana ? currentWord.kana.trim() : "") ||
-      (currentWord.meaning ? currentWord.meaning.trim() : "") ||
       t("word");
   const frontDisplayStyle: React.CSSProperties = isMeaningFront
     ? frontMeaningTextStyle
     : wordTextStyle;
-  const frontKanaDisplay =
-    !isMeaningFront && currentWord.kanji && currentWord.kana
-      ? currentWord.kana
-      : null;
 
   return (
     <div
@@ -761,15 +815,21 @@ export default function FlashcardStudy({
             <div
               data-test-id="flashcard-study-div-highlight"
               style={frontModeToggleHighlightStyle}
+              className={`flashcard-mode-highlight ${
+                isMeaningFront
+                  ? "flashcard-mode-highlight--left"
+                  : "flashcard-mode-highlight--right"
+              } ${highlightAnimationClass}`}
               aria-hidden="true"
             />
             <button
               data-test-id="flashcard-study-button-test-1"
               type="button"
+              className={switchModeButtonClassName}
               style={{
                 ...switchModeItemButtonStyle,
-                paddingLeft: isPortrait ? "8%" : "10%",
                 backgroundColor: "transparent",
+                background: "transparent",
               }}
               onClick={() => handleChangeFrontMode("meaning")}
               title={t("flashcardFrontToggleToMeaning")}
@@ -787,11 +847,19 @@ export default function FlashcardStudy({
                   viewBox="0 0 24 24"
                 >
                   <path
-                    fill={isDark ? "rgb(255, 255, 255)" : "rgb(146, 146, 146)"}
+                    fill={
+                      isMeaningFront
+                        ? themeTokens.lightbulbActivePrimary
+                        : themeTokens.lightbulbInactivePrimary
+                    }
                     d="M14 20a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2h1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1zm1-3a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-2c-1.8-1.18-3-3.2-3-5.5A6.5 6.5 0 0 1 11.5 3A6.5 6.5 0 0 1 18 9.5c0 2.3-1.2 4.32-3 5.5zm-6 0a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-2.6c1.78-.9 3-2.76 3-4.9A5.5 5.5 0 0 0 11.5 4A5.5 5.5 0 0 0 6 9.5c0 2.14 1.22 4 3 4.9z"
                   />
                   <path
-                    fill="rgb(255, 232, 100)"
+                    fill={
+                      isMeaningFront
+                        ? themeTokens.lightbulbActiveAccent
+                        : themeTokens.lightbulbInactiveAccent
+                    }
                     d="M8.13 10.12l2.37-2.37l2 2L14.25 8l.71.71l-2.46 2.45l-2-2l-1.66 1.67z"
                   />
                 </svg>
@@ -800,10 +868,11 @@ export default function FlashcardStudy({
             <button
               data-test-id="flashcard-study-button-test"
               type="button"
+              className={switchModeButtonClassName}
               style={{
                 ...switchModeItemButtonStyle,
-                paddingRight: isPortrait ? "12%" : "10%",
                 backgroundColor: "transparent",
+                background: "transparent",
               }}
               onClick={() => handleChangeFrontMode("writing")}
               title={t("flashcardFrontToggleToWriting")}
@@ -824,7 +893,11 @@ export default function FlashcardStudy({
                   viewBox="0 0 24 24"
                 >
                   <path
-                    fill="rgb(147, 112, 219)"
+                    fill={
+                      isMeaningFront
+                        ? themeTokens.wandInactivePrimary
+                        : themeTokens.wandActivePrimary
+                    }
                     d="M16.15 13.05L14 16.5q-.275.425-.762.35t-.613-.575l-.7-2.8L5.1 20.3q-.275.275-.687.288T3.7 20.3q-.275-.275-.275-.7t.275-.7l6.825-6.85l-2.8-.7q-.5-.125-.575-.612t.35-.763l3.45-2.125l-.3-4.075q-.05-.5.4-.725t.825.1L15 5.775l3.775-1.525q.475-.2.825.15t.15.825L18.225 9l2.625 3.1q.325.375.1.825t-.725.4zm-12.8-6.7Q3.2 6.2 3.2 6t.15-.35l1.3-1.3Q4.8 4.2 5 4.2t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3Q5.2 7.8 5 7.8t-.35-.15zm14.3 14.3l-1.3-1.3q-.15-.15-.15-.35t.15-.35l1.3-1.3q.15-.15.35-.15t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3q-.15.15-.35.15t-.35-.15"
                   />
                 </svg>
@@ -859,37 +932,16 @@ export default function FlashcardStudy({
               }}
               data-testid="FlashcardStudy-6"
             >
-              {isMeaningFront ? (
-                <div
-                  data-test-id="flashcard-study-div-test-4"
-                  style={frontDisplayStyle}
-                >
-                  {frontDisplayText}
-                </div>
-              ) : (
-                <>
-                  <div
-                    data-test-id="flashcard-study-div-test-3"
-                    style={frontModeLabelStyle}
-                  >
-                    {t("flashcardFrontModeWritingLabel")}
-                  </div>
-                  <div
-                    data-test-id="flashcard-study-div-test-2"
-                    style={frontDisplayStyle}
-                  >
-                    {frontDisplayText}
-                  </div>
-                  {frontKanaDisplay && (
-                    <div
-                      data-test-id="flashcard-study-div-test-1"
-                      style={frontKanaStyle}
-                    >
-                      {frontKanaDisplay}
-                    </div>
-                  )}
-                </>
-              )}
+              <div
+                data-test-id={
+                  isMeaningFront
+                    ? "flashcard-study-div-test-4"
+                    : "flashcard-study-div-test-2"
+                }
+                style={frontDisplayStyle}
+              >
+                {frontDisplayText}
+              </div>
             </div>
           </div>
 

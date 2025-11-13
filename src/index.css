@@ -1,22 +1,69 @@
+/* 主题令牌：统一管理明暗模式的核心色彩 */
 :root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
+  font-family: Inter, -apple-system, BlinkMacSystemFont, "SF Pro Display",
+    "Segoe UI", Roboto, sans-serif;
   color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  --page-bg: radial-gradient(
+    140% 140% at 0% 0%,
+    #f7faff 0%,
+    #eef2ff 45%,
+    #f8fbff 100%
+  );
+  --color-text-primary: #1c1c1e;
+  --color-text-secondary: #3a3a3c;
+  --color-link: #007aff;
+  --color-link-hover: #004fbd;
+  --btn-bg: rgba(0, 122, 255, 0.12);
+  --btn-bg-hover: rgba(0, 122, 255, 0.2);
+  --btn-border: rgba(0, 122, 255, 0.35);
+  --btn-text: #0050c8;
+  --btn-shadow: 0 10px 28px rgba(15, 23, 42, 0.12);
+  --control-bg: rgba(0, 0, 0, 0.02);
+  --control-border: rgba(0, 0, 0, 0.15);
+  --control-bg-focus: #ffffff;
+  --control-border-focus: rgba(0, 150, 212, 0.6);
+  --control-shadow-focus: 0 0 0 0.3vh rgba(0, 150, 212, 0.2);
+  --checkbox-border: rgba(0, 0, 0, 0.25);
+  --checkbox-bg-checked: rgba(0, 150, 212, 0.15);
+  --checkbox-check-color: #0096d4;
+  --scroll-thumb-color: rgba(0, 0, 0, 0.2);
+  --scroll-thumb-hover: rgba(0, 0, 0, 0.3);
+  --surface-border: rgba(15, 23, 42, 0.08);
+  --focus-ring-color: rgba(79, 118, 255, 0.28);
 }
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
+body.dark {
+  --page-bg: radial-gradient(
+    160% 160% at 100% 0%,
+    #26262f 0%,
+    #17171c 52%,
+    #101013 100%
+  );
+  --color-text-primary: rgba(244, 244, 246, 0.94);
+  --color-text-secondary: rgba(235, 235, 245, 0.6);
+  --color-link: #4fa8ff;
+  --color-link-hover: #8cc8ff;
+  --btn-bg: rgba(10, 132, 255, 0.18);
+  --btn-bg-hover: rgba(10, 132, 255, 0.28);
+  --btn-border: rgba(10, 132, 255, 0.32);
+  --btn-text: #d0e8ff;
+  --btn-shadow: 0 18px 36px rgba(0, 0, 0, 0.35);
+  --control-bg: rgba(255, 255, 255, 0.08);
+  --control-border: rgba(255, 255, 255, 0.15);
+  --control-bg-focus: rgba(255, 255, 255, 0.1);
+  --control-border-focus: rgba(0, 180, 255, 0.6);
+  --control-shadow-focus: 0 0 0 0.3vh rgba(0, 180, 255, 0.2);
+  --checkbox-border: rgba(255, 255, 255, 0.4);
+  --checkbox-bg-checked: rgba(0, 180, 255, 0.3);
+  --checkbox-check-color: #00b4ff;
+  --scroll-thumb-color: rgba(255, 255, 255, 0.2);
+  --scroll-thumb-hover: rgba(255, 255, 255, 0.3);
+  --surface-border: rgba(255, 255, 255, 0.08);
+  --focus-ring-color: rgba(168, 196, 255, 0.32);
 }
 
 body {
@@ -26,53 +73,272 @@ body {
   min-height: 100vh;
   width: 100%;
   box-sizing: border-box;
+  font-family: inherit;
+  background: var(--page-bg);
+  color: var(--color-text-primary);
+  transition: background 0.4s ease, color 0.2s ease;
 }
 
-/* 亮色模式样式 */
-body:not(.dark) {
-  background-color: #ffffff;
-  color: #213547;
+a {
+  font-weight: 500;
+  color: var(--color-link);
+  text-decoration: none;
+  transition: color 0.2s ease;
 }
 
-body:not(.dark) button {
-  background-color: #e0dddd;
-  color: #213547;
+a:hover {
+  color: var(--color-link-hover);
 }
-
-/* 暗色模式样式 */
-body.dark {
-  background-color: #242424;
-  color: white;
-}
-
-body.dark button {
-  background-color: #1a1a1a;
-  color: white;
-}
-
 
 button {
   border-radius: 8px;
-  border: 1px solid transparent;
+  border: 1px solid var(--btn-border);
   padding: 0.6em 1.2em;
   font-size: 1em;
   font-weight: 500;
   font-family: inherit;
-  background-color: #1a1a1a;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   cursor: pointer;
-  transition: border-color 0.25s;
+  transition: border-color 0.25s, background 0.25s, box-shadow 0.25s,
+    transform 0.2s;
+  box-shadow: var(--btn-shadow);
 }
 
 button:hover {
-  border-color: #646cff;
+  border-color: var(--color-link);
+  background: var(--btn-bg-hover);
 }
 
-/* 自定义复选框样式 - 适配主题 */
+button:active {
+  transform: translateY(1px);
+}
+
+.flashcard-mode-button {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 0;
+  color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.flashcard-mode-button:hover {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.flashcard-mode-button:active {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.flashcard-mode-highlight {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 50%;
+  height: 100%;
+  border-radius: inherit;
+  transition: transform 0.52s cubic-bezier(0.22, 1, 0.36, 1),
+    background 0.45s ease, box-shadow 0.45s ease;
+  will-change: transform;
+  overflow: visible;
+  background:
+    radial-gradient(
+      120% 160% at var(--fluid-focus-x, 30%) 36%,
+      var(--mode-fluid-sheen, rgba(255, 255, 255, 0.55)),
+      rgba(255, 255, 255, 0) 72%
+    ),
+    var(--mode-fluid-color, rgba(255, 255, 255, 0.75));
+  background-blend-mode: screen, normal;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+    0 0.7vw 1.7vw var(--mode-fluid-halo, rgba(17, 24, 39, 0.18));
+}
+
+.flashcard-mode-highlight--left {
+  transform: translateX(0%) scaleX(1);
+  --fluid-focus-x: 32%;
+}
+
+.flashcard-mode-highlight--right {
+  transform: translateX(100%) scaleX(1);
+  --fluid-focus-x: 68%;
+}
+
+.flashcard-mode-highlight--animate-right {
+  animation: flashcard-mode-suction-right 0.52s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.flashcard-mode-highlight--animate-left {
+  animation: flashcard-mode-suction-left 0.52s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.flashcard-mode-highlight::before {
+  content: "";
+  position: absolute;
+  top: 50%;
+  width: 44%;
+  height: 84%;
+  border-radius: 46% 54% 58% 42% / 58% 46% 54% 42%;
+  background: radial-gradient(
+      120% 140% at 50% 48%,
+      var(--mode-fluid-sheen, rgba(255, 255, 255, 0.5)),
+      rgba(255, 255, 255, 0) 68%
+    ),
+    var(--mode-fluid-color, rgba(255, 255, 255, 0.8));
+  opacity: 0;
+  filter: blur(0.22vw);
+  transform: translate(-50%, -50%) scale(0.68);
+  box-shadow: 0 0.4vw 1.2vw var(--mode-fluid-halo, rgba(17, 24, 39, 0.2));
+  mix-blend-mode: screen;
+}
+
+.flashcard-mode-highlight--left::before {
+  left: 4%;
+}
+
+.flashcard-mode-highlight--right::before {
+  left: 96%;
+}
+
+.flashcard-mode-highlight--animate-right::before {
+  animation: flashcard-mode-tail-right 0.52s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+.flashcard-mode-highlight--animate-left::before {
+  animation: flashcard-mode-tail-left 0.52s cubic-bezier(0.19, 1, 0.22, 1);
+}
+
+@keyframes flashcard-mode-suction-right {
+  0% {
+    transform: translateX(0%) scaleX(1);
+    border-radius: 58% 42% 56% 44% / 58% 46% 54% 42%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 0.7vw 1.7vw rgba(17, 24, 39, 0.18);
+  }
+  22% {
+    transform: translateX(30%) scaleX(1.32);
+    border-radius: 40% 60% 36% 64% / 48% 40% 60% 52%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+      0 1vw 2.1vw rgba(17, 24, 39, 0.2);
+  }
+  46% {
+    transform: translateX(114%) scaleX(0.78);
+    border-radius: 72% 28% 70% 30% / 68% 74% 32% 36%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0.9vw 1.8vw rgba(17, 24, 39, 0.16);
+  }
+  74% {
+    transform: translateX(92%) scaleX(1.08);
+    border-radius: 44% 56% 42% 58% / 42% 58% 44% 58%;
+  }
+  100% {
+    transform: translateX(100%) scaleX(1);
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+  }
+}
+
+@keyframes flashcard-mode-suction-left {
+  0% {
+    transform: translateX(100%) scaleX(1);
+    border-radius: 58% 42% 56% 44% / 58% 46% 54% 42%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12),
+      0 0.7vw 1.7vw rgba(17, 24, 39, 0.18);
+  }
+  22% {
+    transform: translateX(70%) scaleX(1.32);
+    border-radius: 64% 36% 68% 32% / 52% 60% 40% 48%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.16),
+      0 1vw 2.1vw rgba(17, 24, 39, 0.2);
+  }
+  46% {
+    transform: translateX(-18%) scaleX(0.78);
+    border-radius: 30% 70% 28% 72% / 36% 32% 74% 68%;
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14),
+      0 0.9vw 1.8vw rgba(17, 24, 39, 0.16);
+  }
+  74% {
+    transform: translateX(8%) scaleX(1.08);
+    border-radius: 56% 44% 58% 42% / 58% 44% 58% 42%;
+  }
+  100% {
+    transform: translateX(0%) scaleX(1);
+    border-radius: 50% 50% 50% 50% / 50% 50% 50% 50%;
+  }
+}
+
+@keyframes flashcard-mode-tail-right {
+  0% {
+    opacity: 0.45;
+    transform: translate(-100%, -50%) scale(0.7);
+  }
+  34% {
+    opacity: 0.75;
+    transform: translate(-6%, -50%) scale(1.05, 1.12);
+  }
+  60% {
+    opacity: 0.18;
+    transform: translate(42%, -50%) scale(0.55, 0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(0%, -50%) scale(0.3);
+  }
+}
+
+@keyframes flashcard-mode-tail-left {
+  0% {
+    opacity: 0.45;
+    transform: translate(0%, -50%) scale(0.7);
+  }
+  34% {
+    opacity: 0.75;
+    transform: translate(-94%, -50%) scale(1.05, 1.12);
+  }
+  60% {
+    opacity: 0.18;
+    transform: translate(-142%, -50%) scale(0.55, 0.7);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(-196%, -50%) scale(0.3);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flashcard-mode-highlight--animate-left,
+  .flashcard-mode-highlight--animate-right {
+    animation: none !important;
+  }
+  .flashcard-mode-highlight {
+    transition: transform 0.3s ease, background 0.3s ease;
+  }
+  .flashcard-mode-highlight::before {
+    display: none;
+  }
+}
+
+.flashcard-mode-button:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 0.32vw var(--focus-ring-color);
+  border-radius: inherit;
+}
+
+/* 自定义复选框样式 - 统一颜色 */
 input[type="checkbox"].theme-checkbox {
   position: relative;
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
+  width: 1.4em;
+  height: 1.4em;
+  border-radius: 0.4em;
+  border: 2px solid var(--checkbox-border);
+  background-color: transparent;
+  transition: border-color 0.15s ease, background 0.15s ease;
 }
 
 input[type="checkbox"].theme-checkbox::after {
@@ -81,45 +347,98 @@ input[type="checkbox"].theme-checkbox::after {
   top: 50%;
   left: 50%;
   transform: translate(-50%, -50%) scale(0);
-  font-size: 14px;
+  font-size: 0.9em;
   font-weight: bold;
   line-height: 1;
   transition: transform 0.15s ease;
   pointer-events: none;
+  color: var(--checkbox-check-color);
+}
+
+input[type="checkbox"].theme-checkbox:checked {
+  background-color: var(--checkbox-bg-checked);
+  border-color: var(--checkbox-check-color);
 }
 
 input[type="checkbox"].theme-checkbox:checked::after {
   transform: translate(-50%, -50%) scale(1);
 }
 
-/* 暗色模式复选框 */
-body.dark input[type="checkbox"].theme-checkbox {
-  background-color: rgba(255, 255, 255, 0.15);
-  border: 2px solid rgba(255, 255, 255, 0.4);
+/* 表单控件适配主题 */
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+textarea,
+select {
+  padding: 1.2vh 1.4vw;
+  border-radius: 1vh;
+  border: 0.1vh solid var(--control-border);
+  outline: none;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  width: 100%;
+  font-size: 1em;
+  box-sizing: border-box;
+  font-family: inherit; 
+  line-height: 1.5;
+  min-height: 4.4vh;
+  background: var(--control-bg);
+  color: var(--color-text-primary);
 }
 
-body.dark input[type="checkbox"].theme-checkbox:checked {
-  background-color: rgba(0, 180, 255, 0.3);
-  border-color: #00b4ff;
+input[type="text"]:focus, 
+input[type="email"]:focus,
+input[type="password"]:focus,
+input[type="number"]:focus,
+input[type="search"]:focus,
+input[type="tel"]:focus,
+input[type="url"]:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--control-border-focus);
+  box-shadow: var(--control-shadow-focus);
+  background: var(--control-bg-focus);
+  color: var(--color-text-primary);
 }
 
-body.dark input[type="checkbox"].theme-checkbox:checked::after {
-  color: #00b4ff;
+/* textarea 特殊样式 */
+textarea {
+  resize: vertical;
+  min-height: 8vh;
+  line-height: 1.6;
 }
 
-/* 亮色模式复选框 */
-body:not(.dark) input[type="checkbox"].theme-checkbox {
-  background-color: #ffffff;
-  border: 2px solid rgba(0, 0, 0, 0.25);
+/* select 特殊样式 */
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-repeat: no-repeat;
+  background-position: right 1.4vw center;
+  background-size: 1.2vw;
+  padding-right: 3.5vw;
+  cursor: pointer;
 }
 
-body:not(.dark) input[type="checkbox"].theme-checkbox:checked {
-  background-color: rgba(0, 150, 212, 0.15);
-  border-color: #0096d4;
+/* 排除复选框和单选按钮的公共样式 */
+input[type="checkbox"],
+input[type="radio"] {
+  padding: 0;
+  border: none;
+  background: none;
+  min-height: auto;
+  width: auto;
+  box-shadow: none;
 }
 
-body:not(.dark) input[type="checkbox"].theme-checkbox:checked::after {
-  color: #0096d4;
+input[type="checkbox"]:focus,
+input[type="radio"]:focus {
+  border: none;
+  box-shadow: none;
+  background: none;
 }
 
 /* Apple HIG 风格的动画 */
@@ -143,127 +462,6 @@ body:not(.dark) input[type="checkbox"].theme-checkbox:checked::after {
   }
 }
 
-/* Apple HIG 风格的全局输入框样式 */
-input[type="text"],
-input[type="email"],
-input[type="password"],
-input[type="number"],
-input[type="search"],
-input[type="tel"],
-input[type="url"],
-textarea,
-select {
-  padding: 1.2vh 1.4vw;
-  border-radius: 1vh;
-  border: 0.1vh solid;
-  outline: none;
-  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  width: 100%;
-  font-size: 1em;
-  box-sizing: border-box;
-  font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, sans-serif;
-  line-height: 1.5;
-  min-height: 4.4vh;
-}
-
-/* 暗色模式输入框基础样式 */
-body.dark input[type="text"],
-body.dark input[type="email"],
-body.dark input[type="password"],
-body.dark input[type="number"],
-body.dark input[type="search"],
-body.dark input[type="tel"],
-body.dark input[type="url"],
-body.dark textarea,
-body.dark select {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
-}
-
-/* 亮色模式输入框基础样式 */
-body:not(.dark) input[type="text"],
-body:not(.dark) input[type="email"],
-body:not(.dark) input[type="password"],
-body:not(.dark) input[type="number"],
-body:not(.dark) input[type="search"],
-body:not(.dark) input[type="tel"],
-body:not(.dark) input[type="url"],
-body:not(.dark) textarea,
-body:not(.dark) select {
-  border-color: rgba(0, 0, 0, 0.15);
-  background: rgba(0, 0, 0, 0.02);
-  color: #000000;
-}
-
-/* 暗色模式输入框焦点样式 */
-body.dark input[type="text"]:focus,
-body.dark input[type="email"]:focus,
-body.dark input[type="password"]:focus,
-body.dark input[type="number"]:focus,
-body.dark input[type="search"]:focus,
-body.dark input[type="tel"]:focus,
-body.dark input[type="url"]:focus,
-body.dark textarea:focus,
-body.dark select:focus {
-  border-color: rgba(0, 180, 255, 0.6);
-  box-shadow: 0 0 0 0.3vh rgba(0, 180, 255, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* 亮色模式输入框焦点样式 */
-body:not(.dark) input[type="text"]:focus,
-body:not(.dark) input[type="email"]:focus,
-body:not(.dark) input[type="password"]:focus,
-body:not(.dark) input[type="number"]:focus,
-body:not(.dark) input[type="search"]:focus,
-body:not(.dark) input[type="tel"]:focus,
-body:not(.dark) input[type="url"]:focus,
-body:not(.dark) textarea:focus,
-body:not(.dark) select:focus {
-  border-color: rgba(0, 150, 212, 0.6);
-  box-shadow: 0 0 0 0.3vh rgba(0, 150, 212, 0.2);
-  background: #ffffff;
-}
-
-/* textarea 特殊样式 */
-textarea {
-  resize: vertical;
-  min-height: 8vh;
-  line-height: 1.6;
-}
-
-/* select 特殊样式 */
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  -moz-appearance: none;
-  background-repeat: no-repeat;
-  background-position: right 1.4vw center;
-  background-size: 1.2vw;
-  padding-right: 3.5vw;
-  cursor: pointer;
-}
-
-
-/* 排除复选框和单选按钮 */
-input[type="checkbox"],
-input[type="radio"] {
-  padding: 0;
-  border: none;
-  background: none;
-  min-height: auto;
-  width: auto;
-  box-shadow: none;
-}
-
-input[type="checkbox"]:focus,
-input[type="radio"]:focus {
-  border: none;
-  box-shadow: none;
-  background: none;
-}
-
 /* 自定义滚动条样式 - 用于闪卡例句区域 */
 .example-scroll-container::-webkit-scrollbar {
   width: 8px;
@@ -275,21 +473,13 @@ input[type="radio"]:focus {
 }
 
 .example-scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: var(--scroll-thumb-color);
   border-radius: 4px;
   transition: background 0.2s ease;
 }
 
 .example-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.3);
-}
-
-body.dark .example-scroll-container::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-body.dark .example-scroll-container::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.3);
+  background: var(--scroll-thumb-hover);
 }
 
 /* 隐藏滚动条但保持滚动功能 - 用于闪卡答案面 */
