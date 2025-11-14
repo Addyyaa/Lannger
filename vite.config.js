@@ -20,12 +20,9 @@ export default defineConfig(({ mode }) => {
     base: isProd ? "/Lannger/" : "/",
 
     build: {
-      minify: "terser",
-      terserOptions: {
-        compress: {
-          drop_console: true,
-          drop_debugger: true,
-        },
+      minify: "esbuild",
+      esbuildOptions: {
+        drop: ["console", "debugger"],
       },
     },
   };
