@@ -3,14 +3,12 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 
 export default defineConfig(({ mode }) => {
-  const isProd = mode === 'production'
+  const isProd = mode === "production";
   return {
     plugins: [
       react({
         babel: {
-          plugins: [
-            "babel-plugin-react-compiler",
-          ].filter(Boolean),
+          plugins: ["babel-plugin-react-compiler"].filter(Boolean),
         },
       }),
     ],
@@ -19,6 +17,16 @@ export default defineConfig(({ mode }) => {
       port: 5173, // 开发服务器端口
       strictPort: false, // 如果端口被占用，自动尝试下一个可用端口
     },
-    base: isProd ? '/Lannger/' : '/',
-  }
+    base: isProd ? "/Lannger/" : "/",
+
+    build: {
+      minify: "terser",
+      terserOptions: {
+        compress: {
+          drop_console: true,
+          drop_debugger: true,
+        },
+      },
+    },
+  };
 });

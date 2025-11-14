@@ -263,7 +263,7 @@ function LanguageMenu({
       return isTouchDevice;
     };
     if (isTouchDevice()) {
-      sleep(2000).then(() => handleMouseLeave());
+      sleep(4000).then(() => handleMouseLeave());
     }
   }, []);
 
