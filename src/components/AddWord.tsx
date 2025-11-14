@@ -33,7 +33,10 @@ function loadLastSelections() {
 }
 
 // 保存选择到 localStorage
-function saveSelections(setId: number | undefined, difficultyCoefficient: string) {
+function saveSelections(
+  setId: number | undefined,
+  difficultyCoefficient: string
+) {
   try {
     if (setId !== undefined) {
       localStorage.setItem(STORAGE_KEY_LAST_SET_ID, setId.toString());
@@ -73,9 +76,9 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
         setWordSets(sets);
 
         // 验证当前选择的 setId 是否仍然有效
-        setWord(prev => {
+        setWord((prev) => {
           if (prev.setId !== undefined) {
-            const isValidSetId = sets.some(set => set.id === prev.setId);
+            const isValidSetId = sets.some((set) => set.id === prev.setId);
             if (!isValidSetId) {
               // 如果选择的词集不存在，清除无效的 localStorage 值
               localStorage.removeItem(STORAGE_KEY_LAST_SET_ID);
@@ -99,25 +102,26 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
 
     // 验证必填字段
     if (!word.kana || word.kana.trim() === "") {
-      alert(`${t('kana')} ${t('isRequired')}`);
+      alert(`${t("kana")} ${t("isRequired")}`);
       return;
     }
     if (!word.kanji || word.kanji.trim() === "") {
-      alert(`${t('kanji')} ${t('isRequired')}`);
+      alert(`${t("kanji")} ${t("isRequired")}`);
       return;
     }
     if (!word.meaning || word.meaning.trim() === "") {
-      alert(`${t('meaning')} ${t('isRequired')}`);
+      alert(`${t("meaning")} ${t("isRequired")}`);
       return;
     }
     if (!word.example || word.example.trim() === "") {
-      alert(`${t('example')} ${t('isRequired')}`);
+      alert(`${t("example")} ${t("isRequired")}`);
       return;
     }
 
     // 将 difficultyCoefficient 转换为 review.difficulty
     // 处理 setId：如果未选择，则使用默认单词集ID
-    const finalSetId = word.setId !== undefined ? word.setId : DEFAULT_WORD_SET_ID;
+    const finalSetId =
+      word.setId !== undefined ? word.setId : DEFAULT_WORD_SET_ID;
 
     const wordToSave = {
       ...word,
@@ -130,36 +134,37 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
     // 删除 difficultyCoefficient，因为它不是 Word 接口的一部分
     delete (wordToSave as any).difficultyCoefficient;
 
-    await dbOperator.createWord(wordToSave).then(() => {
-      // 显示成功提示
-      alert(t('addWordSuccess'));
+    await dbOperator
+      .createWord(wordToSave)
+      .then(() => {
+        // 显示成功提示
+        alert(t("addWordSuccess"));
 
-      // 重置表单，保留单词集和难度系数设置，方便继续添加
-      // 这些值已经保存在 localStorage 中，下次打开会自动恢复
-      setWord({
-        kana: "",
-        kanji: "",
-        meaning: "",
-        example: "",
-        mark: "",
-        difficultyCoefficient: word.difficultyCoefficient, // 保留难度系数
-        setId: word.setId, // 保留单词集选择
+        // 重置表单，保留单词集和难度系数设置，方便继续添加
+        // 这些值已经保存在 localStorage 中，下次打开会自动恢复
+        setWord({
+          kana: "",
+          kanji: "",
+          meaning: "",
+          example: "",
+          mark: "",
+          difficultyCoefficient: word.difficultyCoefficient, // 保留难度系数
+          setId: word.setId, // 保留单词集选择
+        });
+
+        // 确保选择已保存到 localStorage
+        saveSelections(word.setId, word.difficultyCoefficient);
+
+        // 将焦点设置到第一个输入框（kana），方便继续输入
+        setTimeout(() => {
+          if (kanaInputRef.current) {
+            kanaInputRef.current.focus();
+          }
+        }, 100);
+      })
+      .catch((error) => {
+        alert(t("addWordFailed") + `\t${error}`);
       });
-
-      // 确保选择已保存到 localStorage
-      saveSelections(word.setId, word.difficultyCoefficient);
-
-      // 将焦点设置到第一个输入框（kana），方便继续输入
-      setTimeout(() => {
-        if (kanaInputRef.current) {
-          kanaInputRef.current.focus();
-        }
-      }, 100);
-    }).catch(
-      (error) => {
-        alert(t('addWordFailed') + `\t${error}`)
-      }
-    )
   }
 
   return (
@@ -188,12 +193,31 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             margin: 0,
           }}
         />
-        <Form data-test-id="form-test" style={FormStyle(isPortrait)} data-testid="word-info-form">
-          <fieldset data-test-id="fieldset-test-1" style={wordFieldsetStyle(isPortrait)} data-testid="word-info-must">
-            <legend data-test-id="legend-test" style={legendStyle(isPortrait)}>{t('word')}</legend>
-            <section data-test-id="section-test-6" style={sectionStyle(isPortrait)}>
-              <label data-test-id="label-test-6" style={labelStyle(isDark, isPortrait)}>
-                {t('kana')} <span data-test-id="span-test-3" style={{ color: 'red' }}>*</span>
+        <Form
+          data-test-id="form-test"
+          style={FormStyle(isPortrait)}
+          data-testid="word-info-form"
+        >
+          <fieldset
+            data-test-id="fieldset-test-1"
+            style={wordFieldsetStyle(isPortrait)}
+            data-testid="word-info-must"
+          >
+            <legend data-test-id="legend-test" style={legendStyle(isPortrait)}>
+              {t("word")}
+            </legend>
+            <section
+              data-test-id="section-test-6"
+              style={sectionStyle(isPortrait)}
+            >
+              <label
+                data-test-id="label-test-6"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("kana")}{" "}
+                <span data-test-id="span-test-3" style={{ color: "red" }}>
+                  *
+                </span>
               </label>
               <input
                 ref={kanaInputRef}
@@ -205,9 +229,18 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 onChange={(e) => setWord({ ...word, kana: e.target.value })}
               />
             </section>
-            <section data-test-id="section-test-5" style={sectionStyle(isPortrait)}>
-              <label data-test-id="label-test-5" style={labelStyle(isDark, isPortrait)}>
-                {t('kanji')} <span data-test-id="span-test-2" style={{ color: 'red' }}>*</span>
+            <section
+              data-test-id="section-test-5"
+              style={sectionStyle(isPortrait)}
+            >
+              <label
+                data-test-id="label-test-5"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("kanji")}{" "}
+                <span data-test-id="span-test-2" style={{ color: "red" }}>
+                  *
+                </span>
               </label>
               <input
                 data-test-id="input-test-1"
@@ -218,9 +251,18 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 onChange={(e) => setWord({ ...word, kanji: e.target.value })}
               />
             </section>
-            <section data-test-id="section-test-4" style={sectionStyle(isPortrait)}>
-              <label data-test-id="label-test-4" style={labelStyle(isDark, isPortrait)}>
-                {t('meaning')} <span data-test-id="span-test-1" style={{ color: 'red' }}>*</span>
+            <section
+              data-test-id="section-test-4"
+              style={sectionStyle(isPortrait)}
+            >
+              <label
+                data-test-id="label-test-4"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("meaning")}{" "}
+                <span data-test-id="span-test-1" style={{ color: "red" }}>
+                  *
+                </span>
               </label>
               <input
                 data-test-id="input-test"
@@ -236,21 +278,29 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
               style={{
                 ...sectionStyle(isPortrait),
                 minHeight: isPortrait ? undefined : "40%",
+                paddingBottom: isPortrait ? "4%" : "none",
               }}
             >
-              <label data-test-id="label-test-3" style={labelStyle(isDark, isPortrait)}>
-                {t('example')}
+              <label
+                data-test-id="label-test-3"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("example")}
               </label>
               <TextArea
                 data-test-id="textarea-test-1"
                 style={textAreaStyle(isPortrait)}
-                placeholder={t('examplePlaceholder')}
+                placeholder={t("examplePlaceholder")}
                 value={word.example}
                 onChange={(e) => setWord({ ...word, example: e.target.value })}
               />
             </section>
           </fieldset>
-          <fieldset data-test-id="fieldset-test" style={optionalFieldsetStyle(isPortrait)} data-testid="word-info-optional">
+          <fieldset
+            data-test-id="fieldset-test"
+            style={optionalFieldsetStyle(isPortrait)}
+            data-testid="word-info-optional"
+          >
             <section
               data-test-id="section-test-2"
               style={{
@@ -258,20 +308,36 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 minHeight: isPortrait ? undefined : "33%",
               }}
             >
-              <label data-test-id="label-test-2" style={labelStyle(isDark, isPortrait)}>{t('wordSet')}</label>
+              <label
+                data-test-id="label-test-2"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("wordSet")}
+              </label>
               <select
                 data-test-id="select-test-1"
                 id="wordSet"
                 style={selectStyle(isPortrait)}
-                value={word.setId !== undefined ? word.setId.toString() : DEFAULT_WORD_SET_ID.toString()}
+                value={
+                  word.setId !== undefined
+                    ? word.setId.toString()
+                    : DEFAULT_WORD_SET_ID.toString()
+                }
                 onChange={(e) => {
-                  const setId = e.target.value === "" ? undefined : parseInt(e.target.value, 10);
+                  const setId =
+                    e.target.value === ""
+                      ? undefined
+                      : parseInt(e.target.value, 10);
                   setWord({ ...word, setId });
                   saveSelections(setId, word.difficultyCoefficient);
                 }}
               >
                 {wordSets.map((set) => (
-                  <option data-test-id="option-test-5" key={set.id} value={set.id.toString()}>
+                  <option
+                    data-test-id="option-test-5"
+                    key={set.id}
+                    value={set.id.toString()}
+                  >
                     {set.name}
                   </option>
                 ))}
@@ -284,11 +350,16 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                 minHeight: isPortrait ? undefined : "33%",
               }}
             >
-              <label data-test-id="label-test-1" style={labelStyle(isDark, isPortrait)}>{t('mark')}</label>
+              <label
+                data-test-id="label-test-1"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("mark")}
+              </label>
               <TextArea
                 data-test-id="textarea-test"
                 style={textAreaStyle(isPortrait)}
-                placeholder={t('markPlaceholder')}
+                placeholder={t("markPlaceholder")}
                 value={word.mark}
                 onChange={(e) => setWord({ ...word, mark: e.target.value })}
               />
@@ -298,9 +369,15 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
               style={{
                 ...sectionStyle(isPortrait),
                 minHeight: isPortrait ? undefined : "34%",
+                paddingBottom: isPortrait ? "4%" : "none",
               }}
             >
-              <label data-test-id="label-test" style={labelStyle(isDark, isPortrait)}>{t('difficultyCoefficient')}</label>
+              <label
+                data-test-id="label-test"
+                style={labelStyle(isDark, isPortrait)}
+              >
+                {t("difficultyCoefficient")}
+              </label>
               <select
                 data-test-id="select-test"
                 id="difficultyCoefficient"
@@ -312,11 +389,21 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
                   saveSelections(word.setId, difficultyCoefficient);
                 }}
               >
-                <option data-test-id="option-test-4" value="1">{t('n1')}</option>
-                <option data-test-id="option-test-3" value="2">{t('n2')}</option>
-                <option data-test-id="option-test-2" value="3">{t('n3')}</option>
-                <option data-test-id="option-test-1" value="4">{t('n4')}</option>
-                <option data-test-id="option-test" value="5">{t('n5')}</option>
+                <option data-test-id="option-test-4" value="1">
+                  {t("n1")}
+                </option>
+                <option data-test-id="option-test-3" value="2">
+                  {t("n2")}
+                </option>
+                <option data-test-id="option-test-2" value="3">
+                  {t("n3")}
+                </option>
+                <option data-test-id="option-test-1" value="4">
+                  {t("n4")}
+                </option>
+                <option data-test-id="option-test" value="5">
+                  {t("n5")}
+                </option>
               </select>
             </section>
           </fieldset>
@@ -330,7 +417,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
             role="button"
             tabIndex={0}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
+              if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();
                 handleSubmit(e as any);
               }
@@ -338,18 +425,19 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
           >
             <Submmit
               data-test-id="submmit-test"
-              {...{
+              {...({
                 width: isPortrait ? "100%" : "80%",
                 height: isPortrait ? "100%" : "80%",
                 filter: isHovered
                   ? "drop-shadow(0 8px 16px rgba(0, 0, 0, 0.3)) drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2))"
                   : "drop-shadow(0 4px 8px rgba(0, 0, 0, 0.2)) drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1))",
                 transform: isHovered
-                  ? (isPortrait ? "translateY(-6px)" : "translateY(-8px)")
+                  ? isPortrait
+                    ? "translateY(-6px)"
+                    : "translateY(-8px)"
                   : "translateY(0)",
                 transition: "transform 0.3s ease, filter 0.3s ease",
-              } as React.CSSProperties}
-              
+              } as React.CSSProperties)}
             />
           </div>
         </Form>
@@ -372,7 +460,10 @@ const AddWordStyle: React.CSSProperties = {
   justifyContent: "center",
 };
 
-const FormContainer = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+const FormContainer = (
+  isDark: boolean,
+  isPortrait: boolean
+): React.CSSProperties => ({
   position: "relative",
   width: isPortrait ? "94%" : "60%",
   minHeight: isPortrait ? "90vh" : undefined,
@@ -388,7 +479,7 @@ const FormContainer = (isDark: boolean, isPortrait: boolean): React.CSSPropertie
   padding: isPortrait ? "8vw 6vw 12vw" : "2vw",
   boxSizing: "border-box",
   rowGap: isPortrait ? "6vw" : "2vh",
-})
+});
 
 const FormStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
@@ -400,7 +491,7 @@ const FormStyle = (isPortrait: boolean): React.CSSProperties => ({
   position: "relative",
   rowGap: isPortrait ? "6vw" : "2vh",
   paddingBottom: isPortrait ? "10vw" : 0,
-})
+});
 
 const fieldsetBaseStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
@@ -416,19 +507,19 @@ const fieldsetBaseStyle = (isPortrait: boolean): React.CSSProperties => ({
   boxSizing: "border-box",
   borderRadius: isPortrait ? "3vw" : "0",
   boxShadow: isPortrait ? "0 6px 18px rgba(0,0,0,0.08)" : "none",
-})
+});
 
 const wordFieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
   ...fieldsetBaseStyle(isPortrait),
   flex: isPortrait ? "0 0 auto" : "0 0 65%",
   minHeight: isPortrait ? "auto" : "65%",
-})
+});
 
 const optionalFieldsetStyle = (isPortrait: boolean): React.CSSProperties => ({
   ...fieldsetBaseStyle(isPortrait),
   flex: isPortrait ? "0 0 auto" : "0 0 35%",
   minHeight: isPortrait ? "auto" : "35%",
-})
+});
 
 const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
   color: "black",
@@ -437,15 +528,18 @@ const legendStyle = (isPortrait: boolean): React.CSSProperties => ({
   boxSizing: "border-box",
   fontSize: isPortrait ? "4.5vw" : "1.1vw",
   alignSelf: "flex-start",
-})
+});
 
-const labelStyle = (isDark: boolean, isPortrait: boolean): React.CSSProperties => ({
+const labelStyle = (
+  isDark: boolean,
+  isPortrait: boolean
+): React.CSSProperties => ({
   fontSize: isPortrait ? "3.5vw" : "1vw",
   width: isPortrait ? "100%" : "auto",
   fontWeight: "bold",
   color: isDark ? "black" : "black",
   marginRight: isPortrait ? "0" : "1vw",
-})
+});
 
 const sectionStyle = (isPortrait: boolean): React.CSSProperties => ({
   display: "flex",
@@ -458,7 +552,7 @@ const sectionStyle = (isPortrait: boolean): React.CSSProperties => ({
   rowGap: isPortrait ? "3vw" : 0,
   columnGap: isPortrait ? 0 : "3%",
   paddingRight: isPortrait ? "0" : "5%",
-})
+});
 
 const textInputStyle = (isPortrait: boolean): React.CSSProperties => ({
   width: isPortrait ? "100%" : "70%",
@@ -474,13 +568,13 @@ const textInputStyle = (isPortrait: boolean): React.CSSProperties => ({
   backgroundColor: "white",
   padding: isPortrait ? "2.5vw" : "0 1vw",
   boxShadow: isPortrait ? "0 3px 12px rgba(0,0,0,0.05)" : "none",
-})
+});
 
 const textAreaStyle = (isPortrait: boolean): React.CSSProperties => ({
   ...textInputStyle(isPortrait),
   height: isPortrait ? "24vw" : "100%",
   resize: "none",
-})
+});
 
 const selectStyle = (isPortrait: boolean): React.CSSProperties => ({
   width: isPortrait ? "100%" : "70%",
@@ -495,7 +589,7 @@ const selectStyle = (isPortrait: boolean): React.CSSProperties => ({
   boxSizing: "border-box",
   color: "black",
   backgroundColor: "white",
-})
+});
 
 const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
   width: isPortrait ? "100%" : "8%",
@@ -516,4 +610,4 @@ const submitButtonStyle = (isPortrait: boolean): React.CSSProperties => ({
   justifyContent: "center",
   marginTop: isPortrait ? "6vw" : 0,
   alignSelf: isPortrait ? "center" : "flex-end",
-})
+});

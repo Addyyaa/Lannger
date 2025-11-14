@@ -1,5 +1,18 @@
 import dataVerify from "../utils/dataVerify";
-import { db, WordSet, Word, resetDB, ensureDBOpen, DEFAULT_WORD_TYPE, getOrCreateDefaultWordSet, DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_NAME, FlashcardSessionState } from "../db";
+import {
+  db,
+  WordSet,
+  Word,
+  resetDB,
+  ensureDBOpen,
+  DEFAULT_WORD_TYPE,
+  getOrCreateDefaultWordSet,
+  DEFAULT_WORD_SET_ID,
+  DEFAULT_WORD_SET_NAME,
+  FlashcardSessionState,
+  UserSettings,
+  DailyStat,
+} from "../db";
 
 /**
  * 生成导入时的临时词集名称，避免硬编码常量
@@ -70,7 +83,11 @@ export async function getAllWordSets(): Promise<WordSet[]> {
     if (Array.isArray(result)) {
       return result as WordSet[];
     } else {
-      console.error("getAllWordSets: db.wordSets.toArray() 返回了非数组值:", result, typeof result);
+      console.error(
+        "getAllWordSets: db.wordSets.toArray() 返回了非数组值:",
+        result,
+        typeof result
+      );
       return [];
     }
   } catch (error) {
@@ -120,7 +137,8 @@ export async function getWord(id: number) {
   return await db.words.get(id);
 }
 
-async function ensureUserSettingsRecord() {
+export async function ensureUserSettingsRecord(): Promise<UserSettings> {
+  await ensureDBOpen();
   const now = new Date().toISOString();
   let settings = await db.userSettings.get(1);
   if (!settings) {
@@ -135,7 +153,7 @@ async function ensureUserSettingsRecord() {
     };
     await db.userSettings.put(settings);
   }
-  return settings;
+  return settings as UserSettings;
 }
 
 export async function saveFlashcardSessionState(
@@ -156,6 +174,11 @@ export async function saveFlashcardSessionState(
   });
 }
 
+/**
+ * 获取闪卡会话状态
+ * 会话状态记录了闪卡会话的进度，包括当前单词索引，单词ID列表，会话统计等信息
+ * @returns 闪卡会话状态
+ */
 export async function getFlashcardSessionState(): Promise<FlashcardSessionState | null> {
   await ensureDBOpen();
   const settings = await db.userSettings.get(1);
@@ -167,6 +190,7 @@ export async function getFlashcardSessionState(): Promise<FlashcardSessionState 
   if (!Array.isArray(state.wordIds) || state.wordIds.length === 0) {
     return null;
   }
+  console.log("getFlashcardSessionState", state);
 
   return state;
 }
@@ -188,12 +212,53 @@ export async function clearFlashcardSessionState(): Promise<void> {
   await db.userSettings.put(updatedSettings);
 }
 
+export async function getUserSettings(): Promise<UserSettings> {
+  return ensureUserSettingsRecord();
+}
+
+export async function updateDailyGoal(goal: number): Promise<UserSettings> {
+  const clampedGoal = Math.max(1, Math.round(goal));
+  const now = new Date().toISOString();
+  const settings = await ensureUserSettingsRecord();
+  const updatedSettings: UserSettings = {
+    ...settings,
+    dailyGoal: clampedGoal,
+    updatedAt: now,
+  };
+  await db.userSettings.put(updatedSettings);
+
+  const today = new Date().toISOString().split("T")[0];
+  const existingDailyStat = await db.dailyStats.get(today);
+  if (existingDailyStat) {
+    const updatedDailyStat: DailyStat = {
+      ...existingDailyStat,
+      goal: clampedGoal,
+      updatedAt: now,
+    };
+    await db.dailyStats.put(updatedDailyStat);
+  } else {
+    const newDailyStat: DailyStat = {
+      date: today,
+      learnedCount: 0,
+      reviewedCount: 0,
+      testedCount: 0,
+      correctCount: 0,
+      goal: clampedGoal,
+      updatedAt: now,
+    };
+    await db.dailyStats.put(newDailyStat);
+  }
+
+  return updatedSettings;
+}
+
 export async function resetWordProgress(wordSetId?: number): Promise<number> {
   await ensureDBOpen();
 
-  const targetWords: Word[] = wordSetId !== undefined
-    ? await db.words.where("setId").equals(wordSetId).toArray()
-    : await db.words.toArray();
+  const targetWords: Word[] =
+    wordSetId !== undefined
+      ? await db.words.where("setId").equals(wordSetId).toArray()
+      : await db.words.toArray();
 
   if (!Array.isArray(targetWords) || targetWords.length === 0) {
     return 0;
@@ -209,14 +274,16 @@ export async function resetWordProgress(wordSetId?: number): Promise<number> {
 
       const baseProgress = existingProgress ?? {
         wordId: word.id,
-        setId: typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
+        setId:
+          typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
         createdAt: now,
       };
 
       await db.wordProgress.put({
         ...baseProgress,
         wordId: word.id,
-        setId: typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
+        setId:
+          typeof word.setId === "number" ? word.setId : DEFAULT_WORD_SET_ID,
         easeFactor: 2.5,
         intervalDays: 0,
         repetitions: 0,
@@ -364,7 +431,6 @@ export async function deleteDatabase() {
   await resetDB();
 }
 
-
 // 备份数据库
 export async function backupDatabase() {
   const wordSets = await db.wordSets.toArray();
@@ -372,7 +438,7 @@ export async function backupDatabase() {
   const langggerDB = {
     wordSets,
     words,
-  }
+  };
   const langggerDBString = JSON.stringify(langggerDB, null, 2);
   const blob = new Blob([langggerDBString], { type: "application/json" });
   const url = URL.createObjectURL(blob);
@@ -382,7 +448,6 @@ export async function backupDatabase() {
   a.click();
   URL.revokeObjectURL(url);
 }
-
 
 // 恢复数据库
 export async function restoreDatabase(payload: unknown) {
@@ -401,7 +466,10 @@ export async function restoreDatabase(payload: unknown) {
     const words = Array.isArray(data.words) ? data.words : undefined;
 
     if (wordSets && words) {
-      return await restoreFromBackupFormat(wordSets as WordSet[], words as Word[]);
+      return await restoreFromBackupFormat(
+        wordSets as WordSet[],
+        words as Word[]
+      );
     }
 
     if (words) {
@@ -410,10 +478,15 @@ export async function restoreDatabase(payload: unknown) {
   }
 
   console.error("restoreDatabase: 不支持的数据格式", payload);
-  throw new Error("恢复数据失败：文件格式不正确，请使用合法的备份文件或通过“导入单词”功能导入。");
+  throw new Error(
+    "恢复数据失败：文件格式不正确，请使用合法的备份文件或通过“导入单词”功能导入。"
+  );
 }
 
-async function restoreFromBackupFormat(wordSets: WordSet[], words: Word[]): Promise<boolean> {
+async function restoreFromBackupFormat(
+  wordSets: WordSet[],
+  words: Word[]
+): Promise<boolean> {
   if (!Array.isArray(wordSets) || !Array.isArray(words)) {
     console.error("restoreFromBackupFormat: 输入数据不是数组", wordSets, words);
     return false;
@@ -502,7 +575,8 @@ async function restoreFromBackupFormat(wordSets: WordSet[], words: Word[]): Prom
 
     const originalSetId = parseNumericId((word as any)?.setId);
     if (originalSetId !== undefined) {
-      cloned.setId = wordSetIdMap.get(originalSetId) ?? originalSetId ?? DEFAULT_WORD_SET_ID;
+      cloned.setId =
+        wordSetIdMap.get(originalSetId) ?? originalSetId ?? DEFAULT_WORD_SET_ID;
     } else {
       cloned.setId = DEFAULT_WORD_SET_ID;
     }
@@ -512,14 +586,23 @@ async function restoreFromBackupFormat(wordSets: WordSet[], words: Word[]): Prom
     cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
     cloned.example = typeof cloned.example === "string" ? cloned.example : "";
     cloned.mark = typeof cloned.mark === "string" ? cloned.mark : "";
-    cloned.type = typeof cloned.type === "string" && cloned.type.trim() !== "" ? cloned.type : DEFAULT_WORD_TYPE;
+    cloned.type =
+      typeof cloned.type === "string" && cloned.type.trim() !== ""
+        ? cloned.type
+        : DEFAULT_WORD_TYPE;
 
     if (cloned.review && typeof cloned.review === "object") {
       const review = cloned.review as Word["review"];
       cloned.review = {
         times: typeof review?.times === "number" ? review.times : 0,
-        nextReview: typeof review?.nextReview === "string" ? review.nextReview : undefined,
-        difficulty: typeof review?.difficulty === "number" ? review.difficulty : undefined,
+        nextReview:
+          typeof review?.nextReview === "string"
+            ? review.nextReview
+            : undefined,
+        difficulty:
+          typeof review?.difficulty === "number"
+            ? review.difficulty
+            : undefined,
       };
     } else {
       cloned.review = undefined;
@@ -571,26 +654,40 @@ async function restoreFromWordList(words: unknown[]): Promise<boolean> {
       });
 
       if (missingFields.length > 0) {
-        console.warn("restoreFromWordList: 缺少必填字段", missingFields, wordData);
+        console.warn(
+          "restoreFromWordList: 缺少必填字段",
+          missingFields,
+          wordData
+        );
         continue;
       }
 
       let setId = DEFAULT_WORD_SET_ID;
-      if (typeof wordData.wordSet === "string" && wordData.wordSet.trim() !== "") {
+      if (
+        typeof wordData.wordSet === "string" &&
+        wordData.wordSet.trim() !== ""
+      ) {
         const setName = wordData.wordSet.trim();
         if (!wordSetMap.has(setName)) {
           try {
             const newSetId = await createWordSet({ name: setName, mark: "" });
             wordSetMap.set(setName, newSetId);
           } catch (error) {
-            console.error("restoreFromWordList: 创建单词集失败", setName, error);
+            console.error(
+              "restoreFromWordList: 创建单词集失败",
+              setName,
+              error
+            );
             continue;
           }
         }
         setId = wordSetMap.get(setName) ?? DEFAULT_WORD_SET_ID;
       }
 
-      const difficultyRaw = wordData.difficultyCoefficient ?? (wordData.review as any)?.difficulty ?? 5;
+      const difficultyRaw =
+        wordData.difficultyCoefficient ??
+        (wordData.review as any)?.difficulty ??
+        5;
       let difficulty = parseInt(String(difficultyRaw), 10);
       if (Number.isNaN(difficulty)) {
         difficulty = 5;
@@ -604,9 +701,15 @@ async function restoreFromWordList(words: unknown[]): Promise<boolean> {
         example: String(wordData.example),
         mark: wordData.mark ? String(wordData.mark) : "",
         setId,
-        type: typeof wordData.type === "string" ? String(wordData.type) : DEFAULT_WORD_TYPE,
+        type:
+          typeof wordData.type === "string"
+            ? String(wordData.type)
+            : DEFAULT_WORD_TYPE,
         review: {
-          times: typeof (wordData.review as any)?.times === "number" ? (wordData.review as any).times : 0,
+          times:
+            typeof (wordData.review as any)?.times === "number"
+              ? (wordData.review as any).times
+              : 0,
           difficulty,
         },
       });

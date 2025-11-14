@@ -128,41 +128,57 @@ export default function FlashcardStudy({
     }
   }, []);
 
+  const resolveSessionLimit = useCallback(async () => {
+    try {
+      const settings = await dbOperator.getUserSettings();
+      const parsed = Number.parseInt(String(settings.dailyGoal ?? 20), 10);
+      return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
+    } catch (error) {
+      console.error("获取每日学习目标失败，使用默认值 20:", error);
+      return 20;
+    }
+  }, []);
+
   useEffect(() => {
     if (wordIds.length > 0 && currentIndex < wordIds.length) {
       loadCurrentWord();
     }
   }, [wordIds, currentIndex]);
 
-  const loadWords = useCallback(async () => {
-    try {
-      shouldPersistRef.current = false;
-      setLoading(true);
-      setSessionStats(createInitialStats());
-      setShowAnswer(false);
-      setResetFeedback(null);
-      setCurrentWord(null);
-      await clearPersistedSessionState();
-      const result = await scheduleFlashcardWords({
-        wordSetId,
-        limit: 50,
-      });
-      setWordIds(result.wordIds);
-      setCurrentIndex(0);
-    } catch (error) {
-      console.error("加载单词失败:", error);
-    } finally {
-      startTimeRef.current = Date.now();
-      setLoading(false);
-      shouldPersistRef.current = true;
-    }
-  }, [wordSetId, clearPersistedSessionState]);
+  const loadWords = useCallback(
+    async (limitOverride?: number) => {
+      try {
+        shouldPersistRef.current = false;
+        setLoading(true);
+        setSessionStats(createInitialStats());
+        setShowAnswer(false);
+        setResetFeedback(null);
+        setCurrentWord(null);
+        await clearPersistedSessionState();
+        const limit = limitOverride ?? (await resolveSessionLimit());
+        const result = await scheduleFlashcardWords({
+          wordSetId,
+          limit,
+        });
+        setWordIds(result.wordIds);
+        setCurrentIndex(0);
+      } catch (error) {
+        console.error("加载单词失败:", error);
+      } finally {
+        startTimeRef.current = Date.now();
+        setLoading(false);
+        shouldPersistRef.current = true;
+      }
+    },
+    [wordSetId, clearPersistedSessionState, resolveSessionLimit]
+  );
 
   useEffect(() => {
     let cancelled = false;
 
     const restoreOrLoad = async () => {
       try {
+        const sessionLimit = await resolveSessionLimit();
         const persisted = await dbOperator.getFlashcardSessionState();
         if (cancelled) {
           return;
@@ -192,16 +208,18 @@ export default function FlashcardStudy({
             }
           });
 
-          if (validWordIds.length > 0) {
+          const limitedWordIds = validWordIds.slice(0, sessionLimit);
+
+          if (limitedWordIds.length > 0) {
             if (cancelled) {
               return;
             }
             const nextIndex = Math.min(
               Math.max(persisted.currentIndex ?? 0, 0),
-              validWordIds.length - 1
+              limitedWordIds.length - 1
             );
 
-            setWordIds(validWordIds);
+            setWordIds(limitedWordIds);
             setCurrentIndex(nextIndex);
             setSessionStats(
               persisted.sessionStats
@@ -220,10 +238,11 @@ export default function FlashcardStudy({
           }
         }
 
-        await loadWords();
+        await loadWords(sessionLimit);
       } catch (error) {
         console.error("恢复闪卡会话失败:", error);
-        await loadWords();
+        const fallbackLimit = await resolveSessionLimit();
+        await loadWords(fallbackLimit);
       }
     };
 
@@ -232,7 +251,7 @@ export default function FlashcardStudy({
     return () => {
       cancelled = true;
     };
-  }, [wordSetId, loadWords]);
+  }, [wordSetId, loadWords, resolveSessionLimit]);
 
   useEffect(() => {
     if (loading) return;
@@ -347,7 +366,8 @@ export default function FlashcardStudy({
 
       shouldPersistRef.current = false;
       await clearPersistedSessionState();
-      await loadWords();
+      const limit = await resolveSessionLimit();
+      await loadWords(limit);
       window.alert(t("resetProgressSuccess", { count: resetCount }));
     } catch (error) {
       console.error("重置学习进度失败:", error);
