@@ -76,13 +76,21 @@ export async function createWord(
 }
 
 export async function getAllWordSets(): Promise<WordSet[]> {
-  await ensureDBOpen(); // 确保数据库打开且默认单词集存在
   try {
+    // 确保数据库打开且默认单词集存在
+    await ensureDBOpen();
+    
+    // 验证数据库是否真的打开
+    if (!db.isOpen()) {
+      console.warn("数据库未打开，尝试重新打开...");
+      await db.open();
+    }
+    
+    // 获取单词集
     const result = await db.wordSets.toArray();
+    
     // 确保返回的是数组
-    if (Array.isArray(result)) {
-      return result as WordSet[];
-    } else {
+    if (!Array.isArray(result)) {
       console.error(
         "getAllWordSets: db.wordSets.toArray() 返回了非数组值:",
         result,
@@ -90,8 +98,41 @@ export async function getAllWordSets(): Promise<WordSet[]> {
       );
       return [];
     }
+    
+    // 验证数据有效性
+    const validWordSets = result.filter(
+      (set): set is WordSet =>
+        set !== null &&
+        set !== undefined &&
+        typeof set === "object" &&
+        typeof set.id === "number" &&
+        typeof set.name === "string"
+    );
+    
+    // 如果有效数据为空但原始数据不为空，记录警告
+    if (validWordSets.length === 0 && result.length > 0) {
+      console.warn(
+        "getAllWordSets: 所有单词集数据无效",
+        result
+      );
+    }
+    
+    return validWordSets.length > 0 ? validWordSets : result as WordSet[];
   } catch (error) {
     console.error("获取单词集失败:", error);
+    // 如果是数据库未打开的错误，尝试重新打开
+    if (error instanceof Error && error.message.includes("not open")) {
+      try {
+        await db.open();
+        // 重试一次
+        const retryResult = await db.wordSets.toArray();
+        if (Array.isArray(retryResult)) {
+          return retryResult as WordSet[];
+        }
+      } catch (retryError) {
+        console.error("重试获取单词集失败:", retryError);
+      }
+    }
     return [];
   }
 }

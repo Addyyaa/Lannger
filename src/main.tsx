@@ -9,6 +9,7 @@ import Study from "./pages/Study";
 import Manage from "./pages/Manage";
 import WordsList from "./pages/wordsList";
 import Layout from "./components/Layout";
+import ErrorBoundary from "./components/ErrorBoundary";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n/i18n";
 import languages from "./i18n/languages.json";
@@ -435,13 +436,15 @@ function GlobalHeader() {
 // 根布局：统一包裹主题、竖屏检测、全局头部与侧边栏，并承载子路由
 function RootLayout() {
   return (
-    <OrientationProvider>
-      <ThemeProvider>
-        <Layout globalComponents={<GlobalHeader />}>
-          <Outlet />
-        </Layout>
-      </ThemeProvider>
-    </OrientationProvider>
+    <ErrorBoundary>
+      <OrientationProvider>
+        <ThemeProvider>
+          <Layout globalComponents={<GlobalHeader />}>
+            <Outlet />
+          </Layout>
+        </ThemeProvider>
+      </OrientationProvider>
+    </ErrorBoundary>
   );
 }
 

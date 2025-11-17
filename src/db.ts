@@ -58,6 +58,12 @@ export interface UserSettings {
   createdAt?: string;
   updatedAt?: string;
   flashcardSessionState?: FlashcardSessionState | null;
+  // 复习锁定状态（v4 新增）
+  activeReviewLock?: {
+    wordSetId: number;
+    reviewStage: number;
+    lockedAt: string;
+  } | null;
 }
 
 // 每日统计（用于展示“今日已学习单词数”等，并支撑 Streak 计算）
@@ -124,6 +130,21 @@ export interface ReviewLog {
   responseTime?: number; // 本次答题时间（毫秒）
 }
 
+// 复习计划（基于艾宾浩斯遗忘曲线）
+export interface ReviewPlan {
+  id?: number; // 自增主键
+  wordSetId: number; // 关联 wordSets.id（外键逻辑）
+  reviewStage: number; // 当前复习阶段（1-8）
+  nextReviewAt: string; // ISO 格式，下次复习时间
+  completedStages: number[]; // 已完成的阶段数组 [1, 2, 3, ...]
+  startedAt: string; // 开始复习的时间（ISO）
+  lastCompletedAt?: string; // 最后一次完成复习的时间（ISO）
+  isCompleted: boolean; // 是否完成全部 8 次复习
+  totalWords: number; // 该单词集的总单词数（冗余，便于统计）
+  createdAt?: string;
+  updatedAt?: string;
+}
+
 export class JpLearnDB extends Dexie {
   wordSets!: Table<WordSet, number>;
   words!: Table<Word, number>;
@@ -133,6 +154,7 @@ export class JpLearnDB extends Dexie {
   dailyStats!: Table<DailyStat, string>; // 以 YYYY-MM-DD 为主键
   wordProgress!: Table<WordProgress, number>; // 主键为 wordId（唯一）
   reviewLogs!: Table<ReviewLog, number>;
+  reviewPlans!: Table<ReviewPlan, number>; // 复习计划表（v4 新增）
 
   constructor() {
     super("jpLearnDB");
@@ -251,6 +273,58 @@ export class JpLearnDB extends Dexie {
         }
       }
     });
+
+    // v4：添加复习计划表（支持艾宾浩斯遗忘曲线）
+    this.version(4).stores({
+      wordSets: "++id, name, createdAt",
+      words: "++id, kana, kanji, meaning, type, [setId+kana]",
+      userSettings: "id",
+      studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
+      dailyStats: "date",
+      wordProgress: "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime",
+      reviewLogs: "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
+      reviewPlans: "++id, wordSetId, reviewStage, nextReviewAt, isCompleted, [wordSetId+reviewStage], [nextReviewAt+isCompleted]",
+    }).upgrade(async (trans) => {
+      // 为所有现有单词集创建初始复习计划
+      const wordSetsTable = trans.table("wordSets");
+      const wordsTable = trans.table("words");
+      const reviewPlansTable = trans.table("reviewPlans");
+
+      const allWordSets = await wordSetsTable.toArray();
+      const now = new Date();
+
+      for (const wordSet of allWordSets) {
+        // 检查是否已存在复习计划（防止重复创建）
+        const existing = await reviewPlansTable
+          .where("wordSetId")
+          .equals(wordSet.id)
+          .first();
+
+        if (!existing) {
+          // 统计该单词集的单词数
+          const wordCount = await wordsTable
+            .where("setId")
+            .equals(wordSet.id)
+            .count();
+
+          // 创建初始复习计划（阶段1，1小时后复习）
+          const firstReviewTime = new Date(now);
+          firstReviewTime.setHours(firstReviewTime.getHours() + 1);
+
+          await reviewPlansTable.add({
+            wordSetId: wordSet.id,
+            reviewStage: 1,
+            nextReviewAt: firstReviewTime.toISOString(),
+            completedStages: [],
+            startedAt: now.toISOString(),
+            isCompleted: false,
+            totalWords: wordCount,
+            createdAt: now.toISOString(),
+            updatedAt: now.toISOString(),
+          } as ReviewPlan);
+        }
+      }
+    });
   }
 }
 
@@ -283,12 +357,33 @@ export async function getOrCreateDefaultWordSet(): Promise<number> {
 }
 
 export async function ensureDBOpen() {
-  if (!db.isOpen()) {
-    await db.open();
+  try {
+    // 如果数据库未打开，尝试打开
+    if (!db.isOpen()) {
+      await db.open();
+    }
+    
+    // 验证数据库是否真的打开
+    if (!db.isOpen()) {
+      throw new Error("数据库打开失败");
+    }
+    
+    // 无论数据库是否已打开，都确保默认单词集存在
+    await ensureDefaultWordSetExists();
+    
+    return db;
+  } catch (error) {
+    console.error("ensureDBOpen 失败:", error);
+    // 尝试重新打开数据库
+    try {
+      await db.open();
+      await ensureDefaultWordSetExists();
+      return db;
+    } catch (retryError) {
+      console.error("重试打开数据库失败:", retryError);
+      throw retryError;
+    }
   }
-  // 无论数据库是否已打开，都确保默认单词集存在
-  await ensureDefaultWordSetExists();
-  return db;
 }
 
 // 删除后重建并打开

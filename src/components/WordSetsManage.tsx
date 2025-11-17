@@ -6,6 +6,7 @@ import AddWordSets from "../components/AddWordSets";
 import { useTheme, useOrientation } from "../main";
 import WordSetsTable from "../components/WordSetsTable";
 import * as dbOperator from "../store/wordStore";
+import { getReviewPlan } from "../store/reviewStore";
 import AddWord from "../components/AddWord";
 import { useNavigate } from "react-router-dom";
 import { APP_BUILD_TIME, APP_VERSION } from "../version";
@@ -41,11 +42,12 @@ export default function WordSetsManage({ manageReducer, setWordSets, wordSets }:
     const loadWordSets = async () => {
         try {
             const sets = await dbOperator.getAllWordSets();
-            // 为每个单词集获取单词数量
+            // 为每个单词集获取单词数量和复习计划
             const setsWithWords = await Promise.all(
                 sets.map(async (set) => {
                     const words = await dbOperator.getWordsByWordSet(set.id);
-                    return { ...set, words };
+                    const reviewPlan = await getReviewPlan(set.id);
+                    return { ...set, words, reviewPlan };
                 })
             );
             setWordSets(setsWithWords);

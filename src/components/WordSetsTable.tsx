@@ -8,7 +8,7 @@ import { List, RowComponentProps } from "react-window";
 import type { PointerEvent as ReactPointerEvent } from "react";
 import EditWordSets from "./EditWordSets";
 import { ManageContext } from "../pages/Manage";
-import { DEFAULT_WORD_SET_ID } from "../db";
+import { DEFAULT_WORD_SET_ID, ReviewPlan } from "../db";
 import { Link } from "react-router-dom";
 
 export default function WordSetsTable({
@@ -29,8 +29,8 @@ export default function WordSetsTable({
   const [deleteId, setDeleteId] = useState<number | null>(null);
   const [editIndex, setEditIndex] = useState<number | null>(null);
   const { state, dispatch } = useContext(ManageContext);
-  const COLUMN_TEMPLATE = isPortrait ? "2fr 3fr 1.5fr 1.5fr 1.5fr 2.5fr" : "1fr 2fr 1fr 1fr 1fr 1.5fr";
-  const ROW_HEIGHT = isPortrait ? 90 : 72;
+  const COLUMN_TEMPLATE = isPortrait ? "2fr 3fr 1.5fr 1.5fr 1.5fr 2fr 2.5fr" : "1fr 2fr 1fr 1fr 1fr 1.5fr 1.5fr";
+  const ROW_HEIGHT = isPortrait ? 110 : 85;
   const MAX_LIST_HEIGHT = isPortrait ? 400 : 320;
   const emptyStateStyle: React.CSSProperties = {
     textAlign: "center",
@@ -385,6 +385,148 @@ export default function WordSetsTable({
               : t("noUpdate")}
           </div>
         </Tooltip>
+        {/* 复习进度显示 */}
+        <div
+          data-test-id="div-test-review"
+          style={{
+            ...baseCellStyle,
+            flexDirection: "column",
+            alignItems: "center",
+            justifyContent: "center",
+            gap: isPortrait ? "1vw" : "0.3vw",
+            padding: isPortrait ? "1vw" : "0.5vw",
+          }}
+        >
+          {(() => {
+            const reviewPlan: ReviewPlan | null | undefined = currentSet?.reviewPlan;
+            if (!reviewPlan) {
+              return (
+                <span style={{ fontSize: isPortrait ? "2.5vw" : "0.75rem", color: isDark ? "#888" : "#999" }}>
+                  {t("noReviewPlan") || "未开始"}
+                </span>
+              );
+            }
+
+            const completedCount = reviewPlan.completedStages.length;
+            const currentStage = reviewPlan.reviewStage;
+            const isCompleted = reviewPlan.isCompleted;
+            const nextReviewAt = new Date(reviewPlan.nextReviewAt);
+            const now = new Date();
+            const isDue = now >= nextReviewAt;
+
+            // 计算下次复习时间描述
+            const getNextReviewText = () => {
+              if (isCompleted) return t("reviewCompleted") || "✅ 已完成";
+              if (isDue) return t("reviewDue") || "⏰ 已到期";
+              
+              const diffMs = nextReviewAt.getTime() - now.getTime();
+              const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+              const diffHours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+              
+              if (diffDays > 0) {
+                return `${diffDays}${t("days") || "天"}`;
+              } else if (diffHours > 0) {
+                return `${diffHours}${t("hours") || "小时"}`;
+              } else {
+                return t("soon") || "即将";
+              }
+            };
+
+            // 进度条
+            const progressBarStyle: React.CSSProperties = {
+              width: "100%",
+              height: isPortrait ? "1.5vw" : "0.4vw",
+              background: isDark ? "#333" : "#e0e0e0",
+              borderRadius: isPortrait ? "0.75vw" : "0.2vw",
+              overflow: "hidden",
+              position: "relative",
+            };
+
+            const progressFillStyle: React.CSSProperties = {
+              height: "100%",
+              width: `${(completedCount / 8) * 100}%`,
+              background: isCompleted
+                ? "linear-gradient(90deg, #4caf50 0%, #45a049 100%)"
+                : "linear-gradient(90deg, #00b4ff 0%, #0096d4 100%)",
+              transition: "width 0.3s ease",
+            };
+
+            return (
+              <>
+                {/* 阶段标识 */}
+                <span
+                  style={{
+                    fontSize: isPortrait ? "2.8vw" : "0.8rem",
+                    fontWeight: "bold",
+                    color: isDark ? "#fff" : "#333",
+                    marginBottom: isPortrait ? "0.5vw" : "0.2vw",
+                  }}
+                >
+                  {isCompleted
+                    ? "✅ 8/8"
+                    : `${completedCount}/8 ${t("stages") || "阶段"}`}
+                </span>
+                {/* 进度条 */}
+                <div style={progressBarStyle}>
+                  <div style={progressFillStyle} />
+                  {/* 8个阶段标记点 */}
+                  <div
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      bottom: 0,
+                      display: "flex",
+                      justifyContent: "space-between",
+                      alignItems: "center",
+                      padding: `0 ${isPortrait ? "0.3vw" : "0.1vw"}`,
+                    }}
+                  >
+                    {Array.from({ length: 8 }, (_, i) => {
+                      const stage = i + 1;
+                      const isCompleted = reviewPlan.completedStages.includes(stage);
+                      const isCurrent = stage === currentStage && !isCompleted;
+                      return (
+                        <div
+                          key={stage}
+                          style={{
+                            width: isPortrait ? "1.2vw" : "0.3vw",
+                            height: isPortrait ? "1.2vw" : "0.3vw",
+                            borderRadius: "50%",
+                            background: isCompleted
+                              ? "#4caf50"
+                              : isCurrent
+                              ? "#00b4ff"
+                              : isDark
+                              ? "#555"
+                              : "#ccc",
+                            border: isCurrent ? `1px solid #fff` : "none",
+                            boxShadow: isCurrent ? "0 0 4px rgba(0, 180, 255, 0.6)" : "none",
+                          }}
+                        />
+                      );
+                    })}
+                  </div>
+                </div>
+                {/* 下次复习时间 */}
+                <span
+                  style={{
+                    fontSize: isPortrait ? "2.2vw" : "0.7rem",
+                    color: isDue && !isCompleted
+                      ? "#ff4444"
+                      : isDark
+                      ? "#aaa"
+                      : "#666",
+                    marginTop: isPortrait ? "0.3vw" : "0.1vw",
+                  }}
+                >
+                  {getNextReviewText()}
+                </span>
+              </>
+            );
+          })()}
+        </div>
         <div data-test-id="div-test" style={actionCellStyle}>
           <button
             data-test-id="button-test-1" style={{
@@ -469,6 +611,7 @@ export default function WordSetsTable({
             <span data-test-id="span-test-3" role="columnheader" data-testid="word-sets-table-header-word-count">{t("tableWordCount")}</span>
             <span data-test-id="span-test-2" role="columnheader" data-testid="word-sets-table-header-created-at">{t("tableCreatedAt")}</span>
             <span data-test-id="span-test-1" role="columnheader" data-testid="word-sets-table-header-updated-at">{t("tableUpdatedAt")}</span>
+            <span data-test-id="span-test-review" role="columnheader" data-testid="word-sets-table-header-review">{t("reviewProgress") || "复习进度"}</span>
             <span data-test-id="span-test" role="columnheader" data-testid="word-sets-table-header-actions">{t("tableActions")}</span>
           </div>
           <List

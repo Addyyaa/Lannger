@@ -5,6 +5,11 @@ import { db, StudyMode, UserSettings, DailyStat, ensureDBOpen } from "../db";
 import ComponentAsModel from "../utils/componentAsModel";
 import WordSetSelector from "../components/WordSetSelector";
 import FlashcardStudy from "../components/FlashcardStudy";
+import TestStudy from "../components/TestStudy";
+import ReviewStudy from "../components/ReviewStudy";
+import ReviewNotification from "../components/ReviewNotification";
+import { canStartReview } from "../utils/reviewLock";
+import { getReviewPlan } from "../store/reviewStore";
 
 export default function Study() {
     const { t } = useTranslation();
@@ -19,20 +24,51 @@ export default function Study() {
     });
     const [showWordSetSelector, setShowWordSetSelector] = useState(false);
     const [showFlashcardStudy, setShowFlashcardStudy] = useState(false);
+    const [showTestStudy, setShowTestStudy] = useState(false);
+    const [showReviewStudy, setShowReviewStudy] = useState(false);
+    const [showReviewNotification, setShowReviewNotification] = useState(true);
     const [selectedMode, setSelectedMode] = useState<StudyMode | null>(null);
     const [selectedWordSetId, setSelectedWordSetId] = useState<number | undefined>(undefined);
+    const [selectedReviewStage, setSelectedReviewStage] = useState<number | undefined>(undefined);
 
     useEffect(() => {
         loadStudyStats();
-        // 监听窗口焦点，刷新统计数据
+        checkReviewNotificationsOnStart();
+        
+        // 监听窗口焦点，刷新统计数据并检查复习通知
         const handleFocus = () => {
             loadStudyStats();
+            checkReviewNotificationsOnStart();
         };
         window.addEventListener("focus", handleFocus);
         return () => {
             window.removeEventListener("focus", handleFocus);
         };
     }, []);
+
+    /**
+     * 应用启动时检查复习通知
+     */
+    const checkReviewNotificationsOnStart = async () => {
+        try {
+            const { getDueReviewPlans } = await import("../store/reviewStore");
+            const { canStartReview } = await import("../utils/reviewLock");
+            
+            const duePlans = await getDueReviewPlans();
+            if (duePlans.length > 0) {
+                // 检查是否有可以开始的复习（没有锁定或锁定的就是第一个）
+                const firstPlan = duePlans[0];
+                const canReview = await canStartReview(firstPlan.wordSetId);
+                
+                // 如果有可以开始的复习，或者当前锁定的就是第一个，则显示通知
+                if (canReview.allowed || (canReview.lockInfo && canReview.lockInfo.wordSetId === firstPlan.wordSetId)) {
+                    setShowReviewNotification(true);
+                }
+            }
+        } catch (error) {
+            console.error("检查复习通知失败:", error);
+        }
+    };
 
     const loadStudyStats = async () => {
         try {
@@ -101,14 +137,43 @@ export default function Study() {
         setShowWordSetSelector(true);
     };
 
-    const handleSelectWordSet = (wordSetId: number | undefined) => {
+    const handleSelectWordSet = async (wordSetId: number | undefined) => {
         setSelectedWordSetId(wordSetId);
         setShowWordSetSelector(false);
+        
         // 根据选择的模式显示对应的学习组件
         if (selectedMode === "flashcard") {
             setShowFlashcardStudy(true);
+        } else if (selectedMode === "test") {
+            setShowTestStudy(true);
+        } else if (selectedMode === "review") {
+            // 检查复习锁定
+            if (wordSetId !== undefined) {
+                const canReview = await canStartReview(wordSetId);
+                if (!canReview.allowed && canReview.lockInfo) {
+                    // 显示锁定提示
+                    const lockMessage = `必须完成课程 ${canReview.lockInfo.wordSetName} 第 ${canReview.lockInfo.reviewStage} 次复习`;
+                    alert(lockMessage);
+                    return;
+                }
+                
+                // 获取复习计划，确定复习阶段
+                const plan = await getReviewPlan(wordSetId);
+                if (plan) {
+                    setSelectedReviewStage(plan.reviewStage);
+                    setShowReviewStudy(true);
+                } else {
+                    alert("该单词集还没有复习计划");
+                }
+            }
         }
-        // TODO: 添加测试和复习模式的处理
+    };
+
+    const handleStartReview = async (wordSetId: number, reviewStage: number) => {
+        setSelectedWordSetId(wordSetId);
+        setSelectedReviewStage(reviewStage);
+        setShowReviewNotification(false);
+        setShowReviewStudy(true);
     };
 
     const handleSessionComplete = async (stats: {
@@ -137,6 +202,14 @@ export default function Study() {
             dailyStat.testedCount += stats.studiedCount;
         } else if (selectedMode === "review") {
             dailyStat.reviewedCount += stats.studiedCount;
+            
+            // 复习完成后，检查是否有下一个复习通知
+            const { getDueReviewPlans } = await import("../store/reviewStore");
+            const nextDuePlans = await getDueReviewPlans();
+            if (nextDuePlans.length > 0) {
+                // 有下一个复习通知，自动显示
+                setShowReviewNotification(true);
+            }
         }
 
         dailyStat.correctCount += stats.correctCount;
@@ -392,6 +465,42 @@ export default function Study() {
                         onSessionComplete={handleSessionComplete}
                     />
                 )}
+
+            {showTestStudy &&
+                ComponentAsModel(
+                    <TestStudy
+                        data-test-id="teststudy-test" closePopup={() => {
+                            setShowTestStudy(false);
+                            setSelectedMode(null);
+                            setSelectedWordSetId(undefined);
+                        }}
+                        wordSetId={selectedWordSetId}
+                        onSessionComplete={handleSessionComplete}
+                    />
+                )}
+
+            {showReviewStudy &&
+                ComponentAsModel(
+                    <ReviewStudy
+                        data-test-id="reviewstudy-test" closePopup={() => {
+                            setShowReviewStudy(false);
+                            setSelectedMode(null);
+                            setSelectedWordSetId(undefined);
+                            setSelectedReviewStage(undefined);
+                            setShowReviewNotification(true); // 重新显示通知
+                        }}
+                        wordSetId={selectedWordSetId}
+                        reviewStage={selectedReviewStage}
+                        onSessionComplete={handleSessionComplete}
+                    />
+                )}
+
+            {showReviewNotification && (
+                <ReviewNotification
+                    onStartReview={handleStartReview}
+                    onDismiss={() => setShowReviewNotification(false)}
+                />
+            )}
         </>
     );
 }

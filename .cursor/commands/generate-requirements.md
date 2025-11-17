@@ -1,0 +1,1 @@
+Generate a dependency configuration file for the project.

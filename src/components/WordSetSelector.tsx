@@ -19,22 +19,69 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
     const { isPortrait } = useOrientation();
     const [wordSets, setWordSets] = useState<WordSet[]>([]);
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [retryCount, setRetryCount] = useState(0);
+    const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    useEffect(() => {
-        loadWordSets();
-    }, []);
-
-    const loadWordSets = async () => {
+    const loadWordSets = React.useCallback(async () => {
         try {
             setLoading(true);
+            setError(null);
+            
+            // 获取单词集
             const sets = await dbOperator.getAllWordSets();
-            setWordSets(sets);
+            
+            // 验证返回的数据
+            if (!Array.isArray(sets)) {
+                throw new Error("获取单词集失败：返回的数据格式不正确");
+            }
+            
+            // 过滤掉无效的单词集
+            const validSets = sets.filter(set => set && typeof set.id === 'number' && set.name);
+            
+            if (validSets.length === 0 && sets.length > 0) {
+                console.warn("所有单词集数据无效，但原始数据存在", sets);
+                // 即使数据无效，也尝试显示原始数据
+                setWordSets(sets);
+            } else {
+                setWordSets(validSets);
+            }
+            
+            setRetryCount(0); // 重置重试计数
         } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : "加载单词集失败，请重试";
             console.error("加载单词集失败:", error);
+            setError(errorMessage);
+            
+            // 如果重试次数少于3次，自动重试一次
+            setRetryCount(prev => {
+                if (prev < 3) {
+                    // 清除之前的定时器
+                    if (retryTimeoutRef.current) {
+                        clearTimeout(retryTimeoutRef.current);
+                    }
+                    // 设置新的定时器
+                    retryTimeoutRef.current = setTimeout(() => {
+                        loadWordSets();
+                    }, 1000);
+                    return prev + 1;
+                }
+                return prev;
+            });
         } finally {
             setLoading(false);
         }
-    };
+    }, []);
+
+    useEffect(() => {
+        loadWordSets();
+        // 清理函数：组件卸载时清除定时器
+        return () => {
+            if (retryTimeoutRef.current) {
+                clearTimeout(retryTimeoutRef.current);
+            }
+        };
+    }, [loadWordSets]);
 
     const containerStyle: React.CSSProperties = {
         display: "flex",
@@ -109,8 +156,63 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
             />
             <h2 data-test-id="h2-test" style={titleStyle}>{t("selectWordSet")}</h2>
             {loading ? (
-                <div data-test-id="div-test-5" style={{ textAlign: "center", padding: isPortrait ? "6vw" : "2.5vw", fontSize: isPortrait ? "3.5vw" : "1vw", color: isDark ? "#ccc" : "#666" }}>
-                    {t("loading")}
+                <div data-test-id="div-test-5" style={{ 
+                    textAlign: "center", 
+                    padding: isPortrait ? "6vw" : "2.5vw", 
+                    fontSize: isPortrait ? "3.5vw" : "1vw", 
+                    color: isDark ? "#ccc" : "#666" 
+                }}>
+                    {retryCount > 0 ? `${t("loading")} (重试 ${retryCount}/3)` : t("loading")}
+                </div>
+            ) : error ? (
+                <div data-test-id="div-test-error" style={{
+                    textAlign: "center",
+                    padding: isPortrait ? "6vw" : "2.5vw",
+                    display: "flex",
+                    flexDirection: "column",
+                    gap: isPortrait ? "3vw" : "1vw",
+                    alignItems: "center"
+                }}>
+                    <div style={{
+                        fontSize: isPortrait ? "3.5vw" : "1vw",
+                        color: "#ff4444",
+                        marginBottom: isPortrait ? "2vw" : "0.5vw"
+                    }}>
+                        {error}
+                    </div>
+                    <button
+                        onClick={loadWordSets}
+                        style={{
+                            padding: isPortrait ? "2.5vw 5vw" : "0.75vw 1.5vw",
+                            fontSize: isPortrait ? "3.5vw" : "1vw",
+                            backgroundColor: "#00b4ff",
+                            color: "#fff",
+                            border: "none",
+                            borderRadius: isPortrait ? "1.5vw" : "0.5vw",
+                            cursor: "pointer",
+                            fontWeight: "500",
+                            transition: "all 0.3s ease"
+                        }}
+                        onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = "#0096d4";
+                            e.currentTarget.style.transform = "scale(1.05)";
+                        }}
+                        onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor = "#00b4ff";
+                            e.currentTarget.style.transform = "scale(1)";
+                        }}
+                    >
+                        {t("retry") || "重试"}
+                    </button>
+                </div>
+            ) : wordSets.length === 0 ? (
+                <div data-test-id="div-test-empty" style={{
+                    textAlign: "center",
+                    padding: isPortrait ? "6vw" : "2.5vw",
+                    fontSize: isPortrait ? "3.5vw" : "1vw",
+                    color: isDark ? "#ccc" : "#666"
+                }}>
+                    {t("noWordSets") || "暂无单词集"}
                 </div>
             ) : (
                 <div data-test-id="div-test-4" style={wordSetListStyle}>
