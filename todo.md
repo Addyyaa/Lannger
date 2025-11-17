@@ -1600,5 +1600,1076 @@ interface ReviewPlan {
 
 - **2024-12-19 10:00 - 代码实现专家**：创建协作请求部分
 - **2024-12-19 14:30 - 高级产品经理**：回复协作请求，分配任务给各角色
-- **最后更新时间**：2024-12-19 14:30  
+- **最后更新时间**：2024-12-19 14:30
+- **文档维护者**：产品团队
+
+---
+
+## 🗄️ 七、数据库设计方案（Database Design Expert）
+
+> **说明**：本章节由数据库设计专家（Database Design Expert）提供，包含数据库架构优化、表结构设计、索引策略、性能优化等专业方案。  
+> **实施者**：Code Implementation Expert 需要根据本章节的方案进行代码实现。  
+> **协作角色**：如需要系统架构师、高级产品经理等角色协助，会在相应任务中明确标注。
+
+---
+
+### 2024-12-19 15:00 - 数据库设计专家 - 方案提供
+
+#### 7.1 当前数据库架构评估
+
+##### 任务 7.1.1：数据库架构全面评估
+
+**优先级**：P0（基础评估）  
+**状态**：待实施  
+**预计工时**：4 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：系统架构师（协助性能分析工具设计）
+
+**需求描述**：
+
+- 对当前 v3 数据库架构进行全面评估
+- 分析各表的索引使用情况和查询性能
+- 识别潜在的数据一致性问题
+- 评估数据增长对性能的影响
+
+**数据库设计专家方案**：
+
+**当前架构优点**：
+
+1. ✅ 表结构职责分离清晰（SRP 原则）
+   - `userSettings`: 用户配置（单行表）
+   - `dailyStats`: 每日统计聚合
+   - `studySessions`: 会话级统计
+   - `wordProgress`: 单词级进度（核心调度表）
+   - `reviewLogs`: 明细日志（审计追踪）
+2. ✅ 索引设计覆盖主要查询路径
+3. ✅ 支持版本化迁移，向后兼容性好
+
+**当前架构问题**：
+
+1. ⚠️ `wordProgress` 表索引过多（13 个索引字段），可能影响写入性能
+2. ⚠️ `wordProgress.setId` 与 `words.setId` 存在数据冗余，需要保证一致性
+3. ⚠️ `reviewLogs` 表会无限增长，缺少归档策略
+4. ⚠️ 缺少复习计划表（`reviewPlans`），无法支持艾宾浩斯遗忘曲线
+5. ⚠️ `userSettings` 中存储 `flashcardSessionState` 可能造成数据膨胀
+
+**技术实现要点**：
+
+- 创建数据库性能分析工具函数：
+  ```typescript
+  // src/utils/dbAnalyzer.ts
+  export async function analyzeDatabasePerformance() {
+    // 1. 统计各表记录数
+    // 2. 分析索引使用情况
+    // 3. 检测数据一致性（wordProgress.setId vs words.setId）
+    // 4. 评估查询性能
+    // 5. 生成分析报告
+  }
+  ```
+- 实现数据一致性检查函数：
+  ```typescript
+  export async function checkDataConsistency(): Promise<ConsistencyReport> {
+    // 检查 wordProgress.setId 与 words.setId 是否一致
+    // 检查 wordProgress.wordId 是否都在 words 中存在
+    // 检查孤立记录（orphan records）
+  }
+  ```
+
+**验收标准**：
+
+- [ ] 完成数据库架构评估报告
+- [ ] 识别所有潜在问题和优化点
+- [ ] 提供性能基准数据
+- [ ] 数据一致性检查工具可用
+
+---
+
+##### 任务 7.2.1：添加复习计划表（ReviewPlans）
+
+**优先级**：P0（核心功能依赖）  
+**状态**：待实施  
+**预计工时**：6 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：高级产品经理（确认业务逻辑）、系统架构师（确认架构设计）
+
+**需求描述**：
+
+- 为支持艾宾浩斯遗忘曲线复习功能，需要新增 `reviewPlans` 表
+- 每个单词集（wordSet）对应一个复习计划
+- 支持 8 个复习阶段的进度跟踪
+
+**数据库设计专家方案**：
+
+**表结构设计**：
+
+```typescript
+export interface ReviewPlan {
+  id?: number; // 自增主键
+  wordSetId: number; // 关联 wordSets.id（外键逻辑）
+  reviewStage: number; // 当前复习阶段（1-8）
+  nextReviewAt: string; // ISO 格式，下次复习时间
+  completedStages: number[]; // 已完成的阶段数组 [1, 2, 3, ...]
+  startedAt: string; // 开始复习的时间（ISO）
+  lastCompletedAt?: string; // 最后一次完成复习的时间（ISO）
+  isCompleted: boolean; // 是否完成全部 8 次复习
+  totalWords: number; // 该单词集的总单词数（冗余，便于统计）
+  createdAt?: string;
+  updatedAt?: string;
+}
+```
+
+**索引设计**：
+
+- 主键：`++id`（自增）
+- 单列索引：
+  - `wordSetId`：按单词集查询（高频）- **建议添加唯一约束**
+  - `nextReviewAt`：查询到期复习计划（高频）
+  - `reviewStage`：按阶段筛选
+  - `isCompleted`：过滤已完成计划
+- 复合索引：
+  - `[wordSetId+reviewStage]`：按单词集和阶段联合查询
+  - `[nextReviewAt+isCompleted]`：查询未完成的到期计划（最高频）
+
+**迁移逻辑（v4.upgrade）**：
+
+```typescript
+this.version(4)
+  .stores({
+    // ... 保留所有现有表
+    reviewPlans:
+      "++id, wordSetId, reviewStage, nextReviewAt, isCompleted, [wordSetId+reviewStage], [nextReviewAt+isCompleted]",
+  })
+  .upgrade(async (trans) => {
+    // 1. 为所有现有单词集创建初始复习计划
+    const wordSetsTable = trans.table("wordSets");
+    const wordsTable = trans.table("words");
+    const reviewPlansTable = trans.table("reviewPlans");
+
+    const allWordSets = await wordSetsTable.toArray();
+    const now = new Date();
+
+    for (const wordSet of allWordSets) {
+      // 检查是否已存在复习计划（防止重复创建）
+      const existing = await reviewPlansTable
+        .where("wordSetId")
+        .equals(wordSet.id)
+        .first();
+
+      if (!existing) {
+        // 统计该单词集的单词数
+        const wordCount = await wordsTable
+          .where("setId")
+          .equals(wordSet.id)
+          .count();
+
+        // 创建初始复习计划（阶段1，1小时后复习）
+        const firstReviewTime = new Date(now);
+        firstReviewTime.setHours(firstReviewTime.getHours() + 1);
+
+        await reviewPlansTable.add({
+          wordSetId: wordSet.id,
+          reviewStage: 1,
+          nextReviewAt: firstReviewTime.toISOString(),
+          completedStages: [],
+          startedAt: now.toISOString(),
+          isCompleted: false,
+          totalWords: wordCount,
+          createdAt: now.toISOString(),
+          updatedAt: now.toISOString(),
+        } as ReviewPlan);
+      }
+    }
+  });
+```
+
+**数据一致性保证**：
+
+- 当单词集被删除时，需要级联删除对应的复习计划（在业务层实现）
+- 当单词集名称更新时，复习计划无需更新（只关联 ID）
+- 定期检查 `reviewPlans.wordSetId` 是否都在 `wordSets` 中存在
+
+**技术实现要点**：
+
+- 在 `src/db.ts` 中添加 `ReviewPlan` 接口定义
+- 在 `JpLearnDB` 类中添加 `reviewPlans` 表声明
+- 实现 v4 版本升级逻辑
+- 添加复习计划 CRUD 辅助函数：
+  ```typescript
+  // src/utils/reviewPlanHelper.ts
+  export async function getReviewPlanByWordSet(
+    wordSetId: number
+  ): Promise<ReviewPlan | undefined>;
+  export async function createReviewPlan(
+    wordSetId: number
+  ): Promise<ReviewPlan>;
+  export async function updateReviewPlanStage(
+    planId: number,
+    newStage: number
+  ): Promise<void>;
+  export async function getDueReviewPlans(): Promise<ReviewPlan[]>;
+  ```
+
+**验收标准**：
+
+- [ ] `reviewPlans` 表成功创建并注册
+- [ ] 现有单词集自动创建初始复习计划
+- [ ] 索引设计合理，查询性能良好
+- [ ] 数据迁移逻辑正确，无数据丢失
+
+---
+
+##### 任务 7.2.2：优化 userSettings 表结构
+
+**优先级**：P1（性能优化）  
+**状态**：待实施  
+**预计工时**：3 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：系统架构师（确认状态管理方案）
+
+**需求描述**：
+
+- `userSettings` 表中存储 `flashcardSessionState` 可能导致数据膨胀
+- 会话状态应该独立存储，避免影响用户设置的读取性能
+
+**数据库设计专家方案**：
+
+**问题分析**：
+
+- `flashcardSessionState` 是一个较大的对象，频繁更新会影响 `userSettings` 的写入性能
+- 会话状态是临时数据，不应该与持久化配置混在一起
+
+**优化方案**：
+
+1. **方案 A（推荐）**：将会话状态移至独立表
+
+   ```typescript
+   export interface StudySessionState {
+     id?: number;
+     userId: number; // 固定为 1（当前单用户）
+     mode: StudyMode;
+     wordSetId?: number;
+     wordIds: number[];
+     currentIndex: number;
+     sessionStats: {
+       studiedCount: number;
+       correctCount: number;
+       wrongCount: number;
+     };
+     showAnswer: boolean;
+     currentWordId?: number;
+     savedAt: string;
+     createdAt?: string;
+     updatedAt?: string;
+   }
+   ```
+
+   - 表名：`studySessionStates`
+   - 主键：`++id`
+   - 索引：`userId, mode, [userId+mode]`
+   - 优点：职责分离，性能更好，支持多会话历史
+
+2. **方案 B（简化）**：使用 IndexedDB 的独立对象存储
+   - 在 `userSettings` 中只存储会话状态的引用 ID
+   - 会话状态存储在独立的键值对中
+
+**推荐实现（方案 A）**：
+
+```typescript
+// v4 升级逻辑中添加
+this.version(4)
+  .stores({
+    // ... 现有表
+    studySessionStates: "++id, userId, mode, [userId+mode]",
+  })
+  .upgrade(async (trans) => {
+    // 迁移现有 flashcardSessionState 到新表
+    const settingsTable = trans.table("userSettings");
+    const sessionStatesTable = trans.table("studySessionStates");
+
+    const settings = await settingsTable.get(1);
+    if (settings?.flashcardSessionState) {
+      // 保存到新表
+      await sessionStatesTable.add({
+        userId: 1,
+        mode: "flashcard",
+        ...settings.flashcardSessionState,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      } as StudySessionState);
+
+      // 从 userSettings 中移除
+      delete settings.flashcardSessionState;
+      await settingsTable.put(settings);
+    }
+  });
+```
+
+**技术实现要点**：
+
+- 在 `src/db.ts` 中添加 `StudySessionState` 接口
+- 添加 `studySessionStates` 表
+- 实现数据迁移逻辑
+- 更新所有使用 `flashcardSessionState` 的代码
+
+**验收标准**：
+
+- [ ] 会话状态成功迁移到独立表
+- [ ] `userSettings` 表结构优化完成
+- [ ] 现有功能不受影响
+- [ ] 性能测试显示读取速度提升
+
+---
+
+##### 任务 7.3.1：优化 wordProgress 表索引
+
+**优先级**：P1（性能优化）  
+**状态**：待实施  
+**预计工时**：4 小时  
+**实施者**：Code Implementation Expert
+
+**需求描述**：
+
+- `wordProgress` 表当前有 13 个索引字段，可能影响写入性能
+- 需要分析实际查询模式，优化索引策略
+
+**数据库设计专家方案**：
+
+**当前索引分析**：
+
+```typescript
+wordProgress: "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime";
+```
+
+**高频查询模式分析**：
+
+1. **按单词集查询**：`where('setId').equals(setId)` - 需要 `setId` 索引 ✅
+2. **查询到期复习单词**：`where('nextReviewAt').belowOrEqual(now)` - 需要 `nextReviewAt` 索引 ✅
+3. **按单词 ID 查询**：`get(wordId)` - 主键查询，无需额外索引 ✅
+4. **排序查询**（闪卡/复习模式）：
+   - 按 `wrongStreak` 降序
+   - 按 `timesCorrect` 升序
+   - 按 `easeFactor` 升序
+   - 这些字段**不需要单独索引**（Dexie 不支持排序索引，需要应用层排序）
+
+**优化方案**：
+
+```typescript
+// 优化后的索引定义（只保留高频查询字段）
+wordProgress: "wordId, setId, nextReviewAt, [setId+nextReviewAt], [setId+lastReviewedAt]";
+```
+
+**索引说明**：
+
+- `wordId`：主键（必需）
+- `setId`：按单词集筛选（高频）
+- `nextReviewAt`：查询到期单词（最高频）
+- `[setId+nextReviewAt]`：复合索引，用于"查询某单词集中到期的单词"（最高频复合查询）
+- `[setId+lastReviewedAt]`：复合索引，用于"查询某单词集最近复习的单词"（统计查询）
+
+**移除的索引**（改为应用层处理）：
+
+- `easeFactor`, `intervalDays`, `repetitions`：很少单独查询，主要用于排序
+- `lastReviewedAt`, `lastResult`：查询频率低
+- `timesSeen`, `timesCorrect`, `correctStreak`, `wrongStreak`：主要用于排序，不需要索引
+- `difficulty`：查询频率低
+- `averageResponseTime`：主要用于统计，不需要索引
+
+**技术实现要点**：
+
+- 在 v4 升级中更新索引定义
+- 验证所有查询逻辑仍然正常工作
+- 性能测试：对比优化前后的写入和查询性能
+
+**验收标准**：
+
+- [ ] 索引优化完成，写入性能提升
+- [ ] 所有现有查询功能正常
+- [ ] 性能测试报告显示优化效果
+
+---
+
+##### 任务 7.3.2：优化 reviewLogs 表索引
+
+**优先级**：P2（性能优化）  
+**状态**：待实施  
+**预计工时**：2 小时  
+**实施者**：Code Implementation Expert
+
+**需求描述**：
+
+- `reviewLogs` 表会持续增长，需要优化索引以支持高效查询
+- 主要查询模式：按单词 ID 查询历史记录、按时间范围查询
+
+**数据库设计专家方案**：
+
+**当前索引**：
+
+```typescript
+reviewLogs: "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime";
+```
+
+**查询模式分析**：
+
+1. **按单词查询历史**：`where('wordId').equals(wordId).sortBy('timestamp')` - 需要 `wordId` 和 `timestamp` ✅
+2. **按时间范围查询**：`where('timestamp').between(start, end)` - 需要 `timestamp` ✅
+3. **按模式统计**：`where('mode').equals(mode)` - 需要 `mode` ✅
+4. **复合查询**：按单词+模式查询 - 需要复合索引
+
+**优化方案**：
+
+```typescript
+reviewLogs: "++id, wordId, timestamp, mode, [wordId+timestamp], [mode+timestamp]";
+```
+
+**索引说明**：
+
+- `++id`：主键（必需）
+- `wordId`：按单词查询历史（高频）
+- `timestamp`：按时间范围查询（高频）
+- `[wordId+timestamp]`：复合索引，用于"查询某单词的历史记录并按时间排序"（最高频）
+- `[mode+timestamp]`：复合索引，用于"按模式统计并按时间排序"（统计查询）
+
+**移除的索引**：
+
+- `result`, `grade`, `nextReviewAt`, `responseTime`：查询频率低，主要用于过滤，不需要索引
+
+**技术实现要点**：
+
+- 在 v4 升级中更新索引定义
+- 验证历史记录查询性能
+
+**验收标准**：
+
+- [ ] 索引优化完成
+- [ ] 历史记录查询性能良好
+- [ ] 数据归档功能不受影响
+
+---
+
+##### 任务 7.4.1：实现数据一致性检查与修复
+
+**优先级**：P1（数据完整性）  
+**状态**：待实施  
+**预计工时**：6 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：高级产品经理（确认修复策略的用户体验）
+
+**需求描述**：
+
+- 确保 `wordProgress.setId` 与 `words.setId` 保持一致
+- 确保 `wordProgress.wordId` 对应的单词都存在
+- 确保 `reviewPlans.wordSetId` 对应的单词集都存在
+- 提供自动修复功能
+
+**数据库设计专家方案**：
+
+**一致性规则**：
+
+1. **外键一致性**（逻辑外键，IndexedDB 不支持真正的外键）：
+
+   - `wordProgress.wordId` → `words.id`（必须存在）
+   - `wordProgress.setId` → `wordSets.id`（必须存在）
+   - `reviewPlans.wordSetId` → `wordSets.id`（必须存在）
+   - `reviewLogs.wordId` → `words.id`（必须存在）
+   - `studySessions` 中的 `wordSetId`（如果存在）→ `wordSets.id`
+
+2. **数据冗余一致性**：
+   - `wordProgress.setId` 必须与 `words.setId` 一致
+   - `reviewPlans.totalWords` 必须与实际的单词数一致
+
+**实现方案**：
+
+```typescript
+// src/utils/dataConsistency.ts
+export interface ConsistencyCheckResult {
+  isValid: boolean;
+  issues: ConsistencyIssue[];
+  fixedCount: number;
+}
+
+export interface ConsistencyIssue {
+  type:
+    | "orphan_record"
+    | "mismatched_setId"
+    | "missing_reference"
+    | "count_mismatch";
+  table: string;
+  recordId: number | string;
+  description: string;
+  severity: "error" | "warning";
+}
+
+export async function checkDataConsistency(): Promise<ConsistencyCheckResult> {
+  const issues: ConsistencyIssue[] = [];
+
+  // 1. 检查 wordProgress 的孤立记录
+  const allWordProgress = await db.wordProgress.toArray();
+  const allWordIds = new Set((await db.words.toArray()).map((w) => w.id));
+
+  for (const progress of allWordProgress) {
+    // 检查 wordId 是否存在
+    if (!allWordIds.has(progress.wordId)) {
+      issues.push({
+        type: "orphan_record",
+        table: "wordProgress",
+        recordId: progress.wordId,
+        description: `wordProgress.wordId=${progress.wordId} 对应的单词不存在`,
+        severity: "error",
+      });
+    }
+
+    // 检查 setId 一致性
+    const word = await db.words.get(progress.wordId);
+    if (word && word.setId !== progress.setId) {
+      issues.push({
+        type: "mismatched_setId",
+        table: "wordProgress",
+        recordId: progress.wordId,
+        description: `wordProgress.setId=${progress.setId} 与 words.setId=${word.setId} 不一致`,
+        severity: "error",
+      });
+    }
+  }
+
+  // 2. 检查 reviewPlans 的孤立记录
+  const allReviewPlans = await db.reviewPlans.toArray();
+  const allWordSetIds = new Set(
+    (await db.wordSets.toArray()).map((ws) => ws.id)
+  );
+
+  for (const plan of allReviewPlans) {
+    if (!allWordSetIds.has(plan.wordSetId)) {
+      issues.push({
+        type: "orphan_record",
+        table: "reviewPlans",
+        recordId: plan.id!,
+        description: `reviewPlans.wordSetId=${plan.wordSetId} 对应的单词集不存在`,
+        severity: "error",
+      });
+    }
+
+    // 检查 totalWords 一致性
+    const actualCount = await db.words
+      .where("setId")
+      .equals(plan.wordSetId)
+      .count();
+    if (plan.totalWords !== actualCount) {
+      issues.push({
+        type: "count_mismatch",
+        table: "reviewPlans",
+        recordId: plan.id!,
+        description: `reviewPlans.totalWords=${plan.totalWords} 与实际单词数=${actualCount} 不一致`,
+        severity: "warning",
+      });
+    }
+  }
+
+  // 3. 检查 reviewLogs 的孤立记录
+  const allReviewLogs = await db.reviewLogs.toArray();
+  for (const log of allReviewLogs) {
+    if (!allWordIds.has(log.wordId)) {
+      issues.push({
+        type: "orphan_record",
+        table: "reviewLogs",
+        recordId: log.id!,
+        description: `reviewLogs.wordId=${log.wordId} 对应的单词不存在`,
+        severity: "error",
+      });
+    }
+  }
+
+  return {
+    isValid: issues.filter((i) => i.severity === "error").length === 0,
+    issues,
+    fixedCount: 0,
+  };
+}
+
+export async function fixDataConsistency(): Promise<ConsistencyCheckResult> {
+  const checkResult = await checkDataConsistency();
+  let fixedCount = 0;
+
+  // 自动修复逻辑
+  for (const issue of checkResult.issues) {
+    if (issue.type === "mismatched_setId" && issue.table === "wordProgress") {
+      // 修复 setId 不一致
+      const word = await db.words.get(issue.recordId as number);
+      if (word) {
+        await db.wordProgress.update(issue.recordId as number, {
+          setId: word.setId,
+        });
+        fixedCount++;
+      }
+    } else if (
+      issue.type === "count_mismatch" &&
+      issue.table === "reviewPlans"
+    ) {
+      // 修复 totalWords 不一致
+      const plan = await db.reviewPlans.get(issue.recordId as number);
+      if (plan) {
+        const actualCount = await db.words
+          .where("setId")
+          .equals(plan.wordSetId)
+          .count();
+        await db.reviewPlans.update(issue.recordId as number, {
+          totalWords: actualCount,
+        });
+        fixedCount++;
+      }
+    }
+    // 注意：孤立记录（orphan_record）需要用户确认后删除，不自动修复
+  }
+
+  return {
+    ...checkResult,
+    fixedCount,
+  };
+}
+```
+
+**技术实现要点**：
+
+- 创建 `src/utils/dataConsistency.ts` 文件
+- 实现一致性检查函数
+- 实现自动修复函数（仅修复安全的问题）
+- 在设置页面添加"数据完整性检查"功能
+- 定期（如应用启动时）执行轻量级检查
+
+**验收标准**：
+
+- [ ] 一致性检查工具可用
+- [ ] 能够检测所有类型的数据不一致问题
+- [ ] 自动修复功能安全可靠
+- [ ] 用户界面友好，支持手动触发检查
+
+---
+
+##### 任务 7.5.1：实现 reviewLogs 数据归档
+
+**优先级**：P2（长期优化）  
+**状态**：待实施  
+**预计工时**：8 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：高级产品经理（确认归档策略的用户体验）
+
+**需求描述**：
+
+- `reviewLogs` 表会无限增长，需要实现归档策略
+- 保留最近 N 天的详细日志，更早的数据归档或删除
+- 支持按需导出历史数据
+
+**数据库设计专家方案**：
+
+**归档策略**：
+
+1. **保留策略**：
+
+   - 最近 90 天：完整保留
+   - 90-365 天：按天聚合（只保留统计信息）
+   - 365 天以上：可选删除或导出后删除
+
+2. **聚合数据表**：
+   ```typescript
+   export interface ReviewLogSummary {
+     date: string; // YYYY-MM-DD
+     wordId: number;
+     totalReviews: number; // 当日总复习次数
+     correctCount: number; // 当日答对次数
+     wrongCount: number; // 当日答错次数
+     averageResponseTime?: number; // 平均答题时间
+     lastReviewAt: string; // 最后一次复习时间
+     createdAt?: string;
+   }
+   ```
+
+**实现方案**：
+
+```typescript
+// src/utils/dataArchiver.ts
+export async function archiveReviewLogs(
+  olderThanDays: number = 90
+): Promise<ArchiveResult> {
+  const cutoffDate = new Date();
+  cutoffDate.setDate(cutoffDate.getDate() - olderThanDays);
+  const cutoffISO = cutoffDate.toISOString();
+
+  // 1. 查询需要归档的记录
+  const logsToArchive = await db.reviewLogs
+    .where("timestamp")
+    .below(cutoffISO)
+    .toArray();
+
+  if (logsToArchive.length === 0) {
+    return { archivedCount: 0, deletedCount: 0 };
+  }
+
+  // 2. 按日期和单词ID聚合
+  const summaryMap = new Map<string, ReviewLogSummary>();
+
+  for (const log of logsToArchive) {
+    const date = log.timestamp.split("T")[0]; // YYYY-MM-DD
+    const key = `${date}_${log.wordId}`;
+
+    if (!summaryMap.has(key)) {
+      summaryMap.set(key, {
+        date,
+        wordId: log.wordId,
+        totalReviews: 0,
+        correctCount: 0,
+        wrongCount: 0,
+        lastReviewAt: log.timestamp,
+        createdAt: new Date().toISOString(),
+      });
+    }
+
+    const summary = summaryMap.get(key)!;
+    summary.totalReviews++;
+    if (log.result === "correct") summary.correctCount++;
+    if (log.result === "wrong") summary.wrongCount++;
+    if (log.responseTime) {
+      // 计算平均答题时间（简化版）
+      summary.averageResponseTime = summary.averageResponseTime
+        ? (summary.averageResponseTime + log.responseTime) / 2
+        : log.responseTime;
+    }
+    if (log.timestamp > summary.lastReviewAt) {
+      summary.lastReviewAt = log.timestamp;
+    }
+  }
+
+  // 3. 保存聚合数据到新表（如果存在）或导出
+  const summaries = Array.from(summaryMap.values());
+
+  // 4. 删除原始日志记录
+  const idsToDelete = logsToArchive
+    .map((log) => log.id!)
+    .filter((id) => id !== undefined);
+  await db.reviewLogs.bulkDelete(idsToDelete);
+
+  return {
+    archivedCount: summaries.length,
+    deletedCount: logsToArchive.length,
+    summaries, // 返回聚合数据，可用于导出
+  };
+}
+```
+
+**技术实现要点**：
+
+- 创建 `src/utils/dataArchiver.ts` 文件
+- 实现归档函数
+- 在设置页面添加"数据归档"功能（用户手动触发）
+- 可选：实现自动归档（应用启动时检查）
+- 支持导出归档数据为 JSON/CSV
+
+**验收标准**：
+
+- [ ] 归档功能可用
+- [ ] 归档后数据正确聚合
+- [ ] 原始日志正确删除
+- [ ] 支持数据导出
+- [ ] 性能测试：归档大量数据时不影响用户体验
+
+---
+
+##### 任务 7.6.1：实现查询缓存机制
+
+**优先级**：P2（性能优化）  
+**状态**：待实施  
+**预计工时**：6 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：系统架构师（确认缓存策略）
+
+**需求描述**：
+
+- 对于频繁查询的数据（如用户设置、单词集列表），实现内存缓存
+- 减少数据库读取次数，提升响应速度
+
+**数据库设计专家方案**：
+
+**缓存策略**：
+
+1. **缓存对象**：
+
+   - `userSettings`（单行，变更频率低）
+   - `wordSets` 列表（变更频率低）
+   - 当前单词集的 `words` 列表（会话期间）
+
+2. **缓存失效机制**：
+   - 写入时自动失效
+   - 手动刷新接口
+   - 应用启动时清空缓存
+
+**实现方案**：
+
+```typescript
+// src/utils/queryCache.ts
+class QueryCache {
+  private cache = new Map<string, { data: any; timestamp: number }>();
+  private readonly TTL = 5 * 60 * 1000; // 5分钟过期
+
+  get<T>(key: string): T | null {
+    const cached = this.cache.get(key);
+    if (!cached) return null;
+
+    if (Date.now() - cached.timestamp > this.TTL) {
+      this.cache.delete(key);
+      return null;
+    }
+
+    return cached.data as T;
+  }
+
+  set<T>(key: string, data: T): void {
+    this.cache.set(key, { data, timestamp: Date.now() });
+  }
+
+  invalidate(key: string): void {
+    this.cache.delete(key);
+  }
+
+  clear(): void {
+    this.cache.clear();
+  }
+}
+
+export const queryCache = new QueryCache();
+
+// 缓存装饰器函数
+export async function cachedQuery<T>(
+  key: string,
+  queryFn: () => Promise<T>
+): Promise<T> {
+  const cached = queryCache.get<T>(key);
+  if (cached !== null) {
+    return cached;
+  }
+
+  const data = await queryFn();
+  queryCache.set(key, data);
+  return data;
+}
+
+// 使用示例
+export async function getCachedUserSettings(): Promise<UserSettings> {
+  return cachedQuery("userSettings", async () => {
+    return (await db.userSettings.get(1)) || createDefaultSettings();
+  });
+}
+```
+
+**技术实现要点**：
+
+- 创建 `src/utils/queryCache.ts` 文件
+- 实现缓存类
+- 在数据写入操作后自动失效相关缓存
+- 在关键查询函数中使用缓存
+
+**验收标准**：
+
+- [ ] 缓存机制可用
+- [ ] 缓存失效逻辑正确
+- [ ] 性能测试显示查询速度提升
+- [ ] 内存使用合理
+
+---
+
+##### 任务 7.7.1：实现数据导出/导入功能
+
+**优先级**：P1（数据安全）  
+**状态**：待实施  
+**预计工时**：8 小时  
+**实施者**：Code Implementation Expert  
+**协作角色**：高级产品经理（确认导入/导出功能的用户体验）
+
+**需求描述**：
+
+- 支持导出所有数据为 JSON 文件
+- 支持从 JSON 文件导入数据
+- 支持选择性导入（如只导入单词，不导入进度）
+
+**数据库设计专家方案**：
+
+**导出格式**：
+
+```typescript
+export interface DatabaseExport {
+  version: string; // 数据库版本
+  exportDate: string; // ISO 格式
+  data: {
+    wordSets: WordSet[];
+    words: Word[];
+    userSettings: UserSettings;
+    wordProgress: WordProgress[];
+    dailyStats: DailyStat[];
+    studySessions: StudySession[];
+    reviewLogs: ReviewLog[];
+    reviewPlans: ReviewPlan[];
+  };
+}
+```
+
+**实现方案**：
+
+```typescript
+// src/utils/dbExportImport.ts
+export async function exportDatabase(): Promise<string> {
+  const data: DatabaseExport = {
+    version: "4",
+    exportDate: new Date().toISOString(),
+    data: {
+      wordSets: await db.wordSets.toArray(),
+      words: await db.words.toArray(),
+      userSettings: await db.userSettings.toArray(),
+      wordProgress: await db.wordProgress.toArray(),
+      dailyStats: await db.dailyStats.toArray(),
+      studySessions: await db.studySessions.toArray(),
+      reviewLogs: await db.reviewLogs.toArray(),
+      reviewPlans: await db.reviewPlans.toArray(),
+    },
+  };
+
+  return JSON.stringify(data, null, 2);
+}
+
+export async function importDatabase(
+  jsonData: string,
+  options: ImportOptions = {}
+): Promise<ImportResult> {
+  const exportData: DatabaseExport = JSON.parse(jsonData);
+  const result: ImportResult = {
+    imported: { wordSets: 0, words: 0 /* ... */ },
+    errors: [],
+  };
+
+  // 根据选项选择性导入
+  if (options.importWordSets !== false) {
+    await db.wordSets.bulkPut(exportData.data.wordSets);
+    result.imported.wordSets = exportData.data.wordSets.length;
+  }
+
+  // ... 其他表的导入逻辑
+
+  return result;
+}
+```
+
+**技术实现要点**：
+
+- 创建 `src/utils/dbExportImport.ts` 文件
+- 实现导出函数
+- 实现导入函数（支持选择性导入）
+- 在设置页面添加"导出数据"和"导入数据"功能
+- 添加数据验证和错误处理
+
+**验收标准**：
+
+- [ ] 导出功能可用，生成正确的 JSON 文件
+- [ ] 导入功能可用，数据正确恢复
+- [ ] 支持选择性导入
+- [ ] 错误处理完善
+- [ ] 支持大文件导入（分块处理）
+
+---
+
+### 2024-12-19 15:00 - 数据库设计专家 - 方案总结
+
+#### 📋 数据库设计方案总结
+
+**实施优先级**：
+
+**P0（必须实施）**：
+
+- 任务 7.2.1：添加复习计划表（ReviewPlans）- 核心功能依赖
+- 任务 7.1.1：数据库架构全面评估 - 基础评估
+
+**P1（重要优化）**：
+
+- 任务 7.2.2：优化 userSettings 表结构
+- 任务 7.3.1：优化 wordProgress 表索引
+- 任务 7.4.1：实现数据一致性检查与修复
+- 任务 7.7.1：实现数据导出/导入功能
+
+**P2（性能优化）**：
+
+- 任务 7.3.2：优化 reviewLogs 表索引
+- 任务 7.5.1：实现 reviewLogs 数据归档
+- 任务 7.6.1：实现查询缓存机制
+
+**实施建议**：
+
+1. **第一阶段**：实施 P0 任务，确保核心功能所需的数据结构就绪
+2. **第二阶段**：实施 P1 任务，优化性能和保证数据完整性
+3. **第三阶段**：实施 P2 任务，进一步提升性能和用户体验
+
+**注意事项**：
+
+1. **数据迁移**：所有 Schema 变更都需要完整的迁移逻辑，确保现有用户数据不丢失
+2. **向后兼容**：新版本数据库应该能够兼容旧版本的数据结构
+3. **性能测试**：每次优化后都需要进行性能测试，确保优化有效
+4. **错误处理**：所有数据库操作都需要完善的错误处理和用户提示
+5. **文档更新**：Schema 变更后需要更新 `dbIntruduce.md` 文档
+
+---
+
+### 2024-12-19 15:00 - 数据库设计专家 - 协作请求
+
+#### 📝 给 Code Implementation Expert 的说明
+
+**亲爱的 Code Implementation Expert：**
+
+本章节（第七章）包含了数据库设计专家提供的完整数据库设计方案。请按照以下步骤实施：
+
+1. **优先实施 P0 任务**：
+
+   - 任务 7.2.1（添加复习计划表）是核心功能依赖，必须优先实施
+   - 任务 7.1.1（数据库架构评估）可以帮助你了解当前数据库状态
+
+2. **协作沟通**：
+
+   - 如果任务中标注了需要其他角色协助（如系统架构师、高级产品经理），请先与他们确认相关细节
+   - 如有任何疑问，可以在协作记录中提出
+
+3. **实施顺序**：
+
+   - 建议按照优先级（P0 → P1 → P2）逐步实施
+   - 每个任务完成后，请更新状态为"已完成"
+
+4. **代码规范**：
+
+   - 遵循项目现有的代码规范
+   - 所有新增函数都需要添加 TypeScript 类型定义
+   - 添加必要的注释（中文）
+
+5. **测试验证**：
+   - 每个任务完成后，请进行充分测试
+   - 确保数据迁移逻辑正确，不会丢失用户数据
+
+**祝你实施顺利！** 🚀
+
+---
+
+#### 📝 给其他角色的协作请求
+
+**给系统架构师的请求**：
+
+- **任务 7.1.1**：需要您协助设计数据库性能分析工具的整体架构
+- **任务 7.2.2**：需要您确认会话状态管理的架构方案（独立表 vs 现有方案）
+- **任务 7.6.1**：需要您确认查询缓存策略是否符合整体架构
+
+**给高级产品经理的请求**：
+
+- **任务 7.2.1**：需要您确认复习计划表的业务逻辑是否符合产品需求
+- **任务 7.4.1**：需要您确认数据一致性修复的用户体验（是否自动修复，还是需要用户确认）
+- **任务 7.5.1**：需要您确认数据归档策略的用户体验（归档时机、用户提示等）
+- **任务 7.7.1**：需要您确认数据导入/导出功能的用户体验（界面设计、操作流程等）
+
+---
+
+**文档维护记录更新**：
+
+- **2024-12-19 10:00 - 代码实现专家**：创建协作请求部分
+- **2024-12-19 14:30 - 高级产品经理**：回复协作请求，分配任务给各角色
+- **2024-12-19 15:00 - 数据库设计专家**：提供完整的数据库设计方案（第七章）
+- **最后更新时间**：2024-12-19 15:00
 - **文档维护者**：产品团队
