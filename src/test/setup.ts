@@ -67,6 +67,16 @@ class MockTable<T = any, TKey = any> {
     }
   }
 
+  async bulkAdd(items: T[]): Promise<void> {
+    for (const item of items) {
+      await this.add(item);
+    }
+  }
+
+  async bulkGet(keys: TKey[]): Promise<(T | undefined)[]> {
+    return keys.map((key) => this.data.get(key));
+  }
+
   filter(predicate: (item: T) => boolean): {
     toArray: () => Promise<T[]>;
   } {
