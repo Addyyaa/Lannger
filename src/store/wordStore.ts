@@ -154,12 +154,31 @@ export async function fuzzySearchWordSets(query: string) {
     .toArray();
 }
 /**
+ * 检测字符串是否包含日文假名（平假名或片假名）
+ */
+function containsKana(str: string): boolean {
+  // 平假名范围：\u3040-\u309F
+  // 片假名范围：\u30A0-\u30FF
+  return /[\u3040-\u309F\u30A0-\u30FF]/.test(str);
+}
+
+/**
+ * 检测字符串是否包含汉字（中日韩统一表意文字）
+ */
+function containsKanji(str: string): boolean {
+  // CJK 统一表意文字范围：\u4E00-\u9FAF
+  return /[\u4E00-\u9FAF]/.test(str);
+}
+
+/**
  * 模糊搜索单词（性能优化版本）
  *
  * 优化策略：
  * 1. 限制返回结果数量（默认 50 个）
  * 2. 支持按单词集搜索（如果指定 wordSetId）
- * 3. 使用更高效的搜索方式
+ * 3. 利用复合索引 [setId+kana] 进行高效前缀匹配
+ * 4. 根据查询词特征智能选择查询策略
+ * 5. 并行查询多个字段，合并去重
  *
  * @param query 搜索关键词
  * @param wordSetId 可选的单词集ID，如果指定则只在该单词集内搜索
@@ -177,38 +196,93 @@ export async function fuzzySearchWords(
     return [];
   }
 
-  const trimmedQuery = query.trim().toLowerCase();
-  const results: Word[] = [];
+  const trimmedQuery = query.trim();
+  const lowerQuery = trimmedQuery.toLowerCase();
+  const resultsMap = new Map<number, Word>(); // 使用 Map 去重
 
-  // 如果指定了单词集，先按单词集筛选，再模糊搜索（性能优化）
+  // 如果指定了单词集，使用优化查询策略
   if (wordSetId !== undefined) {
-    const words = await db.words
-      .where("setId")
-      .equals(wordSetId)
-      .filter(
-        (word) =>
-          word.kana.toLowerCase().includes(trimmedQuery) ||
-          word.kanji?.toLowerCase().includes(trimmedQuery) ||
-          word.meaning.toLowerCase().includes(trimmedQuery)
-      )
-      .limit(limit)
-      .toArray();
-    results.push(...words);
+    const queries: Promise<Word[]>[] = [];
+
+    // 策略1：如果查询词包含假名，优先使用复合索引 [setId+kana] 进行前缀匹配
+    if (containsKana(trimmedQuery)) {
+      queries.push(
+        db.words
+          .where("[setId+kana]")
+          .between(
+            [wordSetId, trimmedQuery],
+            [wordSetId, trimmedQuery + "\uffff"]
+          )
+          .limit(limit)
+          .toArray()
+      );
+    }
+
+    // 策略2：如果查询词包含汉字，优先查询 kanji 字段（使用索引）
+    if (containsKanji(trimmedQuery)) {
+      queries.push(
+        db.words
+          .where("setId")
+          .equals(wordSetId)
+          .filter((word) => word.kanji?.includes(trimmedQuery) ?? false)
+          .limit(limit)
+          .toArray()
+      );
+    }
+
+    // 策略3：通用模糊搜索（kana、kanji、meaning 全字段匹配）
+    // 如果前两个策略都没有，或者需要补充结果，执行全字段搜索
+    queries.push(
+      db.words
+        .where("setId")
+        .equals(wordSetId)
+        .filter(
+          (word) =>
+            word.kana.toLowerCase().includes(lowerQuery) ||
+            word.kanji?.toLowerCase().includes(lowerQuery) ||
+            word.meaning.toLowerCase().includes(lowerQuery)
+        )
+        .limit(limit)
+        .toArray()
+    );
+
+    // 并行执行所有查询策略
+    const queryResults = await Promise.all(queries);
+
+    // 合并结果并去重（按 id）
+    for (const words of queryResults) {
+      for (const word of words) {
+        if (word.id !== undefined && !resultsMap.has(word.id)) {
+          resultsMap.set(word.id, word);
+          // 如果已达到限制，提前终止
+          if (resultsMap.size >= limit) {
+            break;
+          }
+        }
+      }
+      if (resultsMap.size >= limit) {
+        break;
+      }
+    }
   } else {
     // 全表搜索，但限制结果数量（性能优化）
     const words = await db.words
       .filter(
         (word) =>
-          word.kana.toLowerCase().includes(trimmedQuery) ||
-          word.kanji?.toLowerCase().includes(trimmedQuery) ||
-          word.meaning.toLowerCase().includes(trimmedQuery)
+          word.kana.toLowerCase().includes(lowerQuery) ||
+          word.kanji?.toLowerCase().includes(lowerQuery) ||
+          word.meaning.toLowerCase().includes(lowerQuery)
       )
       .limit(limit)
       .toArray();
-    results.push(...words);
+    words.forEach((word) => {
+      if (word.id !== undefined) {
+        resultsMap.set(word.id, word);
+      }
+    });
   }
 
-  return results;
+  return Array.from(resultsMap.values()).slice(0, limit);
 }
 
 export async function getWordSet(id: number) {
@@ -619,8 +693,44 @@ export async function deleteDatabase() {
 
 // 备份数据库
 export async function backupDatabase() {
-  const wordSets = await db.wordSets.toArray();
-  const words = await db.words.toArray();
+  await ensureDBOpen();
+  
+  // 获取所有单词集，但排除默认单词集
+  const allWordSets = await db.wordSets.toArray();
+  const wordSets = allWordSets.filter(
+    (set) => set.id !== DEFAULT_WORD_SET_ID && set.name !== DEFAULT_WORD_SET_NAME
+  );
+
+  // 获取所有单词
+  const allWords = await db.words.toArray();
+  
+  // 处理单词：对于属于默认单词集的单词，添加 wordSet 字段以便恢复时映射
+  const words = allWords.map((word) => {
+    if (word.setId === DEFAULT_WORD_SET_ID) {
+      // 属于默认单词集的单词，添加 wordSet 字段，移除 setId（恢复时会通过名称映射）
+      const { setId, ...wordWithoutSetId } = word;
+      return {
+        ...wordWithoutSetId,
+        wordSet: DEFAULT_WORD_SET_NAME,
+      };
+    }
+    // 不属于默认单词集的单词，保持原样（但需要找到对应的单词集名称）
+    const wordSet = allWordSets.find((set) => set.id === word.setId);
+    if (wordSet) {
+      const { setId, ...wordWithoutSetId } = word;
+      return {
+        ...wordWithoutSetId,
+        wordSet: wordSet.name,
+      };
+    }
+    // 如果找不到对应的单词集，也添加 wordSet 字段（使用默认名称）
+    const { setId, ...wordWithoutSetId } = word;
+    return {
+      ...wordWithoutSetId,
+      wordSet: DEFAULT_WORD_SET_NAME,
+    };
+  });
+
   const langggerDB = {
     wordSets,
     words,
@@ -678,32 +788,32 @@ async function restoreFromBackupFormat(
     return false;
   }
 
-  // 重新初始化数据库，确保数据干净
-  await resetDB();
+  // 不重置数据库，保留已有数据
   await ensureDBOpen();
 
-  const parseNumericId = (value: unknown): number | undefined => {
-    if (typeof value === "number" && Number.isFinite(value)) {
-      return value;
-    }
-    if (typeof value === "string" && value.trim() !== "") {
-      const parsed = Number(value);
-      if (Number.isFinite(parsed)) {
-        return parsed;
-      }
-    }
-    return undefined;
-  };
-
+  // 用于映射文件中的单词集名称到数据库中的 ID
+  const wordSetNameMap = new Map<string, number>();
+  // 用于映射文件中的旧单词集 ID 到数据库中的新 ID
   const wordSetIdMap = new Map<number, number>();
+  wordSetNameMap.set(DEFAULT_WORD_SET_NAME, DEFAULT_WORD_SET_ID);
   wordSetIdMap.set(DEFAULT_WORD_SET_ID, DEFAULT_WORD_SET_ID);
 
-  const wordSetsWithId: WordSet[] = [];
-  const wordSetsWithoutId: Array<{ data: WordSet; originalId?: number }> = [];
+  // 获取所有现有的单词集，建立名称到 ID 的映射
+  const existingWordSets = await db.wordSets.toArray();
+  for (const set of existingWordSets) {
+    if (typeof set.name === "string" && typeof set.id === "number") {
+      wordSetNameMap.set(set.name, set.id);
+      wordSetIdMap.set(set.id, set.id);
+    }
+  }
 
+  // 处理单词集：不使用文件中的 id，使用数据库自增 id
   for (const rawSet of wordSets) {
     const cloned = { ...rawSet } as Partial<WordSet>;
-    const originalId = parseNumericId((rawSet as any)?.id);
+    const originalId = typeof (rawSet as any)?.id === "number" ? (rawSet as any).id : undefined;
+
+    // 移除文件中的 id，让数据库自动分配
+    delete (cloned as any).id;
 
     if (typeof cloned.name !== "string" || cloned.name.trim() === "") {
       cloned.name = generateFallbackWordSetName();
@@ -718,90 +828,133 @@ async function restoreFromBackupFormat(
     cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
     cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
 
-    if (originalId !== undefined) {
-      cloned.id = originalId;
-      wordSetIdMap.set(originalId, originalId);
-      wordSetsWithId.push(cloned as WordSet);
+    // 检查是否已存在同名单词集
+    if (wordSetNameMap.has(cloned.name)) {
+      // 如果已存在，使用现有的 ID
+      const existingId = wordSetNameMap.get(cloned.name)!;
+      if (originalId !== undefined) {
+        wordSetIdMap.set(originalId, existingId);
+      }
     } else {
-      delete (cloned as any).id;
-      wordSetsWithoutId.push({ data: cloned as WordSet });
-    }
-  }
-
-  if (wordSetsWithId.length > 0) {
-    await db.wordSets.bulkPut(wordSetsWithId as WordSet[]);
-  }
-
-  if (wordSetsWithoutId.length > 0) {
-    for (const item of wordSetsWithoutId) {
-      const newId = await db.wordSets.add(item.data as WordSet);
-      if (item.originalId !== undefined) {
-        wordSetIdMap.set(item.originalId, newId);
+      // 如果不存在，创建新的单词集（使用数据库自增 id）
+      try {
+        const newId = await db.wordSets.add(cloned as WordSet);
+        wordSetNameMap.set(cloned.name, newId);
+        if (originalId !== undefined) {
+          wordSetIdMap.set(originalId, newId);
+        }
+      } catch (error) {
+        console.error(
+          "restoreFromBackupFormat: 创建单词集失败",
+          cloned.name,
+          error
+        );
+        // 如果创建失败，跳过该单词集
+        continue;
       }
     }
   }
 
-  // 确保映射包含当前数据库中的所有词集 ID
-  const existingWordSets = await db.wordSets.toArray();
-  for (const set of existingWordSets) {
-    if (typeof set.id === "number" && !wordSetIdMap.has(set.id)) {
-      wordSetIdMap.set(set.id, set.id);
-    }
-  }
+  // 处理单词：不使用文件中的 id，使用数据库自增 id
+  for (const rawWord of words) {
+    try {
+      const cloned = { ...rawWord } as Partial<Word>;
 
-  const sanitizedWords = words.map((word) => {
-    const cloned = { ...word } as Partial<Word>;
-
-    const originalWordId = parseNumericId((word as any)?.id);
-    if (originalWordId !== undefined) {
-      cloned.id = originalWordId;
-    } else {
+      // 移除文件中的 id，让数据库自动分配
       delete (cloned as any).id;
+
+      // 处理单词集 ID 映射
+      let setId = DEFAULT_WORD_SET_ID;
+      const originalSetId = typeof cloned.setId === "number" ? cloned.setId : undefined;
+
+      // 优先通过单词集名称查找（如果文件中有 wordSetName 或 wordSet 字段）
+      const wordSetName =
+        (rawWord as any)?.wordSetName ||
+        (rawWord as any)?.wordSet;
+
+      if (typeof wordSetName === "string" && wordSetName.trim() !== "") {
+        const setName = wordSetName.trim();
+        if (wordSetNameMap.has(setName)) {
+          setId = wordSetNameMap.get(setName)!;
+        } else {
+          // 如果单词集不存在，创建它
+          try {
+            const newSetId = await createWordSet({ name: setName, mark: "" });
+            wordSetNameMap.set(setName, newSetId);
+            wordSetIdMap.set(newSetId, newSetId);
+            setId = newSetId;
+          } catch (error) {
+            console.error(
+              "restoreFromBackupFormat: 创建单词集失败",
+              setName,
+              error
+            );
+            setId = DEFAULT_WORD_SET_ID;
+          }
+        }
+      } else if (originalSetId !== undefined) {
+        // 如果没有名称，通过旧的 ID 映射
+        if (wordSetIdMap.has(originalSetId)) {
+          setId = wordSetIdMap.get(originalSetId)!;
+        } else {
+          // 如果找不到映射，使用默认单词集
+          setId = DEFAULT_WORD_SET_ID;
+        }
+      }
+
+      cloned.setId = setId;
+
+      // 验证必填字段
+      cloned.kana = typeof cloned.kana === "string" ? cloned.kana : "";
+      cloned.kanji = typeof cloned.kanji === "string" ? cloned.kanji : "";
+      cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
+      cloned.example = typeof cloned.example === "string" ? cloned.example : "";
+
+      if (
+        cloned.kana.trim() === "" ||
+        cloned.kanji.trim() === "" ||
+        cloned.meaning.trim() === "" ||
+        cloned.example.trim() === ""
+      ) {
+        console.warn(
+          "restoreFromBackupFormat: 跳过缺少必填字段的单词",
+          cloned
+        );
+        continue;
+      }
+
+      cloned.mark = typeof cloned.mark === "string" ? cloned.mark : "";
+      cloned.type =
+        typeof cloned.type === "string" && cloned.type.trim() !== ""
+          ? cloned.type
+          : DEFAULT_WORD_TYPE;
+
+      if (cloned.review && typeof cloned.review === "object") {
+        const review = cloned.review as Word["review"];
+        cloned.review = {
+          times: typeof review?.times === "number" ? review.times : 0,
+          nextReview:
+            typeof review?.nextReview === "string"
+              ? review.nextReview
+              : undefined,
+          difficulty:
+            typeof review?.difficulty === "number"
+              ? review.difficulty
+              : undefined,
+        };
+      } else {
+        cloned.review = undefined;
+      }
+
+      cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
+      cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
+
+      // 使用 add 方法添加新单词（使用数据库自增 id），不覆盖已有数据
+      await db.words.add(cloned as Word);
+    } catch (error) {
+      console.error("restoreFromBackupFormat: 导入单词失败", rawWord, error);
+      // 继续处理下一个单词
     }
-
-    const originalSetId = parseNumericId((word as any)?.setId);
-    if (originalSetId !== undefined) {
-      cloned.setId =
-        wordSetIdMap.get(originalSetId) ?? originalSetId ?? DEFAULT_WORD_SET_ID;
-    } else {
-      cloned.setId = DEFAULT_WORD_SET_ID;
-    }
-
-    cloned.kana = typeof cloned.kana === "string" ? cloned.kana : "";
-    cloned.kanji = typeof cloned.kanji === "string" ? cloned.kanji : "";
-    cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
-    cloned.example = typeof cloned.example === "string" ? cloned.example : "";
-    cloned.mark = typeof cloned.mark === "string" ? cloned.mark : "";
-    cloned.type =
-      typeof cloned.type === "string" && cloned.type.trim() !== ""
-        ? cloned.type
-        : DEFAULT_WORD_TYPE;
-
-    if (cloned.review && typeof cloned.review === "object") {
-      const review = cloned.review as Word["review"];
-      cloned.review = {
-        times: typeof review?.times === "number" ? review.times : 0,
-        nextReview:
-          typeof review?.nextReview === "string"
-            ? review.nextReview
-            : undefined,
-        difficulty:
-          typeof review?.difficulty === "number"
-            ? review.difficulty
-            : undefined,
-      };
-    } else {
-      cloned.review = undefined;
-    }
-
-    cloned.createdAt = cloned.createdAt ?? new Date().toISOString();
-    cloned.updatedAt = cloned.updatedAt ?? new Date().toISOString();
-
-    return cloned as Word;
-  });
-
-  if (sanitizedWords.length > 0) {
-    await db.words.bulkPut(sanitizedWords as Word[]);
   }
 
   return true;
@@ -813,8 +966,7 @@ async function restoreFromWordList(words: unknown[]): Promise<boolean> {
     return false;
   }
 
-  // 清空数据库并重新初始化默认单词集
-  await resetDB();
+  // 不重置数据库，保留已有数据
   await ensureDBOpen();
 
   const wordSetMap = new Map<string, number>();

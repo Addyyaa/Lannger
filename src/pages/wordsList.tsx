@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useTranslation, Trans } from "react-i18next";
 import { Tooltip } from "antd";
 import { List, RowComponentProps } from "react-window";
-import { Word, WordSet } from "../db";
+import { Word, WordSet, DEFAULT_WORD_SET_NAME } from "../db";
 import * as dbOperator from "../store/wordStore";
 import { useTheme, useOrientation } from "../main";
 import BackButton from "../components/BackButton";
@@ -29,6 +29,9 @@ export default function WordsList() {
     const [selectedWordIds, setSelectedWordIds] = useState<Set<number>>(new Set());
     const [batchDeletePopup, setBatchDeletePopup] = useState<boolean>(false);
     const [editingWord, setEditingWord] = useState<Word | null>(null);
+    const [searchQuery, setSearchQuery] = useState<string>("");
+    const [searchResults, setSearchResults] = useState<Word[]>([]);
+    const [isSearching, setIsSearching] = useState<boolean>(false);
 
     // 虚拟列表配置常量
     const COLUMN_TEMPLATE = isPortrait ? "0.8fr 1.8fr 1.8fr 2.5fr 1.5fr 1.5fr 1fr 1.5fr" : "0.5fr 1.4fr 1.4fr 2fr 1.4fr 1.4fr 1fr 1.2fr";
@@ -41,6 +44,10 @@ export default function WordsList() {
         wordSets.forEach((set) => {
             map.set(set.id, set.name);
         });
+        // 确保默认单词集始终在映射中（即使数据库中没有，也使用常量名称）
+        if (!map.has(0)) {
+            map.set(0, DEFAULT_WORD_SET_NAME);
+        }
         return map;
     }, [wordSets]);
 
@@ -84,6 +91,93 @@ export default function WordsList() {
         };
     }, [fetchData]);
 
+    /**
+     * 计算单词与搜索关键词的匹配度（用于排序）
+     * 返回值越小，匹配度越高（越精确）
+     */
+    const calculateMatchScore = useCallback((word: Word, query: string): number => {
+        const lowerQuery = query.toLowerCase().trim();
+        if (lowerQuery === "") return 0;
+
+        let score = 1000; // 初始分数，分数越小越精确
+
+        // 完全匹配（最高优先级）
+        if (word.kana.toLowerCase() === lowerQuery) {
+            score = 0;
+        } else if (word.kanji?.toLowerCase() === lowerQuery) {
+            score = 1;
+        } else if (word.meaning.toLowerCase() === lowerQuery) {
+            score = 2;
+        }
+        // 开头匹配（次高优先级）
+        else if (word.kana.toLowerCase().startsWith(lowerQuery)) {
+            score = 10;
+        } else if (word.kanji?.toLowerCase().startsWith(lowerQuery)) {
+            score = 11;
+        } else if (word.meaning.toLowerCase().startsWith(lowerQuery)) {
+            score = 12;
+        }
+        // 包含匹配（较低优先级）
+        else {
+            const kanaIndex = word.kana.toLowerCase().indexOf(lowerQuery);
+            const kanjiIndex = word.kanji?.toLowerCase().indexOf(lowerQuery) ?? -1;
+            const meaningIndex = word.meaning.toLowerCase().indexOf(lowerQuery);
+
+            if (kanaIndex >= 0) {
+                score = 20 + kanaIndex; // 位置越靠前，分数越小
+            } else if (kanjiIndex >= 0) {
+                score = 30 + kanjiIndex;
+            } else if (meaningIndex >= 0) {
+                score = 40 + meaningIndex;
+            } else {
+                score = 1000; // 不匹配
+            }
+        }
+
+        return score;
+    }, []);
+
+    /**
+     * 执行搜索（带防抖）
+     */
+    useEffect(() => {
+        if (!searchQuery.trim()) {
+            setSearchResults([]);
+            setIsSearching(false);
+            return;
+        }
+
+        setIsSearching(true);
+        const timeoutId = setTimeout(async () => {
+            try {
+                // 使用现有的搜索函数
+                const results = await dbOperator.fuzzySearchWords(
+                    searchQuery,
+                    wordSetId !== null && !isNaN(wordSetId) ? wordSetId : undefined,
+                    200 // 增加搜索限制，以便排序
+                );
+
+                // 按匹配度排序（越精确越靠上）
+                const sortedResults = results.sort((a, b) => {
+                    const scoreA = calculateMatchScore(a, searchQuery);
+                    const scoreB = calculateMatchScore(b, searchQuery);
+                    return scoreA - scoreB;
+                });
+
+                setSearchResults(sortedResults);
+            } catch (error) {
+                console.error("搜索失败:", error);
+                setSearchResults([]);
+            } finally {
+                setIsSearching(false);
+            }
+        }, 500); // 700ms 防抖
+
+        return () => {
+            clearTimeout(timeoutId);
+        };
+    }, [searchQuery, wordSetId, calculateMatchScore]);
+
     // 页面容器样式
     const containerStyle: React.CSSProperties = {
         padding: isPortrait ? "3vw" : "1.25vw",
@@ -100,6 +194,22 @@ export default function WordsList() {
         marginBottom: isPortrait ? "4vw" : "1.5vw",
         flexWrap: "wrap",
         position: "relative",
+    };
+
+    // 搜索输入框样式
+    const searchInputStyle: React.CSSProperties = {
+        flex: 1,
+        minWidth: isPortrait ? "200px" : "300px",
+        padding: isPortrait ? "2vw 3vw" : "0.6vw 1vw",
+        fontSize: isPortrait ? "3.5vw" : "0.875vw",
+        borderRadius: isPortrait ? "2vw" : "0.5vw",
+        border: isDark 
+            ? `${isPortrait ? "0.3vw" : "0.1vw"} solid rgba(255, 255, 255, 0.2)` 
+            : `${isPortrait ? "0.3vw" : "0.1vw"} solid #ddd`,
+        background: isDark ? "rgba(255, 255, 255, 0.1)" : "#fff",
+        color: isDark ? "#f5f5f5" : "#333",
+        outline: "none",
+        transition: "all 0.3s ease",
     };
 
     // 批量操作栏样式
@@ -157,10 +267,15 @@ export default function WordsList() {
         borderBottom: isDark ? `${isPortrait ? "0.25vw" : "0.125vw"} solid rgba(255,255,255,0.2)` : `${isPortrait ? "0.25vw" : "0.125vw"} solid #ddd`,
     };
 
+    // 确定要显示的单词列表（搜索时显示搜索结果，否则显示原始列表）
+    const displayWords = useMemo(() => {
+        return searchQuery.trim() ? searchResults : words;
+    }, [searchQuery, searchResults, words]);
+
     // 计算列表高度
     const listHeight = useMemo(() => {
-        return Math.min(MAX_LIST_HEIGHT, words.length * ROW_HEIGHT);
-    }, [words.length]);
+        return Math.min(MAX_LIST_HEIGHT, displayWords.length * ROW_HEIGHT);
+    }, [displayWords.length]);
 
     // 列表样式
     const listStyle = useMemo<React.CSSProperties>(
@@ -224,8 +339,8 @@ export default function WordsList() {
 
     // 获取单词的回调函数（用于虚拟列表）
     const getWord = useCallback(
-        (index: number) => words[index],
-        [words]
+        (index: number) => displayWords[index],
+        [displayWords]
     );
 
     // 空状态样式
@@ -292,13 +407,13 @@ export default function WordsList() {
 
     // 全选/取消全选
     const toggleSelectAll = useCallback(() => {
-        if (selectedWordIds.size === words.length) {
+        if (selectedWordIds.size === displayWords.length) {
             setSelectedWordIds(new Set());
         } else {
-            const allIds = new Set(words.map((word) => word.id).filter((id): id is number => id !== undefined));
+            const allIds = new Set(displayWords.map((word) => word.id).filter((id): id is number => id !== undefined));
             setSelectedWordIds(allIds);
         }
-    }, [selectedWordIds.size, words]);
+    }, [selectedWordIds.size, displayWords]);
 
     // 虚拟行组件类型定义
     type VirtualRowExtraProps = {
@@ -575,8 +690,58 @@ export default function WordsList() {
             <div style={headerStyle}>
                 <BackButton onClick={handleBack} />
                 <h1 style={titleStyle}>
-                    {t("wordListTitle")} {wordSetId ? `(${wordSetMap.get(wordSetId) || t("unknown")})` : `(${t("wordListAllWords")})`}
+                    {t("wordListTitle")} {wordSetId !== null && !isNaN(wordSetId) 
+                        ? `(${wordSetMap.get(wordSetId) || (wordSetId === 0 ? DEFAULT_WORD_SET_NAME : t("unknown"))})` 
+                        : `(${t("wordListAllWords")})`}
                 </h1>
+                <div style={{ flex: 1, display: "flex", alignItems: "center", gap: isPortrait ? "2vw" : "0.5vw", marginLeft: isPortrait ? "3vw" : "1vw" }}>
+                    <input
+                        type="text"
+                        placeholder={t("searchWords") || "搜索单词..."}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        style={searchInputStyle}
+                        onFocus={(e) => {
+                            e.currentTarget.style.borderColor = isDark ? "rgba(0, 180, 255, 0.6)" : "rgba(0, 150, 212, 0.5)";
+                            e.currentTarget.style.boxShadow = isDark 
+                                ? "0 0 0 2px rgba(0, 180, 255, 0.2)" 
+                                : "0 0 0 2px rgba(0, 150, 212, 0.1)";
+                        }}
+                        onBlur={(e) => {
+                            e.currentTarget.style.borderColor = isDark 
+                                ? "rgba(255, 255, 255, 0.2)" 
+                                : "#ddd";
+                            e.currentTarget.style.boxShadow = "none";
+                        }}
+                    />
+                    {isSearching && (
+                        <span style={{ 
+                            fontSize: isPortrait ? "3vw" : "0.75vw", 
+                            color: isDark ? "#999" : "#666" 
+                        }}>
+                            {t("searching") || "搜索中..."}
+                        </span>
+                    )}
+                    {searchQuery.trim() && !isSearching && (
+                        <button
+                            onClick={() => setSearchQuery("")}
+                            style={{
+                                padding: isPortrait ? "2vw" : "0.5vw",
+                                background: "transparent",
+                                border: "none",
+                                cursor: "pointer",
+                                fontSize: isPortrait ? "4vw" : "1vw",
+                                color: isDark ? "#999" : "#666",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                            }}
+                            title={t("clearSearch") || "清除搜索"}
+                        >
+                            ✕
+                        </button>
+                    )}
+                </div>
             </div>
             {selectedWordIds.size > 0 && (
                 <div style={batchActionBarStyle}>
@@ -614,10 +779,14 @@ export default function WordsList() {
                     </button>
                 </div>
             )}
-            {words.length === 0 ? (
+            {displayWords.length === 0 ? (
                 <div style={emptyStateStyle}>
-                    <div style={{ fontSize: isPortrait ? "12vw" : "3vw", marginBottom: isPortrait ? "4vw" : "1vw" }}>📚</div>
-                    <p style={{ color: isDark ? "#ccc" : "#666" }}>{t("noWords")}</p>
+                    <div style={{ fontSize: isPortrait ? "12vw" : "3vw", marginBottom: isPortrait ? "4vw" : "1vw" }}>
+                        {searchQuery.trim() ? "🔍" : "📚"}
+                    </div>
+                    <p style={{ color: isDark ? "#ccc" : "#666" }}>
+                        {searchQuery.trim() ? (t("noSearchResults") || "未找到匹配的单词") : t("noWords")}
+                    </p>
                 </div>
             ) : (
                 <div style={listContainerStyle} role="table" aria-label={t("wordList")}>
@@ -626,7 +795,7 @@ export default function WordsList() {
                             <input
                                 type="checkbox"
                                 className="theme-checkbox"
-                                checked={selectedWordIds.size === words.length && words.length > 0}
+                                checked={selectedWordIds.size === displayWords.length && displayWords.length > 0}
                                 onChange={toggleSelectAll}
                                 style={{
                                     width: "18px",
@@ -655,7 +824,7 @@ export default function WordsList() {
                     <List
                         style={listStyle}
                         overscanCount={6}
-                        rowCount={words.length}
+                        rowCount={displayWords.length}
                         rowHeight={ROW_HEIGHT}
                         rowComponent={VirtualRow}
                         rowProps={{
