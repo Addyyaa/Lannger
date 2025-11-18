@@ -1,15 +1,18 @@
 /**
  * 复习锁定机制工具
  * 管理复习锁定状态，防止同时复习多个课程
+ *
+ * v6 优化：锁定状态从 userSettings 独立存储，提升写入性能
  */
 
-import { db, UserSettings, ensureDBOpen } from "../db";
+import { db, ReviewLock as ReviewLockRecord, ensureDBOpen } from "../db";
 import { getWordSet } from "../store/wordStore";
-import { handleError } from "./errorHandler";
 import { safeDbOperation } from "./dbWrapper";
 
+const USER_ID = 1; // 固定为 1（单用户应用）
+
 /**
- * 复习锁定状态
+ * 复习锁定状态（兼容接口，用于外部调用）
  */
 export interface ReviewLock {
   wordSetId: number;
@@ -24,8 +27,18 @@ export async function getReviewLock(): Promise<ReviewLock | null> {
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      const settings = await db.userSettings.get(1);
-      return settings?.activeReviewLock || null;
+      const lock = await db.reviewLocks.where("userId").equals(USER_ID).first();
+
+      if (!lock) {
+        return null;
+      }
+
+      // 转换为兼容接口
+      return {
+        wordSetId: lock.wordSetId,
+        reviewStage: lock.reviewStage,
+        lockedAt: lock.lockedAt,
+      };
     },
     {
       context: { operation: "getReviewLock" },
@@ -44,20 +57,20 @@ export async function setReviewLock(
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      const settings = await db.userSettings.get(1);
+      const now = new Date().toISOString();
 
-      if (!settings) {
-        throw new Error("用户设置不存在");
-      }
+      // 删除旧的锁定（只保留一个）
+      await db.reviewLocks.where("userId").equals(USER_ID).delete();
 
-      settings.activeReviewLock = {
+      // 创建新锁定
+      await db.reviewLocks.add({
+        userId: USER_ID,
         wordSetId,
         reviewStage,
-        lockedAt: new Date().toISOString(),
-      };
-      settings.updatedAt = new Date().toISOString();
-
-      await db.userSettings.put(settings);
+        lockedAt: now,
+        createdAt: now,
+        updatedAt: now,
+      } as ReviewLockRecord);
     },
     {
       context: { operation: "setReviewLock", wordSetId, reviewStage },
@@ -72,16 +85,7 @@ export async function clearReviewLock(): Promise<void> {
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      const settings = await db.userSettings.get(1);
-
-      if (!settings) {
-        return;
-      }
-
-      settings.activeReviewLock = null;
-      settings.updatedAt = new Date().toISOString();
-
-      await db.userSettings.put(settings);
+      await db.reviewLocks.where("userId").equals(USER_ID).delete();
     },
     {
       context: { operation: "clearReviewLock" },
@@ -92,9 +96,10 @@ export async function clearReviewLock(): Promise<void> {
 /**
  * 检查是否可以开始复习（检查锁定状态）
  */
-export async function canStartReview(
-  wordSetId: number
-): Promise<{ allowed: boolean; lockInfo?: ReviewLock & { wordSetName: string } }> {
+export async function canStartReview(wordSetId: number): Promise<{
+  allowed: boolean;
+  lockInfo?: ReviewLock & { wordSetName: string };
+}> {
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
@@ -142,4 +147,3 @@ export async function getLockMessage(): Promise<string | null> {
 
   return `必须完成课程 ${wordSetName} 第 ${lock.reviewStage} 次复习`;
 }
-

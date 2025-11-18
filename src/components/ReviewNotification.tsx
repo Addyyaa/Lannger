@@ -6,7 +6,7 @@ import { getDueReviewPlans } from "../store/reviewStore";
 import { getWordSet } from "../store/wordStore";
 import { getReviewStageDescription } from "../utils/ebbinghausCurve";
 import { canStartReview } from "../utils/reviewLock";
-import { handleError } from "../utils/errorHandler";
+import { handleErrorSync } from "../utils/errorHandler";
 
 interface ReviewNotificationProps {
   onStartReview: (wordSetId: number, reviewStage: number) => void;
@@ -93,7 +93,7 @@ export default function ReviewNotification({
 
       setNotifications(validNotifications);
     } catch (error) {
-      handleError(error, { operation: "checkReviewNotifications" });
+      handleErrorSync(error, { operation: "checkReviewNotifications" });
     } finally {
       setLoading(false);
     }

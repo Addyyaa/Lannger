@@ -14,6 +14,9 @@ import { useTranslation } from "react-i18next";
 import i18n from "./i18n/i18n";
 import languages from "./i18n/languages.json";
 import { ensureDBOpen } from "./db";
+import { initSentry } from "./utils/sentry";
+import { handleError } from "./utils/errorHandler";
+import { ErrorMonitor } from "./components/ErrorMonitor";
 
 declare global {
   interface Window {
@@ -442,6 +445,8 @@ function RootLayout() {
           <Layout globalComponents={<GlobalHeader />}>
             <Outlet />
           </Layout>
+          {/* 开发环境错误监控 Dashboard */}
+          {process.env.NODE_ENV === "development" && <ErrorMonitor />}
         </ThemeProvider>
       </OrientationProvider>
     </ErrorBoundary>
@@ -486,6 +491,28 @@ if (!rootElement) {
 }
 
 setupPWAAssets();
+
+// 初始化 Sentry（生产环境）
+initSentry().catch((error) => {
+  console.warn("Sentry 初始化失败（可选依赖）:", error);
+});
+
+// 设置全局错误处理器
+if (typeof window !== "undefined") {
+  window.addEventListener("error", (event) => {
+    handleError(event.error, { type: "unhandled_error" }).catch((err) => {
+      console.error("handleError failed:", err);
+    });
+  });
+
+  window.addEventListener("unhandledrejection", (event) => {
+    handleError(event.reason, { type: "unhandled_promise_rejection" }).catch(
+      (err) => {
+        console.error("handleError failed:", err);
+      }
+    );
+  });
+}
 
 // 在应用启动时初始化数据库
 ensureDBOpen().catch((error) => {

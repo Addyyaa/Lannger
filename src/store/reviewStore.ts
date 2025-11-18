@@ -181,20 +181,27 @@ export async function completeReviewStage(
 }
 
 /**
- * 获取所有到期的复习计划
+ * 获取所有到期的复习计划（性能优化：使用索引查询）
  */
 export async function getDueReviewPlans(): Promise<ReviewPlan[]> {
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      const now = new Date();
-      // 使用 filter 方法过滤 boolean 字段，因为 Dexie 的 equals 不支持 boolean
-      const allPlans = await db.reviewPlans
-        .filter((plan) => plan.isCompleted === false)
+      const now = new Date().toISOString();
+
+      // 性能优化：使用索引查询 nextReviewAt <= now，而不是全表扫描
+      // 先使用索引查询到期的计划（nextReviewAt <= now）
+      const plansByTime = await db.reviewPlans
+        .where("nextReviewAt")
+        .belowOrEqual(now)
         .toArray();
 
-      // 过滤出到期的计划
-      const duePlans = allPlans.filter((plan) => isReviewDue(plan, now));
+      // 过滤出未完成且到期的计划
+      // 注意：isCompleted 字段没有索引，但这里数据量通常较小，内存过滤可以接受
+      const nowDate = new Date(now);
+      const duePlans = plansByTime.filter(
+        (plan) => !plan.isCompleted && isReviewDue(plan, nowDate)
+      );
 
       // 按 nextReviewAt 排序（最早到期的在前）
       duePlans.sort((a, b) => {

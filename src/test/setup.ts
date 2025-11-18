@@ -1,6 +1,6 @@
 /**
  * 测试环境设置文件
- * 
+ *
  * 注意：现在使用 alias 而非 overrides，Vitest 会自动使用原版 Vite。
  * 采用 mock db.ts 模块的方式，而不是 mock Dexie，以避免子类属性覆盖问题。
  */
@@ -21,21 +21,21 @@ if (typeof global.indexedDB === "undefined") {
 // Mock Table - 内存数据库实现
 class MockTable<T = any, TKey = any> {
   private data: Map<TKey, T> = new Map();
-  
+
   async get(key: TKey): Promise<T | undefined> {
     return this.data.get(key);
   }
-  
+
   async put(item: T): Promise<TKey> {
     const key = (item as any).id ?? (item as any).date ?? this.data.size;
     this.data.set(key as TKey, item);
     return key as TKey;
   }
-  
+
   async add(item: T): Promise<TKey> {
     return this.put(item);
   }
-  
+
   async update(key: TKey, changes: Partial<T>): Promise<number> {
     const existing = this.data.get(key);
     if (existing) {
@@ -44,29 +44,29 @@ class MockTable<T = any, TKey = any> {
     }
     return 0;
   }
-  
+
   async delete(key: TKey): Promise<void> {
     this.data.delete(key);
   }
-  
+
   async clear(): Promise<void> {
     this.data.clear();
   }
-  
+
   async toArray(): Promise<T[]> {
     return Array.from(this.data.values());
   }
-  
+
   async count(): Promise<number> {
     return this.data.size;
   }
-  
+
   async bulkPut(items: T[]): Promise<void> {
     for (const item of items) {
       await this.put(item);
     }
   }
-  
+
   filter(predicate: (item: T) => boolean): {
     toArray: () => Promise<T[]>;
   } {
@@ -77,7 +77,7 @@ class MockTable<T = any, TKey = any> {
       },
     };
   }
-  
+
   where(index: string): {
     equals: (value: any) => {
       toArray: () => Promise<T[]>;
@@ -87,7 +87,10 @@ class MockTable<T = any, TKey = any> {
     startsWith: (value: string) => {
       toArray: () => Promise<T[]>;
     };
-    between: (lower: any, upper: any) => {
+    between: (
+      lower: any,
+      upper: any
+    ) => {
       toArray: () => Promise<T[]>;
     };
   } {
@@ -121,7 +124,9 @@ class MockTable<T = any, TKey = any> {
           const all = await this.toArray();
           return all.filter((item: any) => {
             const fieldValue = item[index];
-            return typeof fieldValue === "string" && fieldValue.startsWith(prefix);
+            return (
+              typeof fieldValue === "string" && fieldValue.startsWith(prefix)
+            );
           });
         },
       }),
@@ -148,19 +153,21 @@ const mockDb = {
   wordProgress: new MockTable(),
   reviewLogs: new MockTable(),
   reviewPlans: new MockTable(),
-  
+  flashcardSessions: new MockTable(), // v6 新增
+  reviewLocks: new MockTable(), // v6 新增
+
   async open(): Promise<void> {
     // Mock 打开数据库
   },
-  
+
   isOpen(): boolean {
     return true;
   },
-  
+
   async delete(): Promise<void> {
     // Mock 删除数据库
   },
-  
+
   async transaction<T>(
     _mode: string,
     _tables: any,
@@ -186,8 +193,9 @@ async function initializeDefaultData() {
       updatedAt: new Date().toISOString(),
     });
   }
-  
+
   // 确保用户设置存在（id = 1）
+  // v6 优化：移除 flashcardSessionState 和 activeReviewLock（已迁移到独立表）
   const userSettings = await mockDb.userSettings.get(1);
   if (!userSettings) {
     const nowIso = new Date().toISOString();
@@ -197,7 +205,7 @@ async function initializeDefaultData() {
       dailyGoal: 20,
       currentStreak: 0,
       longestStreak: 0,
-      activeReviewLock: null,
+      // v6 已移除：activeReviewLock（迁移到 reviewLocks 表）
       updatedAt: nowIso,
       createdAt: nowIso,
     });

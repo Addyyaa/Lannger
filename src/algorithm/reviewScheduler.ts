@@ -1,6 +1,6 @@
 import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight, calculateMastery } from "./weightCalculator";
-import { ensureWordProgressExists } from "./progressUpdater";
+import { ensureWordProgressExistsBatch } from "./progressUpdater";
 import { isDueForReview, calculateUrgency } from "./spacedRepetition";
 
 /**
@@ -59,13 +59,14 @@ export async function scheduleReviewWords(
     wordIds = words.map((w) => w.id);
   }
 
-  // 确保所有单词都有进度记录
+  // 批量确保所有单词都有进度记录（性能优化：使用批量查询）
+  const progressResults = await ensureWordProgressExistsBatch(wordIds);
   const progresses: WordProgress[] = [];
   let dueCount = 0;
   let urgentCount = 0;
 
-  for (const wordId of wordIds) {
-    const progress = await ensureWordProgressExists(wordId);
+  for (let i = 0; i < wordIds.length; i++) {
+    const progress = progressResults[i];
     if (!progress) continue;
 
     // 复习模式：只包含已经学习过的单词（timesSeen > 0）
@@ -176,8 +177,11 @@ export async function getReviewStatistics(wordSetId?: number): Promise<{
 
   const now = new Date();
 
-  for (const wordId of wordIds) {
-    const progress = await db.wordProgress.get(wordId);
+  // 批量查询进度（性能优化）
+  const progressResults = await db.wordProgress.bulkGet(wordIds);
+
+  for (let i = 0; i < wordIds.length; i++) {
+    const progress = progressResults[i];
     if (!progress) {
       totalWords++;
       continue;

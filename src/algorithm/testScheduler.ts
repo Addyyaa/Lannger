@@ -1,6 +1,9 @@
 import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight, calculateMastery } from "./weightCalculator";
-import { ensureWordProgressExists } from "./progressUpdater";
+import {
+  ensureWordProgressExists,
+  ensureWordProgressExistsBatch,
+} from "./progressUpdater";
 
 /**
  * 测试模式调度选项
@@ -139,13 +142,14 @@ export async function scheduleTestWords(
     wordIds = words.map((w) => w.id);
   }
 
-  // 确保所有单词都有进度记录
+  // 批量确保所有单词都有进度记录（性能优化：使用批量查询）
+  const progressResults = await ensureWordProgressExistsBatch(wordIds);
   const progresses: WordProgress[] = [];
   let totalDifficulty = 0;
   let totalMastery = 0;
 
-  for (const wordId of wordIds) {
-    const progress = await ensureWordProgressExists(wordId);
+  for (let i = 0; i < wordIds.length; i++) {
+    const progress = progressResults[i];
     if (!progress) continue;
 
     const mastery = calculateMastery(progress);

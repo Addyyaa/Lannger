@@ -8,7 +8,21 @@ export default defineConfig(({ mode }) => {
     plugins: [
       react({
         babel: {
-          plugins: ["babel-plugin-react-compiler"].filter(Boolean),
+          plugins: [
+            [
+              "babel-plugin-react-compiler",
+              {
+                // 排除 hooks 目录，避免编译问题
+                sources: (filename) => {
+                  // 排除 hooks 目录下的文件
+                  return (
+                    !filename.includes("/hooks/") &&
+                    !filename.includes("\\hooks\\")
+                  );
+                },
+              },
+            ],
+          ].filter(Boolean),
         },
       }),
     ],

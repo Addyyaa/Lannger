@@ -79,16 +79,16 @@ export async function getAllWordSets(): Promise<WordSet[]> {
   try {
     // 确保数据库打开且默认单词集存在
     await ensureDBOpen();
-    
+
     // 验证数据库是否真的打开
     if (!db.isOpen()) {
       console.warn("数据库未打开，尝试重新打开...");
       await db.open();
     }
-    
+
     // 获取单词集
     const result = await db.wordSets.toArray();
-    
+
     // 确保返回的是数组
     if (!Array.isArray(result)) {
       console.error(
@@ -98,7 +98,7 @@ export async function getAllWordSets(): Promise<WordSet[]> {
       );
       return [];
     }
-    
+
     // 验证数据有效性
     const validWordSets = result.filter(
       (set): set is WordSet =>
@@ -108,16 +108,13 @@ export async function getAllWordSets(): Promise<WordSet[]> {
         typeof set.id === "number" &&
         typeof set.name === "string"
     );
-    
+
     // 如果有效数据为空但原始数据不为空，记录警告
     if (validWordSets.length === 0 && result.length > 0) {
-      console.warn(
-        "getAllWordSets: 所有单词集数据无效",
-        result
-      );
+      console.warn("getAllWordSets: 所有单词集数据无效", result);
     }
-    
-    return validWordSets.length > 0 ? validWordSets : result as WordSet[];
+
+    return validWordSets.length > 0 ? validWordSets : (result as WordSet[]);
   } catch (error) {
     console.error("获取单词集失败:", error);
     // 如果是数据库未打开的错误，尝试重新打开
@@ -156,16 +153,62 @@ export async function fuzzySearchWordSets(query: string) {
     .filter((wordSet) => wordSet.name.includes(query))
     .toArray();
 }
-export async function fuzzySearchWords(query: string) {
+/**
+ * 模糊搜索单词（性能优化版本）
+ *
+ * 优化策略：
+ * 1. 限制返回结果数量（默认 50 个）
+ * 2. 支持按单词集搜索（如果指定 wordSetId）
+ * 3. 使用更高效的搜索方式
+ *
+ * @param query 搜索关键词
+ * @param wordSetId 可选的单词集ID，如果指定则只在该单词集内搜索
+ * @param limit 返回结果的最大数量，默认 50
+ * @returns 匹配的单词列表
+ */
+export async function fuzzySearchWords(
+  query: string,
+  wordSetId?: number,
+  limit: number = 50
+): Promise<Word[]> {
   await ensureDBOpen();
-  return await db.words
-    .filter(
-      (word) =>
-        word.kana.includes(query) ||
-        word.kanji?.includes(query) ||
-        word.meaning.includes(query)
-    )
-    .toArray();
+
+  if (!query || query.trim() === "") {
+    return [];
+  }
+
+  const trimmedQuery = query.trim().toLowerCase();
+  const results: Word[] = [];
+
+  // 如果指定了单词集，先按单词集筛选，再模糊搜索（性能优化）
+  if (wordSetId !== undefined) {
+    const words = await db.words
+      .where("setId")
+      .equals(wordSetId)
+      .filter(
+        (word) =>
+          word.kana.toLowerCase().includes(trimmedQuery) ||
+          word.kanji?.toLowerCase().includes(trimmedQuery) ||
+          word.meaning.toLowerCase().includes(trimmedQuery)
+      )
+      .limit(limit)
+      .toArray();
+    results.push(...words);
+  } else {
+    // 全表搜索，但限制结果数量（性能优化）
+    const words = await db.words
+      .filter(
+        (word) =>
+          word.kana.toLowerCase().includes(trimmedQuery) ||
+          word.kanji?.toLowerCase().includes(trimmedQuery) ||
+          word.meaning.toLowerCase().includes(trimmedQuery)
+      )
+      .limit(limit)
+      .toArray();
+    results.push(...words);
+  }
+
+  return results;
 }
 
 export async function getWordSet(id: number) {
@@ -197,60 +240,75 @@ export async function ensureUserSettingsRecord(): Promise<UserSettings> {
   return settings as UserSettings;
 }
 
+/**
+ * 保存闪卡会话状态（兼容层）
+ * v6 优化：内部使用新的 sessionStore API，不再更新 userSettings
+ */
 export async function saveFlashcardSessionState(
   state: Omit<FlashcardSessionState, "savedAt"> & { savedAt?: string }
 ): Promise<void> {
-  await ensureDBOpen();
-  const now = new Date().toISOString();
-  const settings = await ensureUserSettingsRecord();
-  const payload: FlashcardSessionState = {
-    ...state,
-    savedAt: state.savedAt ?? now,
+  // 导入 sessionStore（避免循环依赖）
+  const { saveFlashcardSession } = await import("./sessionStore");
+
+  // 转换为新表结构
+  const session: Omit<
+    import("../db").FlashcardSession,
+    "id" | "userId" | "createdAt" | "updatedAt"
+  > = {
+    wordSetId: state.wordSetId,
+    wordIds: state.wordIds,
+    currentIndex: state.currentIndex,
+    sessionStats: state.sessionStats,
+    showAnswer: state.showAnswer,
+    currentWordId: state.currentWordId,
+    savedAt: state.savedAt || new Date().toISOString(),
   };
 
-  await db.userSettings.put({
-    ...settings,
-    flashcardSessionState: payload,
-    updatedAt: now,
-  });
+  await saveFlashcardSession(session);
 }
 
 /**
- * 获取闪卡会话状态
+ * 获取闪卡会话状态（兼容层）
+ * v6 优化：内部使用新的 sessionStore API，不再从 userSettings 读取
  * 会话状态记录了闪卡会话的进度，包括当前单词索引，单词ID列表，会话统计等信息
  * @returns 闪卡会话状态
  */
 export async function getFlashcardSessionState(): Promise<FlashcardSessionState | null> {
-  await ensureDBOpen();
-  const settings = await db.userSettings.get(1);
-  if (!settings || !settings.flashcardSessionState) {
+  // 导入 sessionStore（避免循环依赖）
+  const { getFlashcardSession } = await import("./sessionStore");
+
+  const session = await getFlashcardSession();
+  if (!session) {
     return null;
   }
 
-  const state = settings.flashcardSessionState;
+  // 转换为旧接口格式
+  const state: FlashcardSessionState = {
+    wordSetId: session.wordSetId,
+    wordIds: session.wordIds,
+    currentIndex: session.currentIndex,
+    sessionStats: session.sessionStats,
+    showAnswer: session.showAnswer,
+    currentWordId: session.currentWordId,
+    savedAt: session.savedAt,
+  };
+
   if (!Array.isArray(state.wordIds) || state.wordIds.length === 0) {
     return null;
   }
-  console.log("getFlashcardSessionState", state);
 
+  console.log("getFlashcardSessionState", state);
   return state;
 }
 
+/**
+ * 清除闪卡会话状态（兼容层）
+ * v6 优化：内部使用新的 sessionStore API，不再更新 userSettings
+ */
 export async function clearFlashcardSessionState(): Promise<void> {
-  await ensureDBOpen();
-  const settings = await db.userSettings.get(1);
-  if (!settings || !settings.flashcardSessionState) {
-    return;
-  }
-
-  const now = new Date().toISOString();
-  const updatedSettings = {
-    ...settings,
-    flashcardSessionState: null,
-    updatedAt: now,
-  };
-
-  await db.userSettings.put(updatedSettings);
+  // 导入 sessionStore（避免循环依赖）
+  const { clearFlashcardSession } = await import("./sessionStore");
+  await clearFlashcardSession();
 }
 
 export async function getUserSettings(): Promise<UserSettings> {
@@ -414,8 +472,18 @@ export async function updateWord(word: Word) {
   return await db.words.put(word);
 }
 
-// 删除单词集
-export async function deleteWordSet(id: number) {
+/**
+ * 删除单词集（带级联删除和数据迁移）
+ *
+ * 删除单词集时：
+ * 1. 将该词集下的单词移动到默认单词集
+ * 2. 更新 wordProgress.setId（保持数据一致性）
+ * 3. 删除对应的 reviewPlans 记录
+ *
+ * @param id 单词集ID
+ * @returns 是否删除成功
+ */
+export async function deleteWordSet(id: number): Promise<boolean> {
   try {
     await ensureDBOpen();
     // 不允许删除默认单词集（ID 为 0）
@@ -423,26 +491,103 @@ export async function deleteWordSet(id: number) {
       throw new Error("Cannot delete the default word set");
     }
 
-    // 将该词集下的单词对应的setId设置为默认单词集ID
-    const words = await db.words.where("setId").equals(id).toArray();
-    for (const word of words) {
-      word.setId = DEFAULT_WORD_SET_ID;
-      await db.words.put(word);
-    }
-    return await db.wordSets.delete(id);
+    // 使用事务确保数据一致性
+    await db.transaction(
+      "rw",
+      db.wordSets,
+      db.words,
+      db.wordProgress,
+      db.reviewPlans,
+      async () => {
+        // 1. 将该词集下的单词移动到默认单词集
+        const words = await db.words.where("setId").equals(id).toArray();
+        const wordIds = words.map((word) => word.id);
+
+        // 批量更新单词的 setId
+        if (words.length > 0) {
+          const updatedWords = words.map((word) => ({
+            ...word,
+            setId: DEFAULT_WORD_SET_ID,
+            updatedAt: new Date().toISOString(),
+          }));
+          await db.words.bulkPut(updatedWords);
+        }
+
+        // 2. 更新 wordProgress.setId（保持冗余字段一致性）
+        if (wordIds.length > 0) {
+          const progresses = await db.wordProgress
+            .where("wordId")
+            .anyOf(wordIds)
+            .toArray();
+
+          if (progresses.length > 0) {
+            const updatedProgresses = progresses.map((progress) => ({
+              ...progress,
+              setId: DEFAULT_WORD_SET_ID,
+              updatedAt: new Date().toISOString(),
+            }));
+            await db.wordProgress.bulkPut(updatedProgresses);
+          }
+        }
+
+        // 3. 删除对应的 reviewPlans 记录（级联删除）
+        await db.reviewPlans.where("wordSetId").equals(id).delete();
+
+        // 4. 删除单词集
+        await db.wordSets.delete(id);
+      }
+    );
+
+    return true;
   } catch (error) {
-    console.error(error);
+    console.error("删除单词集失败:", error);
     return false;
   }
 }
 
-// 删除单词
-export async function deleteWord(id: number) {
+/**
+ * 删除单词（带级联删除）
+ *
+ * 删除单词时，同时删除：
+ * 1. wordProgress 记录
+ * 2. reviewLogs 记录
+ *
+ * @param id 单词ID
+ * @returns 是否删除成功
+ */
+export async function deleteWord(id: number): Promise<boolean> {
   try {
     await ensureDBOpen();
-    return await db.words.delete(id);
+
+    // 使用事务确保数据一致性
+    await db.transaction(
+      "rw",
+      db.words,
+      db.wordProgress,
+      db.reviewLogs,
+      async () => {
+        // 删除单词进度记录
+        await db.wordProgress.delete(id);
+
+        // 删除复习日志记录（批量删除）
+        const logs = await db.reviewLogs.where("wordId").equals(id).toArray();
+        if (logs.length > 0) {
+          const logIds = logs
+            .map((log) => log.id)
+            .filter((id): id is number => id !== undefined);
+          if (logIds.length > 0) {
+            await db.reviewLogs.bulkDelete(logIds);
+          }
+        }
+
+        // 删除单词
+        await db.words.delete(id);
+      }
+    );
+
+    return true;
   } catch (error) {
-    console.error(error);
+    console.error("删除单词失败:", error);
     return false;
   }
 }

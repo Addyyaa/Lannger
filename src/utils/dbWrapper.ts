@@ -3,7 +3,13 @@
  * 提供安全的数据库操作包装，自动处理错误和重试
  */
 
-import { handleError, createAppError, ErrorType } from "./errorHandler";
+import {
+  handleError,
+  createAppError,
+  ErrorType,
+  ErrorSeverity,
+  ErrorCategory,
+} from "./errorHandler";
 
 /**
  * 数据库操作选项
@@ -50,6 +56,7 @@ export async function safeDbOperation<T>(
 
       // 如果是最后一次尝试，处理错误
       if (attempts > retries) {
+        // 异步处理错误，不阻塞
         handleError(
           error,
           {
@@ -58,8 +65,10 @@ export async function safeDbOperation<T>(
             attempts,
             retries,
           },
-          !silent
-        );
+          { showUserMessage: !silent }
+        ).catch((err) => {
+          console.error("handleError failed:", err);
+        });
 
         // 如果有默认值，返回默认值
         if (fallback !== undefined) {
@@ -70,11 +79,15 @@ export async function safeDbOperation<T>(
         throw createAppError(
           error instanceof Error ? error.message : String(error),
           ErrorType.DATABASE,
-          "数据库操作失败，请重试",
           {
-            ...context,
-            originalError: error,
-            attempts,
+            userMessage: "数据库操作失败，请重试",
+            context: {
+              ...context,
+              originalError: error,
+              attempts,
+            },
+            severity: ErrorSeverity.HIGH,
+            category: ErrorCategory.DATABASE,
           }
         );
       }
@@ -106,10 +119,12 @@ export async function safeBatchDbOperation<T>(
     if (result.status === "fulfilled") {
       return { success: true, result: result.value };
     } else {
-      const error = result.reason instanceof Error
-        ? result.reason
-        : new Error(String(result.reason));
-      
+      const error =
+        result.reason instanceof Error
+          ? result.reason
+          : new Error(String(result.reason));
+
+      // 异步处理错误，不阻塞
       handleError(
         error,
         {
@@ -117,8 +132,10 @@ export async function safeBatchDbOperation<T>(
           operation: "safeBatchDbOperation",
           operationIndex: index,
         },
-        !options.silent
-      );
+        { showUserMessage: !options.silent }
+      ).catch((err) => {
+        console.error("handleError failed:", err);
+      });
 
       return { success: false, error };
     }
@@ -148,4 +165,3 @@ export async function safeTransaction<T>(
     }
   );
 }
-

@@ -14,6 +14,7 @@ import AddWordSets from "../components/AddWordSets";
 import ImportDialog from "../components/ImportDialog";
 import ConfirmWidget from "../components/ConfirmWidget";
 import RestoreData from "../components/RestoreData";
+import { handleManagementTitleClick } from "../utils/errorMonitorToggle";
 
 export interface ManageState {
   popup: Action["type"];
@@ -295,7 +296,35 @@ export default function Manage() {
           style={senction1Style}
           data-testid="word-sets-manage-section"
         >
-          <h1 data-test-id="h1-test" style={titleStyle}>
+          <h1
+            data-test-id="h1-test"
+            style={{
+              ...titleStyle,
+              cursor:
+                process.env.NODE_ENV === "development" ? "pointer" : "default",
+              userSelect: "none",
+              WebkitUserSelect: "none",
+              MozUserSelect: "none",
+              msUserSelect: "none",
+            }}
+            onClick={(e) => {
+              if (process.env.NODE_ENV === "development") {
+                e.preventDefault();
+                e.stopPropagation();
+                handleManagementTitleClick();
+              }
+            }}
+            onMouseDown={(e) => {
+              if (process.env.NODE_ENV === "development") {
+                e.preventDefault();
+              }
+            }}
+            onDragStart={(e) => {
+              if (process.env.NODE_ENV === "development") {
+                e.preventDefault();
+              }
+            }}
+          >
             {t("manage")}
           </h1>
 

@@ -4,6 +4,7 @@ import {
   createAppError,
   ErrorType,
   ErrorSeverity,
+  ErrorCategory,
 } from "../utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
@@ -49,22 +50,26 @@ export default class ErrorBoundary extends Component<
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
     // 记录错误（注意：这里无法使用 useTranslation，因为这是类组件）
     // 错误消息会在 DefaultErrorPage 中通过 t() 函数显示
+    // 注意：这里无法使用 useTranslation，因为这是类组件
+    // 错误消息会在 DefaultErrorPage 中通过 t() 函数显示
+    // 这里使用一个通用的英文消息，实际显示时会通过 i18n 翻译
     handleError(
-      createAppError(
-        error.message,
-        ErrorType.UNKNOWN,
-        "Application error occurred, please refresh the page and try again",
-        {
+      createAppError(error.message, ErrorType.UNKNOWN, {
+        userMessage:
+          "Application error occurred, please refresh the page and try again",
+        context: {
           severity: ErrorSeverity.CRITICAL,
           componentStack: errorInfo.componentStack,
           errorBoundary: true,
-        }
-      ),
+        },
+        severity: ErrorSeverity.CRITICAL,
+        category: ErrorCategory.UNKNOWN,
+      }),
       {
         errorBoundary: true,
         componentStack: errorInfo.componentStack,
       },
-      false // 错误边界不显示额外的用户提示
+      { showUserMessage: false } // 错误边界不显示额外的用户提示
     );
 
     // 调用自定义错误处理回调

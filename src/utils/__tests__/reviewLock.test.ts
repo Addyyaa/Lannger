@@ -15,21 +15,13 @@ import { createWordSet } from "../../store/wordStore";
 describe("reviewLock", () => {
   beforeEach(async () => {
     await ensureDBOpen();
-    // 清理锁定状态
-    const settings = await db.userSettings.get(1);
-    if (settings) {
-      settings.activeReviewLock = null;
-      await db.userSettings.put(settings);
-    }
+    // v6 优化：清理锁定状态（从 reviewLocks 表删除）
+    await db.reviewLocks.where("userId").equals(1).delete();
   });
 
   afterEach(async () => {
-    // 清理锁定状态
-    const settings = await db.userSettings.get(1);
-    if (settings) {
-      settings.activeReviewLock = null;
-      await db.userSettings.put(settings);
-    }
+    // v6 优化：清理锁定状态（从 reviewLocks 表删除）
+    await db.reviewLocks.where("userId").equals(1).delete();
   });
 
   describe("getReviewLock", () => {
@@ -127,4 +119,3 @@ describe("reviewLock", () => {
     });
   });
 });
-

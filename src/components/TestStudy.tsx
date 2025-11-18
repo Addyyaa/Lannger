@@ -12,8 +12,13 @@ import * as dbOperator from "../store/wordStore";
 import { scheduleTestWords } from "../algorithm";
 import { updateWordProgress } from "../algorithm";
 import CloseButton from "./CloseButton";
-import { handleError } from "../utils/errorHandler";
+import { handleError, handleErrorSync } from "../utils/errorHandler";
 import { performanceMonitor } from "../utils/performanceMonitor";
+import {
+  getThemeTokens,
+  getContainerStyle,
+  getCardStyle,
+} from "../utils/themeTokens";
 
 interface TestStudyProps {
   closePopup: () => void;
@@ -139,7 +144,7 @@ export default function TestStudy({
 
         return shuffled;
       } catch (error) {
-        handleError(error, { operation: "generateOptions" });
+        handleErrorSync(error, { operation: "generateOptions" });
         return [{ word: correctWord, isCorrect: true }];
       }
     },
@@ -171,7 +176,7 @@ export default function TestStudy({
 
       if (result.wordIds.length === 0) {
         handleError(
-          new Error("没有可测试的单词"),
+          new Error(t("noWordsToTest") || "没有可测试的单词"),
           { operation: "loadTestWords", wordSetId },
           true
         );
@@ -195,7 +200,7 @@ export default function TestStudy({
         sessionCompleteCalledRef.current = false;
       }
     } catch (error) {
-      handleError(error, { operation: "loadTestWords" });
+      handleErrorSync(error, { operation: "loadTestWords" });
     } finally {
       setLoading(false);
     }
@@ -251,7 +256,7 @@ export default function TestStudy({
       const generatedOptions = await generateOptions(word, allWords);
       setOptions(generatedOptions);
     } catch (error) {
-      handleError(error, { operation: "loadCurrentQuestion" });
+      handleErrorSync(error, { operation: "loadCurrentQuestion" });
     }
   }, [currentIndex, wordIds, wordSetId, generateOptions]);
 
@@ -315,7 +320,7 @@ export default function TestStudy({
           {
             wordId: currentWord.id,
             question,
-            userAnswer: "超时",
+            userAnswer: t("timeout") || "超时",
             correctAnswer,
             questionMode,
           },
@@ -487,74 +492,16 @@ export default function TestStudy({
     }
   }, [testComplete, sessionStats, onSessionComplete]);
 
-  // 样式定义（与 FlashcardStudy 保持一致）
-  const themeTokens = useMemo(() => {
-    if (isDark) {
-      return {
-        containerGradient:
-          "linear-gradient(135deg, rgba(28, 28, 30, 0.96) 0%, rgba(44, 44, 46, 0.92) 100%)",
-        containerBorderColor: "rgba(118, 118, 128, 0.35)",
-        containerShadowPortrait: "0 4vw 8vw rgba(0, 0, 0, 0.55)",
-        containerShadowLandscape: "0 1.5vw 3vw rgba(0, 0, 0, 0.55)",
-        cardSurface:
-          "linear-gradient(160deg, rgba(50, 50, 52, 0.7) 0%, rgba(30, 30, 32, 0.5) 100%)",
-        cardBorderColor: "rgba(255, 255, 255, 0.08)",
-        cardShadowPortrait: "0 2.5vw 6vw rgba(0, 0, 0, 0.45)",
-        cardShadowLandscape: "0 1vw 2.5vw rgba(0, 0, 0, 0.45)",
-      };
-    }
-    return {
-      containerGradient:
-        "linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 246, 255, 0.92) 100%)",
-      containerBorderColor: "rgba(141, 153, 174, 0.25)",
-      containerShadowPortrait: "0 4vw 8vw rgba(15, 23, 42, 0.15)",
-      containerShadowLandscape: "0 1.5vw 3vw rgba(15, 23, 42, 0.12)",
-      cardSurface:
-        "linear-gradient(160deg, rgba(255, 255, 255, 0.88) 0%, rgba(235, 242, 255, 0.6) 100%)",
-      cardBorderColor: "rgba(120, 144, 156, 0.16)",
-      cardShadowPortrait: "0 2.5vw 6vw rgba(15, 23, 42, 0.12)",
-      cardShadowLandscape: "0 1vw 2.5vw rgba(15, 23, 42, 0.1)",
-    };
-  }, [isDark]);
+  // 使用共享主题令牌（与 FlashcardStudy 和 ReviewStudy 保持一致）
+  const themeTokens = useMemo(() => getThemeTokens(isDark), [isDark]);
 
   const containerStyle: React.CSSProperties = useMemo(
-    () => ({
-      position: "fixed",
-      top: 0,
-      left: 0,
-      width: "100vw",
-      height: "100vh",
-      background: themeTokens.containerGradient,
-      display: "flex",
-      flexDirection: "column",
-      alignItems: "center",
-      justifyContent: "center",
-      padding: isPortrait ? "5vw" : "2vw",
-      boxSizing: "border-box",
-    }),
-    [themeTokens.containerGradient, isPortrait]
+    () => getContainerStyle(themeTokens, isPortrait),
+    [themeTokens, isPortrait]
   );
 
   const cardStyle: React.CSSProperties = useMemo(
-    () => ({
-      background: themeTokens.cardSurface,
-      borderRadius: isPortrait ? "4vw" : "1.5vw",
-      padding: isPortrait ? "8vw" : "3vw",
-      maxWidth: isPortrait ? "90%" : "700px",
-      width: "100%",
-      boxShadow: isPortrait
-        ? themeTokens.cardShadowPortrait
-        : themeTokens.cardShadowLandscape,
-      border: `${isPortrait ? "0.3vw" : "0.1vw"} solid ${
-        themeTokens.cardBorderColor
-      }`,
-      position: "relative",
-      minHeight: isPortrait ? "60vh" : "400px",
-      display: "flex",
-      flexDirection: "column",
-      justifyContent: "center",
-      alignItems: "center",
-    }),
+    () => getCardStyle(themeTokens, isPortrait),
     [themeTokens, isPortrait]
   );
 
