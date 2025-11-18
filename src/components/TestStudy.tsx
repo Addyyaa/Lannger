@@ -154,9 +154,17 @@ export default function TestStudy({
       setLoading(true);
       const endMeasure = performanceMonitor.start("loadTestWords");
 
+      // 根据掌握程度自动决定测试的单词和数量
+      // 优先测试掌握程度中等的单词（0.2-0.8），这些单词最需要巩固
+      // 也包含一些掌握程度低的单词（0-0.3），需要加强练习
+      // 排除掌握程度很高的单词（> 0.9），除非单词数量不足
+      // limit 不指定，让调度器根据掌握程度自动计算合适的数量
       const result = await scheduleTestWords({
         wordSetId,
-        limit: 30, // 默认30题
+        // limit 不指定，根据掌握程度自动计算（10-50题之间动态调整）
+        masteryRange: [0, 0.95], // 允许测试掌握程度在 0-0.95 之间的单词
+        excludeTooEasy: true, // 排除太简单的单词（掌握程度 > 0.9 且见过多次）
+        excludeTooHard: false, // 不排除太难的单词，让用户有机会练习
       });
 
       endMeasure({ wordSetId, count: result.wordIds.length });

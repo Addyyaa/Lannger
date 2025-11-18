@@ -253,14 +253,52 @@ export function calculateWordWeight(
       reasons.push("复习模式：掌握度较低");
     }
   } else if (mode === "test") {
-    // 测试模式：优先测试难度高的和掌握程度中等的
+    // 测试模式：根据掌握程度智能选择
+    // 优先测试掌握程度中等的单词（0.2-0.8），这些单词最需要巩固
+    if (mastery >= 0.2 && mastery <= 0.8) {
+      // 掌握程度越接近 0.5（中等），权重越高
+      const distanceFromMiddle = Math.abs(mastery - 0.5);
+      const middleWeight = (1 - distanceFromMiddle * 2) * 0.2; // 0.5 时权重最高
+      weight += middleWeight;
+      reasons.push(
+        `测试模式：中等掌握程度 (${mastery.toFixed(
+          2
+        )}, 权重: ${middleWeight.toFixed(2)})`
+      );
+    }
+
+    // 掌握程度低的单词（0-0.3）也需要加强练习
+    if (mastery < 0.3) {
+      const lowMasteryWeight = (0.3 - mastery) * 0.3; // 掌握程度越低，权重越高
+      weight += lowMasteryWeight;
+      reasons.push(
+        `测试模式：掌握程度低 (${mastery.toFixed(
+          2
+        )}, 权重: ${lowMasteryWeight.toFixed(2)})`
+      );
+    }
+
+    // 掌握程度较高的单词（0.7-0.9）也需要偶尔测试，但权重较低
+    if (mastery >= 0.7 && mastery <= 0.9) {
+      const highMasteryWeight = (0.9 - mastery) * 0.1; // 掌握程度越高，权重越低
+      weight += highMasteryWeight;
+      reasons.push(
+        `测试模式：掌握程度较高 (${mastery.toFixed(
+          2
+        )}, 权重: ${highMasteryWeight.toFixed(2)})`
+      );
+    }
+
+    // 高难度单词额外加权
     if (progress.difficulty && progress.difficulty >= 4) {
       weight += 0.1;
       reasons.push("测试模式：高难度");
     }
-    if (mastery >= 0.3 && mastery <= 0.7) {
-      weight += 0.1;
-      reasons.push("测试模式：中等掌握程度");
+
+    // 连续答错的单词需要重点关注
+    if (progress.wrongStreak >= 2) {
+      weight += 0.15;
+      reasons.push(`测试模式：连续答错 ${progress.wrongStreak} 次`);
     }
   }
 

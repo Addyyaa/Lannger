@@ -1,5 +1,10 @@
 import React, { Component, ErrorInfo, ReactNode } from "react";
-import { handleError, createAppError, ErrorType, ErrorSeverity } from "../utils/errorHandler";
+import {
+  handleError,
+  createAppError,
+  ErrorType,
+  ErrorSeverity,
+} from "../utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 
@@ -42,12 +47,13 @@ export default class ErrorBoundary extends Component<
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    // 记录错误
+    // 记录错误（注意：这里无法使用 useTranslation，因为这是类组件）
+    // 错误消息会在 DefaultErrorPage 中通过 t() 函数显示
     handleError(
       createAppError(
         error.message,
         ErrorType.UNKNOWN,
-        "应用发生错误，请刷新页面重试",
+        "Application error occurred, please refresh the page and try again",
         {
           severity: ErrorSeverity.CRITICAL,
           componentStack: errorInfo.componentStack,
@@ -88,7 +94,9 @@ export default class ErrorBoundary extends Component<
       }
 
       // 否则使用默认错误页面
-      return <DefaultErrorPage error={this.state.error} onReset={this.handleReset} />;
+      return (
+        <DefaultErrorPage error={this.state.error} onReset={this.handleReset} />
+      );
     }
 
     return this.props.children;
@@ -190,15 +198,15 @@ function DefaultErrorPage({
         {process.env.NODE_ENV === "development" && error && (
           <details style={errorDetailStyle}>
             <summary style={{ cursor: "pointer", marginBottom: "1vw" }}>
-              错误详情（开发模式）
+              {t("errorDetails") || "错误详情（开发模式）"}
             </summary>
             <div>
-              <strong>错误信息：</strong>
+              <strong>{t("errorMessage") || "错误信息"}：</strong>
               {error.message}
             </div>
             {error.stack && (
               <div style={{ marginTop: "1vw" }}>
-                <strong>堆栈跟踪：</strong>
+                <strong>{t("stackTrace") || "堆栈跟踪"}：</strong>
                 <pre style={{ whiteSpace: "pre-wrap", margin: "1vw 0" }}>
                   {error.stack}
                 </pre>
@@ -228,4 +236,3 @@ function DefaultErrorPage({
     </div>
   );
 }
-

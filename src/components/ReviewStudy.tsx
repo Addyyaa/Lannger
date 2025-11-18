@@ -145,6 +145,12 @@ export default function ReviewStudy({
     null
   );
 
+  // 是否全部掌握（用于显示选择按钮：重新复习 vs 进入下一阶段）
+  const [allMastered, setAllMastered] = useState(false);
+
+  // 标记是否正在重新复习（防止 useEffect 重复调用 loadWords）
+  const isRestartingRef = useRef(false);
+
   /**
    * 加载复习单词列表
    */
@@ -175,6 +181,8 @@ export default function ReviewStudy({
       setCurrentIndex(0);
       // 重置复习结果跟踪
       reviewResultsRef.current.clear();
+      // 重置全部掌握状态
+      setAllMastered(false);
 
       // 查找对应的复习计划（如果有多个，找到包含当前单词的复习计划）
       if (wordSetId !== undefined) {
@@ -264,38 +272,168 @@ export default function ReviewStudy({
   };
 
   /**
-   * 处理复习完成
+   * 获取当前复习阶段对应的所有单词ID
    */
-  const handleReviewComplete = async () => {
-    try {
-      // 检查是否所有单词都已掌握
-      const { allMastered, unmasteredWordIds } = await checkAllWordsMastered();
+  const getCurrentStageWords = async (): Promise<number[]> => {
+    if (wordSetId === undefined) {
+      console.warn("getCurrentStageWords: wordSetId 未定义");
+      return [];
+    }
 
-      if (!allMastered) {
-        // 未全部掌握，继续复习未掌握的单词
-        setWordIds(unmasteredWordIds);
-        setCurrentIndex(0);
-        // 显示提示信息
-        const message = t("reviewNotAllMastered", {
-          count: unmasteredWordIds.length,
-        });
-        setNotificationMessage(message);
-        console.log(message);
-        // 3秒后自动隐藏提示
-        setTimeout(() => {
-          setNotificationMessage(null);
-        }, 3000);
+    const { db } = await import("../db");
+
+    // 获取当前复习计划
+    let plan: import("../db").ReviewPlan | undefined;
+    if (currentReviewPlanIdRef.current !== undefined) {
+      plan = await db.reviewPlans.get(currentReviewPlanIdRef.current);
+      console.log(
+        "getCurrentStageWords: 使用当前计划ID",
+        currentReviewPlanIdRef.current,
+        plan
+      );
+    } else {
+      // 如果没有当前计划ID，尝试查找
+      const allPlans = await db.reviewPlans
+        .where("wordSetId")
+        .equals(wordSetId)
+        .toArray();
+
+      console.log("getCurrentStageWords: 查找所有计划", {
+        wordSetId,
+        currentReviewStage,
+        allPlansCount: allPlans.length,
+        allPlans: allPlans.map((p) => ({
+          id: p.id,
+          reviewStage: p.reviewStage,
+          learnedWordIdsCount: p.learnedWordIds?.length || 0,
+        })),
+      });
+
+      // 找到当前阶段的计划
+      plan = allPlans.find((p) => p.reviewStage === currentReviewStage);
+      if (!plan && allPlans.length > 0) {
+        plan = allPlans[0];
+        console.log(
+          "getCurrentStageWords: 未找到当前阶段的计划，使用第一个计划",
+          plan
+        );
+      }
+    }
+
+    if (plan?.learnedWordIds && plan.learnedWordIds.length > 0) {
+      // 如果有 learnedWordIds，使用它
+      console.log(
+        "getCurrentStageWords: 使用 learnedWordIds",
+        plan.learnedWordIds
+      );
+      return plan.learnedWordIds;
+    } else {
+      // 否则，使用单词集的所有单词
+      const words = await db.words.where("setId").equals(wordSetId).toArray();
+      const wordIds = words.map((w) => w.id);
+      console.log("getCurrentStageWords: 使用单词集的所有单词", {
+        wordSetId,
+        wordsCount: words.length,
+        wordIds,
+      });
+      return wordIds;
+    }
+  };
+
+  /**
+   * 重新复习当前阶段
+   */
+  const handleRestartCurrentStage = async () => {
+    if (wordSetId === undefined) {
+      return;
+    }
+
+    // 确认对话框
+    const confirmed = window.confirm(
+      t("confirmRestartReview", {
+        stage: currentReviewStage,
+      })
+    );
+
+    if (!confirmed) {
+      return;
+    }
+
+    try {
+      // 设置重新复习标记，防止 useEffect 重复调用 loadWords
+      isRestartingRef.current = true;
+
+      // 获取当前阶段的所有单词
+      const wordIds = await getCurrentStageWords();
+
+      console.log("重新复习：获取到的单词ID列表", wordIds);
+
+      if (wordIds.length === 0) {
+        isRestartingRef.current = false; // 重置标记
+        handleError(
+          new Error("当前阶段没有单词"),
+          { operation: "restartCurrentStage" },
+          true
+        );
         return;
       }
 
-      // 全部掌握，显示成功提示
-      const successMessage = t("reviewAllMastered");
-      setNotificationMessage(successMessage);
+      // 重置复习状态
+      setLoading(true); // 先设置加载状态
+      setAllMastered(false); // 先重置全部掌握状态，隐藏选择按钮
+      setWordIds(wordIds);
+      setCurrentIndex(0);
+      reviewResultsRef.current.clear();
+      setSessionStats(createInitialStats());
+      setShowAnswer(false);
+
+      // 确保加载第一个单词
+      if (wordIds.length > 0) {
+        const wordId = wordIds[0];
+        const word = await dbOperator.getWord(wordId);
+        console.log("重新复习：加载第一个单词", word);
+        setCurrentWord(word || null);
+        setShowAnswer(false);
+        startTimeRef.current = Date.now();
+      }
+
+      // 重新设置复习锁定（确保锁定状态正确）
+      if (wordSetId !== undefined) {
+        await setReviewLock(wordSetId, currentReviewStage);
+      }
+
+      // 设置加载完成
+      setLoading(false);
+
+      console.log("重新复习：状态重置完成", {
+        wordIdsCount: wordIds.length,
+        currentIndex: 0,
+        allMastered: false,
+        loading: false,
+      });
+
+      // 显示提示
+      const message = t("restartReviewStarted", { count: wordIds.length });
+      setNotificationMessage(message);
       setTimeout(() => {
         setNotificationMessage(null);
-      }, 2000);
+      }, 3000);
+    } catch (error) {
+      console.error("重新复习失败:", error);
+      isRestartingRef.current = false; // 重置标记
+      handleError(error, { operation: "restartCurrentStage" });
+      // 确保即使出错也重置加载状态
+      setLoading(false);
+      setAllMastered(false);
+    }
+  };
 
-      // 全部掌握，才完成当前复习阶段并推进到下一阶段
+  /**
+   * 继续到下一阶段
+   */
+  const handleContinueToNextStage = async () => {
+    try {
+      // 完成当前复习阶段并推进到下一阶段
       if (wordSetId !== undefined) {
         await completeReviewStage(
           wordSetId,
@@ -313,6 +451,45 @@ export default function ReviewStudy({
       }
 
       closePopup();
+    } catch (error) {
+      handleError(error, { operation: "handleContinueToNextStage" });
+    }
+  };
+
+  /**
+   * 处理复习完成
+   */
+  const handleReviewComplete = async () => {
+    try {
+      // 检查是否所有单词都已掌握
+      const { allMastered: isAllMastered, unmasteredWordIds } =
+        await checkAllWordsMastered();
+
+      if (!isAllMastered) {
+        // 未全部掌握，继续复习未掌握的单词
+        setWordIds(unmasteredWordIds);
+        setCurrentIndex(0);
+        setAllMastered(false);
+        // 显示提示信息
+        const message = t("reviewNotAllMastered", {
+          count: unmasteredWordIds.length,
+        });
+        setNotificationMessage(message);
+        console.log(message);
+        // 3秒后自动隐藏提示
+        setTimeout(() => {
+          setNotificationMessage(null);
+        }, 3000);
+        return;
+      }
+
+      // 全部掌握，显示成功提示并显示选择按钮
+      setAllMastered(true);
+      const successMessage = t("reviewAllMastered");
+      setNotificationMessage(successMessage);
+      setTimeout(() => {
+        setNotificationMessage(null);
+      }, 2000);
     } catch (error) {
       handleError(error, { operation: "handleReviewComplete" });
     }
@@ -396,6 +573,11 @@ export default function ReviewStudy({
    * 初始化加载
    */
   useEffect(() => {
+    // 如果正在重新复习，不调用 loadWords（避免重复加载）
+    if (isRestartingRef.current) {
+      isRestartingRef.current = false; // 重置标记
+      return;
+    }
     loadWords();
   }, [loadWords]);
 
@@ -517,6 +699,100 @@ export default function ReviewStudy({
           </div>
         )}
 
+        {/* 全部掌握后的选择按钮 */}
+        {allMastered && (
+          <div
+            style={{
+              position: "absolute",
+              top: "50%",
+              left: "50%",
+              transform: "translate(-50%, -50%)",
+              zIndex: 2000,
+              background: isDark
+                ? "rgba(45, 45, 45, 0.95)"
+                : "rgba(255, 255, 255, 0.95)",
+              borderRadius: isPortrait ? "3vw" : "1vw",
+              padding: isPortrait ? "5vw" : "2vw",
+              boxShadow: isDark
+                ? "0 2vw 8vw rgba(0, 0, 0, 0.5)"
+                : "0 1vw 4vw rgba(0, 0, 0, 0.1)",
+              border: isDark ? "0.3vw solid #444" : "0.1vw solid #e0e0e0",
+              minWidth: isPortrait ? "70%" : "400px",
+              textAlign: "center",
+            }}
+          >
+            <div
+              style={{
+                fontSize: isPortrait ? "4vw" : "1.2vw",
+                color: isDark ? "#fff" : "#333",
+                marginBottom: isPortrait ? "4vw" : "1.5vw",
+                fontWeight: "500",
+              }}
+            >
+              {t("reviewAllMastered")}
+            </div>
+            <div
+              style={{
+                display: "flex",
+                gap: isPortrait ? "3vw" : "1.5vw",
+                justifyContent: "center",
+                flexDirection: isPortrait ? "column" : "row",
+              }}
+            >
+              <button
+                onClick={handleRestartCurrentStage}
+                style={{
+                  padding: isPortrait ? "3vw 6vw" : "1vw 2vw",
+                  fontSize: isPortrait ? "3.5vw" : "1vw",
+                  backgroundColor: "#00b4ff",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: isPortrait ? "2vw" : "0.5vw",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                  transition: "all 0.3s ease",
+                  flex: isPortrait ? "1" : "0 0 auto",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#0096d4";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#00b4ff";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                {t("restartCurrentStage")}
+              </button>
+              <button
+                onClick={handleContinueToNextStage}
+                style={{
+                  padding: isPortrait ? "3vw 6vw" : "1vw 2vw",
+                  fontSize: isPortrait ? "3.5vw" : "1vw",
+                  backgroundColor: "#34c759",
+                  color: "#fff",
+                  border: "none",
+                  borderRadius: isPortrait ? "2vw" : "0.5vw",
+                  cursor: "pointer",
+                  fontWeight: "500",
+                  transition: "all 0.3s ease",
+                  flex: isPortrait ? "1" : "0 0 auto",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.backgroundColor = "#2fb04a";
+                  e.currentTarget.style.transform = "scale(1.05)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.backgroundColor = "#34c759";
+                  e.currentTarget.style.transform = "scale(1)";
+                }}
+              >
+                {t("continueToNextStage")}
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* 复习阶段显示 */}
         <div
           style={{
@@ -527,6 +803,7 @@ export default function ReviewStudy({
             color: "#00b4ff",
             fontWeight: "bold",
             transition: "margin-top 0.3s ease-out",
+            opacity: allMastered ? 0.3 : 1, // 全部掌握后降低不透明度
           }}
         >
           {getReviewStageDescription(currentReviewStage, t)}
@@ -825,7 +1102,7 @@ export default function ReviewStudy({
         {/* 操作按钮（与 FlashcardStudy 保持一致） */}
         <div
           style={{
-            display: "flex",
+            display: allMastered ? "none" : "flex", // 全部掌握后隐藏操作按钮
             position: "absolute",
             width: "100%",
             height: "auto",

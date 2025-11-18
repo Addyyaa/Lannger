@@ -187,6 +187,9 @@
   "retry": "Retry",
   "errorBoundaryMessage": "The app encountered an error. We've logged this issue. Please try refreshing the page.",
   "refreshPage": "Refresh Page",
+  "errorDetails": "Error Details (Development Mode)",
+  "errorMessage": "Error Message",
+  "stackTrace": "Stack Trace",
   "progress": "Progress",
   "selectMeaning": "Select the corresponding meaning",
   "totalQuestions": "Total Questions",
@@ -225,5 +228,9 @@
   "reviewStage8": "Review 8 (after 60 days)",
   "reviewStageUnknown": "Unknown stage",
   "reviewNotAllMastered": "{{count}} words not yet mastered, please continue reviewing",
-  "reviewAllMastered": "Congratulations! All words mastered, moving to next stage"
+  "reviewAllMastered": "Congratulations! All words mastered, moving to next stage",
+  "confirmRestartReview": "Are you sure you want to restart review stage {{stage}}? This will reload all words.",
+  "restartReviewStarted": "Restart review started, {{count}} words in total",
+  "restartCurrentStage": "Restart Current Stage",
+  "continueToNextStage": "Continue to Next Stage"
 }

@@ -183,6 +183,9 @@
   "buildTime": "构建时间 {{time}}",
   "errorBoundaryMessage": "应用遇到了一个错误。我们已经记录了这个问题，请尝试刷新页面。",
   "refreshPage": "刷新页面",
+  "errorDetails": "错误详情（开发模式）",
+  "errorMessage": "错误信息",
+  "stackTrace": "堆栈跟踪",
   "progress": "进度",
   "selectMeaning": "请选择对应的意思",
   "totalQuestions": "总题数",
@@ -225,5 +228,9 @@
   "reviewStage8": "第 8 次复习（60 天后）",
   "reviewStageUnknown": "未知阶段",
   "reviewNotAllMastered": "还有 {{count}} 个单词未掌握，请继续复习",
-  "reviewAllMastered": "恭喜！本次复习全部掌握，已进入下一阶段"
+  "reviewAllMastered": "恭喜！本次复习全部掌握，已进入下一阶段",
+  "confirmRestartReview": "确定要重新复习第 {{stage}} 次吗？这将重新加载所有单词。",
+  "restartReviewStarted": "已开始重新复习，共 {{count}} 个单词",
+  "restartCurrentStage": "重新复习当前阶段",
+  "continueToNextStage": "进入下一阶段"
 }
