@@ -16,9 +16,9 @@ export interface Word {
   type?: string; // 未设置时将使用默认值
   example?: string;
   review?: {
-    times: number;  // 已经复习的次数
-    nextReview?: string;  // 下次复习时间
-    difficulty?: number;  //难度系数
+    times: number; // 已经复习的次数
+    nextReview?: string; // 下次复习时间
+    difficulty?: number; //难度系数
   };
   mark?: string;
 }
@@ -66,7 +66,7 @@ export interface UserSettings {
   } | null;
 }
 
-// 每日统计（用于展示“今日已学习单词数”等，并支撑 Streak 计算）
+// 每日统计（用于展示"今日已学习单词数"等，并支撑 Streak 计算）
 export interface DailyStat {
   date: string; // YYYY-MM-DD
   learnedCount: number; // 当日新增学习（或完成学习）数量
@@ -74,6 +74,7 @@ export interface DailyStat {
   testedCount: number; // 当日测试数量
   correctCount: number; // 当日答对总数
   goal?: number; // 当日目标（冗余存储，便于历史回看）
+  learnedWordIds?: number[]; // 今日已学习的单词ID列表（用于去重，只统计首次掌握的单词）
   updatedAt?: string;
 }
 
@@ -141,6 +142,7 @@ export interface ReviewPlan {
   lastCompletedAt?: string; // 最后一次完成复习的时间（ISO）
   isCompleted: boolean; // 是否完成全部 8 次复习
   totalWords: number; // 该单词集的总单词数（冗余，便于统计）
+  learnedWordIds?: number[]; // 该复习计划对应的单词ID列表（用于区分不同的学习批次）
   createdAt?: string;
   updatedAt?: string;
 }
@@ -166,7 +168,9 @@ export class JpLearnDB extends Dexie {
     // 数据库升级时初始化默认数据
     this.version(1).upgrade(async (trans) => {
       // 确保默认单词集存在，使用固定ID 0
-      const defaultWordSet = await trans.table("wordSets").get(DEFAULT_WORD_SET_ID);
+      const defaultWordSet = await trans
+        .table("wordSets")
+        .get(DEFAULT_WORD_SET_ID);
 
       if (!defaultWordSet) {
         await trans.table("wordSets").put({
@@ -179,152 +183,171 @@ export class JpLearnDB extends Dexie {
 
       // 为没有 type 的单词设置默认 type
       const wordsTable = trans.table("words");
-      const wordsWithoutType = await wordsTable.filter((word) => word.type === undefined || word.type === null).toArray();
+      const wordsWithoutType = await wordsTable
+        .filter((word) => word.type === undefined || word.type === null)
+        .toArray();
       for (const word of wordsWithoutType) {
         await wordsTable.update(word.id, { type: DEFAULT_WORD_TYPE });
       }
     });
 
     // v2：扩展表结构以支持学习统计、间隔重复与模式参数
-    this.version(2).stores({
-      wordSets: "++id, name, createdAt",
-      words: "++id, kana, kanji, meaning, type, [setId+kana]",
-      userSettings: "id", // 固定单行：id = 1
-      studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
-      dailyStats: "date", // 主键：YYYY-MM-DD
-      wordProgress: "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty",
-      reviewLogs: "++id, wordId, timestamp, mode, result, grade, nextReviewAt",
-    }).upgrade(async (trans) => {
-      // 初始化用户设置（若不存在）
-      const settingsTable = trans.table("userSettings");
-      const existingSettings = await settingsTable.get(1);
-      if (!existingSettings) {
-        const nowIso = new Date().toISOString();
-        await settingsTable.put({
-          id: 1,
-          currentMode: "flashcard",
-          dailyGoal: 20,
-          currentStreak: 0,
-          longestStreak: 0,
-          updatedAt: nowIso,
-          createdAt: nowIso,
-        } as UserSettings);
-      }
-
-      // 将 words 中已有数据迁移到 wordProgress（若不存在）
-      const wordsTable = trans.table("words");
-      const progressTable = trans.table("wordProgress");
-      const allWords = await wordsTable.toArray();
-      const now = new Date();
-      for (const w of allWords) {
-        if (!w || typeof w.id !== "number") continue;
-        const existing = await progressTable.get(w.id);
-        if (existing) continue;
-
-        const review = w.review || { times: 0, difficulty: undefined, nextReview: undefined };
-        const repetitions = review.times ?? 0;
-        const difficulty = review.difficulty ?? undefined;
-        const nextReviewAt = review.nextReview ?? undefined;
-
-        const initial: WordProgress = {
-          wordId: w.id,
-          setId: typeof w.setId === "number" ? w.setId : DEFAULT_WORD_SET_ID,
-          // SM-2 风格的初始参数（保守值，后续按答题动态调整）
-          easeFactor: 2.5,
-          intervalDays: 0,
-          repetitions,
-          difficulty,
-          timesSeen: 0,
-          timesCorrect: 0,
-          correctStreak: 0,
-          wrongStreak: 0,
-          lastResult: undefined,
-          lastMode: undefined,
-          lastReviewedAt: undefined,
-          nextReviewAt: nextReviewAt,
-          createdAt: now.toISOString(),
-          updatedAt: now.toISOString(),
-        };
-        await progressTable.put(initial);
-      }
-    });
-
-    // v3：添加答题速度支持
-    this.version(3).stores({
-      wordSets: "++id, name, createdAt",
-      words: "++id, kana, kanji, meaning, type, [setId+kana]",
-      userSettings: "id",
-      studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
-      dailyStats: "date",
-      wordProgress: "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime",
-      reviewLogs: "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
-    }).upgrade(async (trans) => {
-      // 为现有的 wordProgress 记录添加答题速度字段的默认值
-      const progressTable = trans.table("wordProgress");
-      const allProgress = await progressTable.toArray();
-      for (const progress of allProgress) {
-        if (progress.averageResponseTime === undefined) {
-          await progressTable.update(progress.wordId, {
-            averageResponseTime: undefined,
-            lastResponseTime: undefined,
-            fastResponseCount: 0,
-            slowResponseCount: 0,
-          });
+    this.version(2)
+      .stores({
+        wordSets: "++id, name, createdAt",
+        words: "++id, kana, kanji, meaning, type, [setId+kana]",
+        userSettings: "id", // 固定单行：id = 1
+        studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
+        dailyStats: "date", // 主键：YYYY-MM-DD
+        wordProgress:
+          "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty",
+        reviewLogs:
+          "++id, wordId, timestamp, mode, result, grade, nextReviewAt",
+      })
+      .upgrade(async (trans) => {
+        // 初始化用户设置（若不存在）
+        const settingsTable = trans.table("userSettings");
+        const existingSettings = await settingsTable.get(1);
+        if (!existingSettings) {
+          const nowIso = new Date().toISOString();
+          await settingsTable.put({
+            id: 1,
+            currentMode: "flashcard",
+            dailyGoal: 20,
+            currentStreak: 0,
+            longestStreak: 0,
+            updatedAt: nowIso,
+            createdAt: nowIso,
+          } as UserSettings);
         }
-      }
-    });
 
-    // v4：添加复习计划表（支持艾宾浩斯遗忘曲线）
-    this.version(4).stores({
-      wordSets: "++id, name, createdAt",
-      words: "++id, kana, kanji, meaning, type, [setId+kana]",
-      userSettings: "id",
-      studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
-      dailyStats: "date",
-      wordProgress: "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime",
-      reviewLogs: "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
-      reviewPlans: "++id, wordSetId, reviewStage, nextReviewAt, isCompleted, [wordSetId+reviewStage], [nextReviewAt+isCompleted]",
-    }).upgrade(async (trans) => {
-      // 为所有现有单词集创建初始复习计划
-      const wordSetsTable = trans.table("wordSets");
-      const wordsTable = trans.table("words");
-      const reviewPlansTable = trans.table("reviewPlans");
+        // 将 words 中已有数据迁移到 wordProgress（若不存在）
+        const wordsTable = trans.table("words");
+        const progressTable = trans.table("wordProgress");
+        const allWords = await wordsTable.toArray();
+        const now = new Date();
+        for (const w of allWords) {
+          if (!w || typeof w.id !== "number") continue;
+          const existing = await progressTable.get(w.id);
+          if (existing) continue;
 
-      const allWordSets = await wordSetsTable.toArray();
-      const now = new Date();
+          const review = w.review || {
+            times: 0,
+            difficulty: undefined,
+            nextReview: undefined,
+          };
+          const repetitions = review.times ?? 0;
+          const difficulty = review.difficulty ?? undefined;
+          const nextReviewAt = review.nextReview ?? undefined;
 
-      for (const wordSet of allWordSets) {
-        // 检查是否已存在复习计划（防止重复创建）
-        const existing = await reviewPlansTable
-          .where("wordSetId")
-          .equals(wordSet.id)
-          .first();
-
-        if (!existing) {
-          // 统计该单词集的单词数
-          const wordCount = await wordsTable
-            .where("setId")
-            .equals(wordSet.id)
-            .count();
-
-          // 创建初始复习计划（阶段1，1小时后复习）
-          const firstReviewTime = new Date(now);
-          firstReviewTime.setHours(firstReviewTime.getHours() + 1);
-
-          await reviewPlansTable.add({
-            wordSetId: wordSet.id,
-            reviewStage: 1,
-            nextReviewAt: firstReviewTime.toISOString(),
-            completedStages: [],
-            startedAt: now.toISOString(),
-            isCompleted: false,
-            totalWords: wordCount,
+          const initial: WordProgress = {
+            wordId: w.id,
+            setId: typeof w.setId === "number" ? w.setId : DEFAULT_WORD_SET_ID,
+            // SM-2 风格的初始参数（保守值，后续按答题动态调整）
+            easeFactor: 2.5,
+            intervalDays: 0,
+            repetitions,
+            difficulty,
+            timesSeen: 0,
+            timesCorrect: 0,
+            correctStreak: 0,
+            wrongStreak: 0,
+            lastResult: undefined,
+            lastMode: undefined,
+            lastReviewedAt: undefined,
+            nextReviewAt: nextReviewAt,
             createdAt: now.toISOString(),
             updatedAt: now.toISOString(),
-          } as ReviewPlan);
+          };
+          await progressTable.put(initial);
         }
-      }
-    });
+      });
+
+    // v3：添加答题速度支持
+    this.version(3)
+      .stores({
+        wordSets: "++id, name, createdAt",
+        words: "++id, kana, kanji, meaning, type, [setId+kana]",
+        userSettings: "id",
+        studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
+        dailyStats: "date",
+        wordProgress:
+          "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime",
+        reviewLogs:
+          "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
+      })
+      .upgrade(async (trans) => {
+        // 为现有的 wordProgress 记录添加答题速度字段的默认值
+        const progressTable = trans.table("wordProgress");
+        const allProgress = await progressTable.toArray();
+        for (const progress of allProgress) {
+          if (progress.averageResponseTime === undefined) {
+            await progressTable.update(progress.wordId, {
+              averageResponseTime: undefined,
+              lastResponseTime: undefined,
+              fastResponseCount: 0,
+              slowResponseCount: 0,
+            });
+          }
+        }
+      });
+
+    // v4：添加复习计划表（支持艾宾浩斯遗忘曲线）
+    this.version(4)
+      .stores({
+        wordSets: "++id, name, createdAt",
+        words: "++id, kana, kanji, meaning, type, [setId+kana]",
+        userSettings: "id",
+        studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
+        dailyStats: "date",
+        wordProgress:
+          "wordId, setId, nextReviewAt, easeFactor, intervalDays, repetitions, lastReviewedAt, lastResult, timesSeen, timesCorrect, correctStreak, wrongStreak, difficulty, averageResponseTime",
+        reviewLogs:
+          "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
+        reviewPlans:
+          "++id, wordSetId, reviewStage, nextReviewAt, isCompleted, [wordSetId+reviewStage], [nextReviewAt+isCompleted]",
+      })
+      .upgrade(async (trans) => {
+        // 为所有现有单词集创建初始复习计划
+        const wordSetsTable = trans.table("wordSets");
+        const wordsTable = trans.table("words");
+        const reviewPlansTable = trans.table("reviewPlans");
+
+        const allWordSets = await wordSetsTable.toArray();
+        const now = new Date();
+
+        for (const wordSet of allWordSets) {
+          // 检查是否已存在复习计划（防止重复创建）
+          const existing = await reviewPlansTable
+            .where("wordSetId")
+            .equals(wordSet.id)
+            .first();
+
+          if (!existing) {
+            // 统计该单词集的单词数
+            const wordCount = await wordsTable
+              .where("setId")
+              .equals(wordSet.id)
+              .count();
+
+            // 创建初始复习计划（阶段1，1小时后复习）
+            const firstReviewTime = new Date(now);
+            firstReviewTime.setHours(firstReviewTime.getHours() + 1);
+
+            await reviewPlansTable.add({
+              wordSetId: wordSet.id,
+              reviewStage: 1,
+              nextReviewAt: firstReviewTime.toISOString(),
+              completedStages: [],
+              startedAt: now.toISOString(),
+              isCompleted: false,
+              totalWords: wordCount,
+              createdAt: now.toISOString(),
+              updatedAt: now.toISOString(),
+            } as ReviewPlan);
+          }
+        }
+      });
   }
 }
 
@@ -362,15 +385,15 @@ export async function ensureDBOpen() {
     if (!db.isOpen()) {
       await db.open();
     }
-    
+
     // 验证数据库是否真的打开
     if (!db.isOpen()) {
       throw new Error("数据库打开失败");
     }
-    
+
     // 无论数据库是否已打开，都确保默认单词集存在
     await ensureDefaultWordSetExists();
-    
+
     return db;
   } catch (error) {
     console.error("ensureDBOpen 失败:", error);

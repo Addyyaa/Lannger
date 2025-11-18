@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { db, StudyMode, UserSettings, DailyStat, ensureDBOpen } from "../db";
@@ -117,28 +117,45 @@ export default function Study() {
         await db.dailyStats.put(dailyStat);
       }
 
-      // 计算目标进度
+      // 计算目标进度：只统计今日首次掌握的单词，不包含复习和测试
       const goalProgress = Math.min(
         100,
-        Math.round(
-          ((dailyStat.learnedCount +
-            dailyStat.reviewedCount +
-            dailyStat.testedCount) /
-            userSettings.dailyGoal) *
-            100
-        )
+        Math.round((dailyStat.learnedCount / userSettings.dailyGoal) * 100)
       );
 
       // 确保 totalWords 是数字类型，防止类型错误
       const safeTotalWords = typeof totalWords === "number" ? totalWords : 0;
-      const studiedToday =
-        (dailyStat.learnedCount || 0) +
-        (dailyStat.reviewedCount || 0) +
-        (dailyStat.testedCount || 0);
+
+      // 确保统计值是有效的数字，并限制最大值（防止异常数据）
+      const safeLearnedCount = Math.max(
+        0,
+        Math.min(Number(dailyStat.learnedCount) || 0, 10000)
+      );
+      // 注意：reviewedCount 和 testedCount 不再用于计算 studiedToday
+      // 但保留它们用于其他可能的用途（如显示详细统计）
+
+      // 只统计今日首次掌握的单词（learnedCount），不包含复习和测试
+      // 因为复习和测试是重复学习，不应该计入"今日学习"
+      const studiedToday = safeLearnedCount;
+
+      // 如果发现异常大的值，记录警告并重置
+      if (studiedToday > 10000) {
+        console.warn("检测到异常大的学习统计值，重置为0", {
+          learnedCount: dailyStat.learnedCount,
+          reviewedCount: dailyStat.reviewedCount,
+          testedCount: dailyStat.testedCount,
+        });
+        // 重置异常数据
+        dailyStat.learnedCount = 0;
+        dailyStat.reviewedCount = 0;
+        dailyStat.testedCount = 0;
+        dailyStat.updatedAt = new Date().toISOString();
+        await db.dailyStats.put(dailyStat);
+      }
 
       setStudyStats({
         totalWords: safeTotalWords,
-        studiedToday: studiedToday,
+        studiedToday: studiedToday > 10000 ? 0 : studiedToday, // 如果仍然异常，显示0
         currentStreak: userSettings.currentStreak || 0,
         dailyGoal: userSettings.dailyGoal || 20,
         goalProgress,
@@ -156,6 +173,9 @@ export default function Study() {
   const handleSelectWordSet = async (wordSetId: number | undefined) => {
     setSelectedWordSetId(wordSetId);
     setShowWordSetSelector(false);
+
+    // 重置 sessionCompleteRef，允许新的学习会话
+    sessionCompleteRef.current = false;
 
     // 根据选择的模式显示对应的学习组件
     if (selectedMode === "flashcard") {
@@ -192,89 +212,223 @@ export default function Study() {
     setShowReviewStudy(true);
   };
 
+  // 防止重复调用的标志
+  const sessionCompleteRef = useRef(false);
+
   const handleSessionComplete = async (stats: {
     studiedCount: number;
     correctCount: number;
     wrongCount: number;
+    masteredWordIds?: number[]; // 本次会话中标记为掌握的单词ID列表
   }) => {
-    // 更新每日统计
-    const today = new Date().toISOString().split("T")[0];
-    let dailyStat = await db.dailyStats.get(today);
-    if (!dailyStat) {
-      dailyStat = {
-        date: today,
-        learnedCount: 0,
-        reviewedCount: 0,
-        testedCount: 0,
-        correctCount: 0,
-        updatedAt: new Date().toISOString(),
-      } as DailyStat;
+    // 防止重复调用
+    if (sessionCompleteRef.current) {
+      console.warn("handleSessionComplete 已被调用，忽略重复调用");
+      return;
     }
+    sessionCompleteRef.current = true;
 
-    // 根据模式更新对应的统计
-    if (selectedMode === "flashcard") {
-      dailyStat.learnedCount += stats.studiedCount;
-    } else if (selectedMode === "test") {
-      dailyStat.testedCount += stats.studiedCount;
-    } else if (selectedMode === "review") {
-      dailyStat.reviewedCount += stats.studiedCount;
+    try {
+      // 确保统计值是有效的数字，并限制最大值（防止异常数据）
+      const safeStudiedCount = Math.max(
+        0,
+        Math.min(Number(stats.studiedCount) || 0, 1000)
+      );
+      const safeCorrectCount = Math.max(
+        0,
+        Math.min(Number(stats.correctCount) || 0, 1000)
+      );
+      const safeWrongCount = Math.max(
+        0,
+        Math.min(Number(stats.wrongCount) || 0, 1000)
+      );
 
-      // 复习完成后，检查是否有下一个复习通知
-      const { getDueReviewPlans } = await import("../store/reviewStore");
-      const nextDuePlans = await getDueReviewPlans();
-      if (nextDuePlans.length > 0) {
-        // 有下一个复习通知，自动显示
-        setShowReviewNotification(true);
+      // 记录调试信息
+      console.log("handleSessionComplete 被调用", {
+        mode: selectedMode,
+        stats,
+        safeStudiedCount,
+        safeCorrectCount,
+        safeWrongCount,
+      });
+
+      // 更新每日统计
+      const today = new Date().toISOString().split("T")[0];
+      let dailyStat = await db.dailyStats.get(today);
+      if (!dailyStat) {
+        dailyStat = {
+          date: today,
+          learnedCount: 0,
+          reviewedCount: 0,
+          testedCount: 0,
+          correctCount: 0,
+          learnedWordIds: [], // 初始化今日已学习的单词ID列表
+          updatedAt: new Date().toISOString(),
+        } as DailyStat;
       }
-    }
 
-    dailyStat.correctCount += stats.correctCount;
-    dailyStat.updatedAt = new Date().toISOString();
-    await db.dailyStats.put(dailyStat);
+      // 初始化 learnedWordIds（如果不存在）
+      if (!dailyStat.learnedWordIds) {
+        dailyStat.learnedWordIds = [];
+      }
 
-    // 检查是否完成每日目标
-    const userSettings = await db.userSettings.get(1);
-    if (userSettings) {
-      const totalStudied =
-        dailyStat.learnedCount +
-        dailyStat.reviewedCount +
-        dailyStat.testedCount;
-      if (
-        totalStudied >= userSettings.dailyGoal &&
-        userSettings.currentStreak === 0
-      ) {
-        // 更新连续天数
-        const yesterday = new Date();
-        yesterday.setDate(yesterday.getDate() - 1);
-        const yesterdayStr = yesterday.toISOString().split("T")[0];
-        const yesterdayStat = await db.dailyStats.get(yesterdayStr);
+      // 根据模式更新对应的统计
+      // 注意：如果 selectedMode 为 null，尝试从 stats 中推断模式
+      // 或者使用默认的 flashcard 模式（因为闪卡是最常用的）
+      const mode = selectedMode || "flashcard";
 
-        if (yesterdayStat) {
-          const yesterdayTotal =
-            yesterdayStat.learnedCount +
-            yesterdayStat.reviewedCount +
-            yesterdayStat.testedCount;
-          if (yesterdayTotal >= userSettings.dailyGoal) {
-            // 连续完成目标
-            userSettings.currentStreak += 1;
-            if (userSettings.currentStreak > userSettings.longestStreak) {
-              userSettings.longestStreak = userSettings.currentStreak;
+      if (mode === "flashcard") {
+        // 只统计本次会话中标记为"掌握"的单词，且不在今日已学习列表中的单词
+        const masteredWordIds = stats.masteredWordIds || [];
+        const newLearnedWordIds = masteredWordIds.filter(
+          (wordId) => !dailyStat.learnedWordIds!.includes(wordId)
+        );
+
+        // 只统计新掌握的单词数量
+        const newLearnedCount = newLearnedWordIds.length;
+        dailyStat.learnedCount += newLearnedCount;
+
+        // 更新今日已学习的单词ID列表
+        dailyStat.learnedWordIds = [
+          ...dailyStat.learnedWordIds!,
+          ...newLearnedWordIds,
+        ];
+
+        console.log("闪卡学习统计", {
+          masteredWordIds,
+          newLearnedWordIds,
+          newLearnedCount,
+          totalLearnedCount: dailyStat.learnedCount,
+        });
+
+        // 闪卡学习完成后，为新学习的单词创建独立的复习计划
+        if (selectedWordSetId !== undefined && newLearnedWordIds.length > 0) {
+          try {
+            const { getOrCreateReviewPlan } = await import(
+              "../store/reviewStore"
+            );
+            // 获取单词集的总单词数
+            const wordSet = await db.wordSets.get(selectedWordSetId);
+            if (wordSet) {
+              // 为新学习的单词创建独立的复习计划
+              await getOrCreateReviewPlan(
+                selectedWordSetId,
+                newLearnedWordIds.length,
+                newLearnedWordIds
+              );
+              console.log("闪卡学习完成，已为新学习的单词创建复习计划", {
+                wordSetId: selectedWordSetId,
+                learnedWordIds: newLearnedWordIds,
+                count: newLearnedWordIds.length,
+              });
+            }
+          } catch (error) {
+            console.error("创建复习计划失败:", error);
+            // 不阻止主流程，只记录错误
+          }
+        }
+      } else if (mode === "test") {
+        // 测试模式：统计测试的单词数（不去重，因为测试可能重复测试）
+        dailyStat.testedCount += safeStudiedCount;
+      } else if (mode === "review") {
+        // 复习模式：不统计到 learnedCount，只统计到 reviewedCount
+        dailyStat.reviewedCount += safeStudiedCount;
+
+        // 复习完成后，检查是否有下一个复习通知
+        const { getDueReviewPlans } = await import("../store/reviewStore");
+        const nextDuePlans = await getDueReviewPlans();
+        if (nextDuePlans.length > 0) {
+          // 有下一个复习通知，自动显示
+          setShowReviewNotification(true);
+        }
+      } else {
+        // 如果模式未知，默认使用 flashcard 模式
+        console.warn("未知的学习模式，使用默认的 flashcard 模式", {
+          mode,
+          selectedMode,
+        });
+        // 对于未知模式，也使用去重逻辑
+        const masteredWordIds = stats.masteredWordIds || [];
+        const newLearnedWordIds = masteredWordIds.filter(
+          (wordId) => !dailyStat.learnedWordIds!.includes(wordId)
+        );
+        dailyStat.learnedCount += newLearnedWordIds.length;
+        dailyStat.learnedWordIds = [
+          ...dailyStat.learnedWordIds!,
+          ...newLearnedWordIds,
+        ];
+      }
+
+      // correctCount 仍然累加所有答对的次数（包括复习）
+      dailyStat.correctCount += safeCorrectCount;
+      dailyStat.updatedAt = new Date().toISOString();
+
+      // 记录更新前的值
+      console.log(
+        "更新数据库前的 dailyStat:",
+        JSON.parse(JSON.stringify(dailyStat))
+      );
+
+      await db.dailyStats.put(dailyStat);
+
+      // 验证更新是否成功
+      const updatedStat = await db.dailyStats.get(today);
+      console.log(
+        "更新数据库后的 dailyStat:",
+        JSON.parse(JSON.stringify(updatedStat))
+      );
+
+      // 检查是否完成每日目标
+      const userSettings = await db.userSettings.get(1);
+      if (userSettings) {
+        const totalStudied =
+          dailyStat.learnedCount +
+          dailyStat.reviewedCount +
+          dailyStat.testedCount;
+        if (
+          totalStudied >= userSettings.dailyGoal &&
+          userSettings.currentStreak === 0
+        ) {
+          // 更新连续天数
+          const yesterday = new Date();
+          yesterday.setDate(yesterday.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split("T")[0];
+          const yesterdayStat = await db.dailyStats.get(yesterdayStr);
+
+          if (yesterdayStat) {
+            const yesterdayTotal =
+              yesterdayStat.learnedCount +
+              yesterdayStat.reviewedCount +
+              yesterdayStat.testedCount;
+            if (yesterdayTotal >= userSettings.dailyGoal) {
+              // 连续完成目标
+              userSettings.currentStreak += 1;
+              if (userSettings.currentStreak > userSettings.longestStreak) {
+                userSettings.longestStreak = userSettings.currentStreak;
+              }
+            } else {
+              // 重新开始
+              userSettings.currentStreak = 1;
             }
           } else {
-            // 重新开始
+            // 第一天
             userSettings.currentStreak = 1;
           }
-        } else {
-          // 第一天
-          userSettings.currentStreak = 1;
+          userSettings.updatedAt = new Date().toISOString();
+          await db.userSettings.put(userSettings);
         }
-        userSettings.updatedAt = new Date().toISOString();
-        await db.userSettings.put(userSettings);
       }
-    }
 
-    // 刷新统计
-    await loadStudyStats();
+      // 刷新统计（延迟执行，确保数据库更新完成）
+      setTimeout(async () => {
+        await loadStudyStats();
+      }, 200);
+    } finally {
+      // 延迟重置标志，确保统计更新完成
+      setTimeout(() => {
+        sessionCompleteRef.current = false;
+      }, 500);
+    }
   };
 
   const containerStyle: React.CSSProperties = {

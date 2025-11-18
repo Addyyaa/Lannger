@@ -20,6 +20,7 @@ interface FlashcardStudyProps {
     studiedCount: number;
     correctCount: number;
     wrongCount: number;
+    masteredWordIds?: number[]; // 本次会话中标记为掌握的单词ID列表
   }) => void;
 }
 
@@ -112,12 +113,15 @@ export default function FlashcardStudy({
     wrongCount: 0,
   });
   const [sessionStats, setSessionStats] = useState(createInitialStats);
+  // 跟踪本次会话中标记为"掌握"的单词ID列表
+  const [masteredWordIds, setMasteredWordIds] = useState<number[]>([]);
   const startTimeRef = useRef<number>(Date.now());
   const [isResetting, setIsResetting] = useState(false);
   const [resetFeedback, setResetFeedback] = useState<string | null>(null);
   const shouldPersistRef = useRef(true);
   const highlightAnimationTimeoutRef = useRef<number | null>(null);
   const hasMountedRef = useRef(false);
+  const sessionCompleteCalledRef = useRef(false);
   const [highlightAnimationClass, setHighlightAnimationClass] = useState("");
 
   const clearPersistedSessionState = useCallback(async () => {
@@ -154,11 +158,17 @@ export default function FlashcardStudy({
         setShowAnswer(false);
         setResetFeedback(null);
         setCurrentWord(null);
+        setMasteredWordIds([]); // 重置已掌握的单词ID列表
+        sessionCompleteCalledRef.current = false; // 重置完成标志
         await clearPersistedSessionState();
         const limit = limitOverride ?? (await resolveSessionLimit());
+        // 每次加载单词时都重新调用 scheduleFlashcardWords，确保按照最新的掌握度排序
         const result = await scheduleFlashcardWords({
           wordSetId,
           limit,
+          includeNewWords: true,
+          includeReviewWords: true,
+          masteryThreshold: 0.9, // 只过滤掉掌握程度非常高的单词
         });
         setWordIds(result.wordIds);
         setCurrentIndex(0);
@@ -275,11 +285,15 @@ export default function FlashcardStudy({
 
   const loadCurrentWord = async () => {
     if (currentIndex >= wordIds.length) {
-      // 学习完成
-      shouldPersistRef.current = false;
-      await clearPersistedSessionState();
-      if (onSessionComplete) {
-        onSessionComplete(sessionStats);
+      // 学习完成 - 这种情况不应该发生，因为 handleResult 会处理最后一个单词
+      // 但如果确实发生了（比如直接关闭），使用当前统计
+      if (!sessionCompleteCalledRef.current) {
+        sessionCompleteCalledRef.current = true;
+        shouldPersistRef.current = false;
+        await clearPersistedSessionState();
+        if (onSessionComplete) {
+          onSessionComplete(sessionStats);
+        }
       }
       closePopup();
       return;
@@ -318,34 +332,66 @@ export default function FlashcardStudy({
       responseTime
     );
 
-    // 更新统计
-    setSessionStats((prev) => ({
-      studiedCount: prev.studiedCount + 1,
+    // 更新统计，使用函数式更新确保获取最新值
+    // 先计算新的统计值，确保 finalStats 不为 null
+    const newStats = {
+      studiedCount: sessionStats.studiedCount + 1,
       correctCount:
-        result === "correct" ? prev.correctCount + 1 : prev.correctCount,
-      wrongCount: result === "wrong" ? prev.wrongCount + 1 : prev.wrongCount,
-    }));
+        result === "correct"
+          ? sessionStats.correctCount + 1
+          : sessionStats.correctCount,
+      wrongCount:
+        result === "wrong"
+          ? sessionStats.wrongCount + 1
+          : sessionStats.wrongCount,
+    };
+
+    setSessionStats(newStats);
+
+    // 如果标记为"掌握"，添加到已掌握列表
+    if (result === "correct" && currentWord.id) {
+      setMasteredWordIds((prev) => {
+        if (!prev.includes(currentWord.id)) {
+          return [...prev, currentWord.id];
+        }
+        return prev;
+      });
+    }
 
     // 移动到下一个单词
     if (currentIndex < wordIds.length - 1) {
       setCurrentIndex(currentIndex + 1);
     } else {
-      // 学习完成
-      shouldPersistRef.current = false;
-      await clearPersistedSessionState();
-      if (onSessionComplete) {
-        onSessionComplete({
-          ...sessionStats,
-          studiedCount: sessionStats.studiedCount + 1,
-          correctCount:
-            result === "correct"
-              ? sessionStats.correctCount + 1
-              : sessionStats.correctCount,
-          wrongCount:
-            result === "wrong"
-              ? sessionStats.wrongCount + 1
-              : sessionStats.wrongCount,
-        });
+      // 学习完成 - 使用计算好的统计值
+      if (!sessionCompleteCalledRef.current) {
+        sessionCompleteCalledRef.current = true;
+        shouldPersistRef.current = false;
+        await clearPersistedSessionState();
+        if (onSessionComplete) {
+          // 确保使用最新的 masteredWordIds（包含当前单词，如果它是"correct"）
+          // 直接计算最终的 masteredWordIds，确保包含当前单词（如果它是"correct"）
+          const finalMasteredIds =
+            result === "correct" && currentWord.id
+              ? masteredWordIds.includes(currentWord.id)
+                ? masteredWordIds
+                : [...masteredWordIds, currentWord.id]
+              : masteredWordIds;
+
+          console.log("闪卡学习完成，调用 onSessionComplete", {
+            ...newStats,
+            masteredWordIds: finalMasteredIds,
+            currentWordId: currentWord.id,
+            currentResult: result,
+            originalMasteredWordIds: masteredWordIds,
+            finalMasteredWordIds: finalMasteredIds,
+          });
+          await onSessionComplete({
+            ...newStats,
+            masteredWordIds: finalMasteredIds,
+          });
+        }
+        // 等待更长时间确保数据库更新和统计刷新完成，然后再关闭
+        await new Promise((resolve) => setTimeout(resolve, 500));
       }
       closePopup();
     }

@@ -153,12 +153,14 @@ export function getReviewUrgency(plan: ReviewPlan, now?: Date): number {
  * @param wordSetId 单词集 ID
  * @param totalWords 单词总数
  * @param startedAt 开始时间（可选，默认为当前时间）
+ * @param learnedWordIds 该复习计划对应的单词ID列表（可选，用于区分不同的学习批次）
  * @returns 新的复习计划
  */
 export function createReviewPlan(
   wordSetId: number,
   totalWords: number,
-  startedAt?: Date
+  startedAt?: Date,
+  learnedWordIds?: number[]
 ): ReviewPlan {
   const now = startedAt || new Date();
   const firstReviewTime = calculateNextReviewTime(1, now);
@@ -171,6 +173,7 @@ export function createReviewPlan(
     startedAt: now.toISOString(),
     isCompleted: false,
     totalWords,
+    learnedWordIds: learnedWordIds || undefined,
     createdAt: now.toISOString(),
     updatedAt: now.toISOString(),
   };

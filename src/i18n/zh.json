@@ -223,5 +223,7 @@
   "reviewStage6": "第 6 次复习（15 天后）",
   "reviewStage7": "第 7 次复习（30 天后）",
   "reviewStage8": "第 8 次复习（60 天后）",
-  "reviewStageUnknown": "未知阶段"
+  "reviewStageUnknown": "未知阶段",
+  "reviewNotAllMastered": "还有 {{count}} 个单词未掌握，请继续复习",
+  "reviewAllMastered": "恭喜！本次复习全部掌握，已进入下一阶段"
 }

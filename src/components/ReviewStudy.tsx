@@ -132,6 +132,18 @@ export default function ReviewStudy({
 
   const [sessionStats, setSessionStats] = useState(createInitialStats);
   const startTimeRef = useRef<number>(Date.now());
+  // 跟踪每个单词的复习结果（用于判断是否全部掌握）
+  const reviewResultsRef = useRef<Map<number, "correct" | "wrong" | "skip">>(
+    new Map()
+  );
+
+  // 当前复习计划 ID（用于推进阶段）
+  const currentReviewPlanIdRef = useRef<number | undefined>(undefined);
+
+  // 提示信息状态（用于显示未掌握提示）
+  const [notificationMessage, setNotificationMessage] = useState<string | null>(
+    null
+  );
 
   /**
    * 加载复习单词列表
@@ -144,7 +156,7 @@ export default function ReviewStudy({
       const result = await scheduleReviewWords({
         wordSetId,
         limit: 50, // 复习模式默认50个单词
-        onlyDue: true, // 只返回到期的单词
+        onlyDue: true, // 只返回到期的单词和未掌握的单词
       });
 
       endMeasure({ wordSetId, count: result.wordIds.length });
@@ -161,9 +173,47 @@ export default function ReviewStudy({
 
       setWordIds(result.wordIds);
       setCurrentIndex(0);
+      // 重置复习结果跟踪
+      reviewResultsRef.current.clear();
 
-      // 设置复习锁定
+      // 查找对应的复习计划（如果有多个，找到包含当前单词的复习计划）
       if (wordSetId !== undefined) {
+        const { db } = await import("../db");
+        const { isReviewDue } = await import("../utils/ebbinghausCurve");
+        const allPlans = await db.reviewPlans
+          .where("wordSetId")
+          .equals(wordSetId)
+          .toArray();
+
+        // 如果只有一个复习计划，使用它
+        if (allPlans.length === 1) {
+          currentReviewPlanIdRef.current = allPlans[0].id;
+        } else if (allPlans.length > 1) {
+          // 如果有多个复习计划，找到包含当前单词的复习计划
+          const matchingPlan = allPlans.find((plan) => {
+            if (!plan.learnedWordIds || plan.learnedWordIds.length === 0) {
+              // 如果没有 learnedWordIds，可能是旧的复习计划，跳过
+              return false;
+            }
+            // 检查当前单词是否在该计划的 learnedWordIds 中
+            const planWordSet = new Set(plan.learnedWordIds);
+            return result.wordIds.some((wordId) => planWordSet.has(wordId));
+          });
+
+          if (matchingPlan) {
+            currentReviewPlanIdRef.current = matchingPlan.id;
+          } else {
+            // 如果没有找到匹配的计划，使用第一个到期的计划
+            const duePlans = allPlans.filter((plan) => isReviewDue(plan));
+            if (duePlans.length > 0) {
+              currentReviewPlanIdRef.current = duePlans[0].id;
+            } else {
+              currentReviewPlanIdRef.current = allPlans[0].id;
+            }
+          }
+        }
+
+        // 设置复习锁定
         await setReviewLock(wordSetId, currentReviewStage);
       }
     } catch (error) {
@@ -191,13 +241,67 @@ export default function ReviewStudy({
   }, [currentIndex, wordIds]);
 
   /**
+   * 检查是否所有单词都已掌握
+   */
+  const checkAllWordsMastered = async (): Promise<{
+    allMastered: boolean;
+    unmasteredWordIds: number[];
+  }> => {
+    const unmasteredWordIds: number[] = [];
+
+    for (const wordId of wordIds) {
+      const result = reviewResultsRef.current.get(wordId);
+      // 如果单词未复习，或结果为 wrong/skip，视为未掌握
+      if (!result || result !== "correct") {
+        unmasteredWordIds.push(wordId);
+      }
+    }
+
+    return {
+      allMastered: unmasteredWordIds.length === 0,
+      unmasteredWordIds,
+    };
+  };
+
+  /**
    * 处理复习完成
    */
   const handleReviewComplete = async () => {
     try {
-      // 完成当前复习阶段
+      // 检查是否所有单词都已掌握
+      const { allMastered, unmasteredWordIds } = await checkAllWordsMastered();
+
+      if (!allMastered) {
+        // 未全部掌握，继续复习未掌握的单词
+        setWordIds(unmasteredWordIds);
+        setCurrentIndex(0);
+        // 显示提示信息
+        const message = t("reviewNotAllMastered", {
+          count: unmasteredWordIds.length,
+        });
+        setNotificationMessage(message);
+        console.log(message);
+        // 3秒后自动隐藏提示
+        setTimeout(() => {
+          setNotificationMessage(null);
+        }, 3000);
+        return;
+      }
+
+      // 全部掌握，显示成功提示
+      const successMessage = t("reviewAllMastered");
+      setNotificationMessage(successMessage);
+      setTimeout(() => {
+        setNotificationMessage(null);
+      }, 2000);
+
+      // 全部掌握，才完成当前复习阶段并推进到下一阶段
       if (wordSetId !== undefined) {
-        await completeReviewStage(wordSetId);
+        await completeReviewStage(
+          wordSetId,
+          undefined,
+          currentReviewPlanIdRef.current
+        );
       }
 
       // 解除复习锁定
@@ -228,6 +332,9 @@ export default function ReviewStudy({
       undefined,
       responseTime
     );
+
+    // 记录复习结果
+    reviewResultsRef.current.set(currentWord.id, result);
 
     // 更新统计
     setSessionStats((prev) => ({
@@ -381,14 +488,45 @@ export default function ReviewStudy({
           iconColor={isDark ? "#fff" : "#333"}
         />
 
+        {/* 提示信息显示 */}
+        {notificationMessage && (
+          <div
+            style={{
+              position: "absolute",
+              top: isPortrait ? "8vw" : "3vw",
+              left: "50%",
+              transform: "translateX(-50%)",
+              zIndex: 1000,
+              background: isDark
+                ? "rgba(255, 193, 7, 0.9)"
+                : "rgba(255, 193, 7, 0.95)",
+              color: isDark ? "#000" : "#333",
+              padding: isPortrait ? "2vw 4vw" : "0.8vw 1.5vw",
+              borderRadius: isPortrait ? "2vw" : "0.5vw",
+              fontSize: isPortrait ? "3.5vw" : "1vw",
+              fontWeight: "500",
+              boxShadow: isDark
+                ? "0 2vw 6vw rgba(0, 0, 0, 0.3)"
+                : "0 1vw 3vw rgba(0, 0, 0, 0.2)",
+              maxWidth: isPortrait ? "85%" : "60%",
+              textAlign: "center",
+              transition: "opacity 0.3s ease-out",
+            }}
+          >
+            {notificationMessage}
+          </div>
+        )}
+
         {/* 复习阶段显示 */}
         <div
           style={{
             textAlign: "center",
             marginBottom: isPortrait ? "4vw" : "1.5vw",
+            marginTop: notificationMessage ? (isPortrait ? "8vw" : "3vw") : 0,
             fontSize: isPortrait ? "3.5vw" : "1vw",
             color: "#00b4ff",
             fontWeight: "bold",
+            transition: "margin-top 0.3s ease-out",
           }}
         >
           {getReviewStageDescription(currentReviewStage, t)}

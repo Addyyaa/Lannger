@@ -93,6 +93,8 @@ export default function TestStudy({
 
   const startTimeRef = useRef<number>(Date.now());
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const sessionCompleteCalledRef = useRef(false);
+  const hasInitializedRef = useRef(false);
 
   /**
    * 生成选项（4个选项：1个正确答案 + 3个干扰项）
@@ -179,6 +181,11 @@ export default function TestStudy({
         wrongAnswers: [],
         responseTimes: [],
       });
+      // 重置完成标志（只在主动重新开始时重置，测试完成时不应重置）
+      // 注意：不要在这里重置 testComplete，只有在 onRetry 时才重置
+      if (!testComplete) {
+        sessionCompleteCalledRef.current = false;
+      }
     } catch (error) {
       handleError(error, { operation: "loadTestWords" });
     } finally {
@@ -433,11 +440,15 @@ export default function TestStudy({
   );
 
   /**
-   * 初始化加载
+   * 初始化加载（只在组件挂载时执行一次）
    */
   useEffect(() => {
-    loadWords();
-  }, [loadWords]);
+    if (!hasInitializedRef.current) {
+      hasInitializedRef.current = true;
+      loadWords();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时执行一次
 
   /**
    * 当前题目变化时加载新题目
@@ -452,7 +463,12 @@ export default function TestStudy({
    * 测试完成处理
    */
   useEffect(() => {
-    if (testComplete && sessionStats.totalQuestions > 0) {
+    if (
+      testComplete &&
+      sessionStats.totalQuestions > 0 &&
+      !sessionCompleteCalledRef.current
+    ) {
+      sessionCompleteCalledRef.current = true;
       if (onSessionComplete) {
         onSessionComplete({
           studiedCount: sessionStats.totalQuestions,
@@ -540,6 +556,9 @@ export default function TestStudy({
       <TestResultModal
         stats={sessionStats}
         onRetry={() => {
+          // 重置所有状态
+          sessionCompleteCalledRef.current = false;
+          hasInitializedRef.current = false;
           setTestComplete(false);
           setCurrentIndex(0);
           loadWords();

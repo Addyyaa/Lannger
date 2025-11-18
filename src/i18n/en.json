@@ -223,5 +223,7 @@
   "reviewStage6": "Review 6 (after 15 days)",
   "reviewStage7": "Review 7 (after 30 days)",
   "reviewStage8": "Review 8 (after 60 days)",
-  "reviewStageUnknown": "Unknown stage"
+  "reviewStageUnknown": "Unknown stage",
+  "reviewNotAllMastered": "{{count}} words not yet mastered, please continue reviewing",
+  "reviewAllMastered": "Congratulations! All words mastered, moving to next stage"
 }
