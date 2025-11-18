@@ -118,7 +118,7 @@ export default function ReviewStudy({
   const [cardFrontMode, setCardFrontMode] = useState<CardFrontMode>("writing");
   const [loading, setLoading] = useState(true);
   const currentReviewStage = reviewStage || 1;
-  
+
   // 切换按钮高亮动画状态
   const [highlightAnimationClass, setHighlightAnimationClass] = useState("");
   const highlightAnimationTimeoutRef = useRef<number | null>(null);
@@ -337,7 +337,9 @@ export default function ReviewStudy({
     boxShadow: isPortrait
       ? themeTokens.cardShadowPortrait
       : themeTokens.cardShadowLandscape,
-    border: `${isPortrait ? "0.3vw" : "0.1vw"} solid ${themeTokens.cardBorderColor}`,
+    border: `${isPortrait ? "0.3vw" : "0.1vw"} solid ${
+      themeTokens.cardBorderColor
+    }`,
     position: "relative",
     minHeight: isPortrait ? "60vh" : "400px",
     display: "flex",
@@ -389,7 +391,7 @@ export default function ReviewStudy({
             fontWeight: "bold",
           }}
         >
-          {getReviewStageDescription(currentReviewStage)}
+          {getReviewStageDescription(currentReviewStage, t)}
         </div>
 
         {/* 进度显示 */}
@@ -587,7 +589,9 @@ export default function ReviewStudy({
               ? "rgba(255, 255, 255, 0.05)"
               : "rgba(0, 0, 0, 0.02)",
             borderRadius: isPortrait ? "2vw" : "0.5vw",
-            border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${themeTokens.cardBorderColor}`,
+            border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${
+              themeTokens.cardBorderColor
+            }`,
             minHeight: isPortrait ? "30vh" : "200px",
             display: "flex",
             flexDirection: "column",
@@ -698,6 +702,40 @@ export default function ReviewStudy({
         >
           {!showAnswer ? (
             <>
+              <button
+                onClick={() => handleResult("correct")}
+                style={{
+                  borderRadius: isPortrait ? "2vh" : "1vh",
+                  border: "none",
+                  fontSize: isPortrait
+                    ? "clamp(3vw, 1.2rem, 4vw)"
+                    : "clamp(0.8vw, 0.8rem, 1.2vw)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  padding: isPortrait ? "2.2vh 0" : "1.2vh 2.4vw",
+                  minHeight: isPortrait ? "6vh" : "4.4vh",
+                  flex: isPortrait ? "1 1 0" : "0 0 auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: "rgb(52, 199, 89)",
+                  color: "#fff",
+                  ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-0.2vh)";
+                  e.currentTarget.style.boxShadow = isDark
+                    ? "0 0.4vh 1.2vh rgba(52, 199, 89, 0.5)"
+                    : "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {t("learned")}
+              </button>
               <button
                 onClick={() => setShowAnswer(true)}
                 style={{
@@ -844,4 +882,3 @@ export default function ReviewStudy({
     </div>
   );
 }
-

@@ -29,7 +29,7 @@ export const EBBINGHAUS_INTERVALS = [
 
 /**
  * 计算下一次复习时间
- * 
+ *
  * @param stage 当前复习阶段（1-8）
  * @param lastReviewTime 上次复习时间
  * @returns 下一次复习时间
@@ -51,7 +51,7 @@ export function calculateNextReviewTime(
 
 /**
  * 计算下一次复习时间（从 ISO 字符串）
- * 
+ *
  * @param stage 当前复习阶段（1-8）
  * @param lastReviewTimeISO 上次复习时间（ISO 字符串）
  * @returns 下一次复习时间（ISO 字符串）
@@ -67,7 +67,7 @@ export function calculateNextReviewTimeISO(
 
 /**
  * 完成当前复习阶段，进入下一阶段
- * 
+ *
  * @param plan 当前复习计划
  * @param completedAt 完成时间（可选，默认为当前时间）
  * @returns 更新后的复习计划
@@ -108,7 +108,7 @@ export function advanceReviewStage(
 
 /**
  * 检查复习计划是否到期
- * 
+ *
  * @param plan 复习计划
  * @param now 当前时间（可选，默认为当前时间）
  * @returns 是否到期
@@ -122,7 +122,7 @@ export function isReviewDue(plan: ReviewPlan, now?: Date): boolean {
 /**
  * 获取复习计划的紧急程度（0-1）
  * 0 表示不紧急，1 表示非常紧急
- * 
+ *
  * @param plan 复习计划
  * @param now 当前时间（可选，默认为当前时间）
  * @returns 紧急程度（0-1）
@@ -149,7 +149,7 @@ export function getReviewUrgency(plan: ReviewPlan, now?: Date): number {
 
 /**
  * 创建新的复习计划
- * 
+ *
  * @param wordSetId 单词集 ID
  * @param totalWords 单词总数
  * @param startedAt 开始时间（可选，默认为当前时间）
@@ -178,11 +178,45 @@ export function createReviewPlan(
 
 /**
  * 获取复习阶段的描述
- * 
+ *
  * @param stage 复习阶段（1-8）
+ * @param t 翻译函数（可选）
  * @returns 阶段描述
  */
-export function getReviewStageDescription(stage: number): string {
+export function getReviewStageDescription(
+  stage: number,
+  t?: (key: string) => string
+): string {
+  if (stage < 1 || stage > 8) {
+    if (t) {
+      return t("reviewStageUnknown") || `未知阶段（${stage}）`;
+    }
+    return `未知阶段（${stage}）`;
+  }
+
+  // 如果提供了翻译函数，使用国际化
+  if (t) {
+    const stageKeys = [
+      "reviewStage1",
+      "reviewStage2",
+      "reviewStage3",
+      "reviewStage4",
+      "reviewStage5",
+      "reviewStage6",
+      "reviewStage7",
+      "reviewStage8",
+    ];
+    return t(stageKeys[stage - 1]) || getDefaultDescription(stage);
+  }
+
+  // 默认中文描述（向后兼容）
+  return getDefaultDescription(stage);
+}
+
+/**
+ * 获取默认的复习阶段描述（中文）
+ */
+function getDefaultDescription(stage: number): string {
   const descriptions = [
     "第 1 次复习（1 小时后）",
     "第 2 次复习（1 天后）",
@@ -193,17 +227,12 @@ export function getReviewStageDescription(stage: number): string {
     "第 7 次复习（30 天后）",
     "第 8 次复习（60 天后）",
   ];
-
-  if (stage < 1 || stage > 8) {
-    return `未知阶段（${stage}）`;
-  }
-
   return descriptions[stage - 1];
 }
 
 /**
  * 获取复习间隔的描述（用于显示）
- * 
+ *
  * @param stage 复习阶段（1-8）
  * @returns 间隔描述
  */
@@ -220,4 +249,3 @@ export function getReviewIntervalDescription(stage: number): string {
     return `${interval} 天`;
   }
 }
-

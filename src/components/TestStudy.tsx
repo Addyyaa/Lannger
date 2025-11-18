@@ -73,7 +73,8 @@ export default function TestStudy({
   const [wordIds, setWordIds] = useState<number[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
-  const [questionMode, setQuestionMode] = useState<QuestionMode>("word-to-meaning");
+  const [questionMode, setQuestionMode] =
+    useState<QuestionMode>("word-to-meaning");
   const [options, setOptions] = useState<TestOption[]>([]);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [showResult, setShowResult] = useState(false);
@@ -115,7 +116,8 @@ export default function TestStudy({
           distractors = [...sameSetWords];
           // 从所有单词中补充
           const otherWords = allWords.filter(
-            (w) => w.id !== correctWord.id && !distractors.some((d) => d.id === w.id)
+            (w) =>
+              w.id !== correctWord.id && !distractors.some((d) => d.id === w.id)
           );
           const shuffled = [...otherWords].sort(() => Math.random() - 0.5);
           const needed = 3 - distractors.length;
@@ -125,7 +127,9 @@ export default function TestStudy({
         // 确保有4个选项
         const allOptions: TestOption[] = [
           { word: correctWord, isCorrect: true },
-          ...distractors.slice(0, 3).map((w) => ({ word: w, isCorrect: false })),
+          ...distractors
+            .slice(0, 3)
+            .map((w) => ({ word: w, isCorrect: false })),
         ];
 
         // 随机打乱选项顺序
@@ -147,7 +151,7 @@ export default function TestStudy({
     try {
       setLoading(true);
       const endMeasure = performanceMonitor.start("loadTestWords");
-      
+
       const result = await scheduleTestWords({
         wordSetId,
         limit: 30, // 默认30题
@@ -195,7 +199,7 @@ export default function TestStudy({
     try {
       const wordId = wordIds[currentIndex];
       const word = await dbOperator.getWord(wordId);
-      
+
       if (!word) {
         // 如果单词不存在，跳过
         if (currentIndex < wordIds.length - 1) {
@@ -214,14 +218,16 @@ export default function TestStudy({
       startTimeRef.current = Date.now();
 
       // 随机选择题目模式
-      const mode: QuestionMode = Math.random() > 0.5 ? "word-to-meaning" : "meaning-to-word";
+      const mode: QuestionMode =
+        Math.random() > 0.5 ? "word-to-meaning" : "meaning-to-word";
       setQuestionMode(mode);
 
       // 获取所有单词用于生成选项
-      const allWords = wordSetId !== undefined
-        ? await dbOperator.getWordsByWordSet(wordSetId)
-        : await dbOperator.getAllWords();
-      
+      const allWords =
+        wordSetId !== undefined
+          ? await dbOperator.getWordsByWordSet(wordSetId)
+          : await dbOperator.getAllWords();
+
       if (!allWords || allWords.length === 0) {
         console.warn("没有找到单词数据用于生成选项");
       }
@@ -276,28 +282,41 @@ export default function TestStudy({
 
     // 记录错误答案
     const responseTime = 30000; // 超时时间
-    const question = questionMode === "word-to-meaning"
-      ? `${currentWord.kanji || currentWord.kana}`
-      : currentWord.meaning;
-    const correctAnswer = questionMode === "word-to-meaning"
-      ? currentWord.meaning
-      : `${currentWord.kanji || currentWord.kana}`;
+    const question =
+      questionMode === "word-to-meaning"
+        ? `${currentWord.kanji || currentWord.kana}`
+        : currentWord.meaning;
+    const correctAnswer =
+      questionMode === "word-to-meaning"
+        ? currentWord.meaning
+        : `${currentWord.kanji || currentWord.kana}`;
 
-    setSessionStats((prev) => ({
-      ...prev,
-      wrongCount: prev.wrongCount + 1,
-      wrongAnswers: [
-        ...prev.wrongAnswers,
-        {
-          wordId: currentWord.id,
-          question,
-          userAnswer: "超时",
-          correctAnswer,
-          questionMode,
-        },
-      ],
-      responseTimes: [...prev.responseTimes, responseTime],
-    }));
+    setSessionStats((prev) => {
+      const newStats = {
+        ...prev,
+        wrongCount: prev.wrongCount + 1,
+        wrongAnswers: [
+          ...prev.wrongAnswers,
+          {
+            wordId: currentWord.id,
+            question,
+            userAnswer: "超时",
+            correctAnswer,
+            questionMode,
+          },
+        ],
+        responseTimes: [...prev.responseTimes, responseTime],
+      };
+
+      // 计算平均时间
+      const totalTime = newStats.responseTimes.reduce((sum, t) => sum + t, 0);
+      newStats.averageTime =
+        newStats.responseTimes.length > 0
+          ? Math.round(totalTime / newStats.responseTimes.length)
+          : 0;
+
+      return newStats;
+    });
 
     // 更新单词进度
     await updateWordProgress(
@@ -340,7 +359,7 @@ export default function TestStudy({
       setSessionStats((prev) => {
         const newStats = {
           ...prev,
-          totalQuestions: prev.totalQuestions + 1,
+          // totalQuestions 不应该递增，应该在 loadWords 时设置
           correctCount: correct ? prev.correctCount + 1 : prev.correctCount,
           wrongCount: correct ? prev.wrongCount : prev.wrongCount + 1,
           responseTimes: [...prev.responseTimes, responseTime],
@@ -348,19 +367,27 @@ export default function TestStudy({
 
         // 计算平均时间
         const totalTime = newStats.responseTimes.reduce((sum, t) => sum + t, 0);
-        newStats.averageTime = Math.round(totalTime / newStats.responseTimes.length);
+        newStats.averageTime =
+          newStats.responseTimes.length > 0
+            ? Math.round(totalTime / newStats.responseTimes.length)
+            : 0;
 
         // 记录错题
         if (!correct) {
-          const question = questionMode === "word-to-meaning"
-            ? `${currentWord.kanji || currentWord.kana}`
-            : currentWord.meaning;
-          const userAnswer = questionMode === "word-to-meaning"
-            ? selectedOptionData.word.meaning
-            : `${selectedOptionData.word.kanji || selectedOptionData.word.kana}`;
-          const correctAnswer = questionMode === "word-to-meaning"
-            ? currentWord.meaning
-            : `${currentWord.kanji || currentWord.kana}`;
+          const question =
+            questionMode === "word-to-meaning"
+              ? `${currentWord.kanji || currentWord.kana}`
+              : currentWord.meaning;
+          const userAnswer =
+            questionMode === "word-to-meaning"
+              ? selectedOptionData.word.meaning
+              : `${
+                  selectedOptionData.word.kanji || selectedOptionData.word.kana
+                }`;
+          const correctAnswer =
+            questionMode === "word-to-meaning"
+              ? currentWord.meaning
+              : `${currentWord.kanji || currentWord.kana}`;
 
           newStats.wrongAnswers = [
             ...prev.wrongAnswers,
@@ -395,7 +422,14 @@ export default function TestStudy({
         }
       }, 1000);
     },
-    [showResult, currentWord, options, questionMode, currentIndex, wordIds.length]
+    [
+      showResult,
+      currentWord,
+      options,
+      questionMode,
+      currentIndex,
+      wordIds.length,
+    ]
   );
 
   /**
@@ -487,7 +521,9 @@ export default function TestStudy({
       boxShadow: isPortrait
         ? themeTokens.cardShadowPortrait
         : themeTokens.cardShadowLandscape,
-      border: `${isPortrait ? "0.3vw" : "0.1vw"} solid ${themeTokens.cardBorderColor}`,
+      border: `${isPortrait ? "0.3vw" : "0.1vw"} solid ${
+        themeTokens.cardBorderColor
+      }`,
       position: "relative",
       minHeight: isPortrait ? "60vh" : "400px",
       display: "flex",
@@ -606,7 +642,9 @@ export default function TestStudy({
               ? "rgba(255, 255, 255, 0.05)"
               : "rgba(0, 0, 0, 0.02)",
             borderRadius: isPortrait ? "2vw" : "0.5vw",
-            border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${themeTokens.cardBorderColor}`,
+            border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${
+              themeTokens.cardBorderColor
+            }`,
           }}
         >
           <div
@@ -676,7 +714,9 @@ export default function TestStudy({
                 style={{
                   padding: isPortrait ? "4vw 3vw" : "1.5vw 1.2vw",
                   background: optionBgColor,
-                  border: `${isPortrait ? "0.3vw" : "0.12vw"} solid ${optionBorderColor}`,
+                  border: `${
+                    isPortrait ? "0.3vw" : "0.12vw"
+                  } solid ${optionBorderColor}`,
                   borderRadius: isPortrait ? "2vw" : "0.6vw",
                   cursor: showResult ? "default" : "pointer",
                   fontSize: isPortrait ? "4vw" : "1.2vw",
@@ -684,16 +724,19 @@ export default function TestStudy({
                   fontWeight: 500,
                   textAlign: "center",
                   transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                  opacity: showResult && !isSelected && !isCorrectOption ? 0.5 : 1,
-                  boxShadow: isSelected && !showResult
-                    ? isDark
-                      ? "0 0.5vw 1.5vw rgba(0, 180, 255, 0.3)"
-                      : "0 0.5vw 1.5vw rgba(0, 180, 255, 0.2)"
-                    : "none",
+                  opacity:
+                    showResult && !isSelected && !isCorrectOption ? 0.5 : 1,
+                  boxShadow:
+                    isSelected && !showResult
+                      ? isDark
+                        ? "0 0.5vw 1.5vw rgba(0, 180, 255, 0.3)"
+                        : "0 0.5vw 1.5vw rgba(0, 180, 255, 0.2)"
+                      : "none",
                 }}
                 onMouseEnter={(e) => {
                   if (!showResult) {
-                    e.currentTarget.style.transform = "translateY(-2px) scale(1.02)";
+                    e.currentTarget.style.transform =
+                      "translateY(-2px) scale(1.02)";
                     e.currentTarget.style.boxShadow = isDark
                       ? "0 0.8vw 2vw rgba(0, 180, 255, 0.35)"
                       : "0 0.8vw 2vw rgba(0, 180, 255, 0.25)";
@@ -713,11 +756,12 @@ export default function TestStudy({
                 {questionMode === "word-to-meaning"
                   ? option.word.meaning
                   : option.word.kanji || option.word.kana}
-                {showResult && (isCorrectOption || (isSelected && !isCorrectOption)) && (
-                  <span style={{ marginLeft: isPortrait ? "2vw" : "0.5vw" }}>
-                    {isCorrectOption ? "✅" : "❌"}
-                  </span>
-                )}
+                {showResult &&
+                  (isCorrectOption || (isSelected && !isCorrectOption)) && (
+                    <span style={{ marginLeft: isPortrait ? "2vw" : "0.5vw" }}>
+                      {isCorrectOption ? "✅" : "❌"}
+                    </span>
+                  )}
               </button>
             );
           })}
@@ -734,9 +778,7 @@ export default function TestStudy({
               marginTop: isPortrait ? "4vw" : "1.5vw",
             }}
           >
-            {isCorrect
-              ? t("correct") || "✅ 正确！"
-              : t("wrong") || "❌ 错误"}
+            {isCorrect ? t("correct") || "✅ 正确！" : t("wrong") || "❌ 错误"}
           </div>
         )}
       </div>
@@ -883,7 +925,8 @@ function TestResultModal({
             >
               {showWrongAnswers
                 ? t("hideWrongAnswers") || "隐藏错题"
-                : t("showWrongAnswers") || `查看错题 (${stats.wrongAnswers.length})`}
+                : t("showWrongAnswers") ||
+                  `查看错题 (${stats.wrongAnswers.length})`}
             </button>
 
             {showWrongAnswers && (
@@ -989,11 +1032,15 @@ function TestResultModal({
               color: isDark ? "#fff" : "#333",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = isDark ? "#666" : "#d0d0d0";
+              e.currentTarget.style.backgroundColor = isDark
+                ? "#666"
+                : "#d0d0d0";
               e.currentTarget.style.transform = "scale(1.05)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = isDark ? "#555" : "#e0e0e0";
+              e.currentTarget.style.backgroundColor = isDark
+                ? "#555"
+                : "#e0e0e0";
               e.currentTarget.style.transform = "scale(1)";
             }}
           >
@@ -1004,4 +1051,3 @@ function TestResultModal({
     </div>
   );
 }
-

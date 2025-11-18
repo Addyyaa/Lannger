@@ -6,7 +6,6 @@ import { getDueReviewPlans } from "../store/reviewStore";
 import { getWordSet } from "../store/wordStore";
 import { getReviewStageDescription } from "../utils/ebbinghausCurve";
 import { canStartReview } from "../utils/reviewLock";
-import ComponentAsModel from "../utils/componentAsModel";
 import { handleError } from "../utils/errorHandler";
 
 interface ReviewNotificationProps {
@@ -26,7 +25,15 @@ export default function ReviewNotification({
   const { isDark } = useTheme();
   const { isPortrait } = useOrientation();
   const [notifications, setNotifications] = useState<
-    Array<ReviewPlan & { wordSetName: string }>
+    Array<
+      ReviewPlan & {
+        wordSetName: string;
+        actualDueWords: number;
+        isCurrent?: boolean;
+        isQueued?: boolean;
+        canStart?: boolean;
+      }
+    >
   >([]);
   const [loading, setLoading] = useState(true);
 
@@ -53,21 +60,38 @@ export default function ReviewNotification({
         duePlans.map(async (plan, index) => {
           const wordSet = await getWordSet(plan.wordSetId);
           const canReview = await canStartReview(plan.wordSetId);
-          
+
           // 判断是否为当前需要复习的（第一个且未被锁定，或者被锁定的是这个）
-          const isCurrent = index === 0 && (canReview.allowed || currentLockedWordSetId === plan.wordSetId);
-          
+          const isCurrent =
+            index === 0 &&
+            (canReview.allowed || currentLockedWordSetId === plan.wordSetId);
+
+          // 计算实际到期的单词数
+          const { scheduleReviewWords } = await import("../algorithm");
+          const reviewResult = await scheduleReviewWords({
+            wordSetId: plan.wordSetId,
+            onlyDue: true,
+            limit: 1000, // 获取所有到期的单词
+          });
+          const actualDueWords = reviewResult.dueCount;
+
           return {
             ...plan,
             wordSetName: wordSet?.name || `单词集 #${plan.wordSetId}`,
             isCurrent, // 是否为当前需要复习的
             isQueued: !isCurrent, // 是否为排队中的
-            canStart: canReview.allowed, // 是否可以开始复习
+            canStart: canReview.allowed && actualDueWords > 0, // 是否可以开始复习（需要实际有到期的单词）
+            actualDueWords, // 实际到期的单词数
           };
         })
       );
 
-      setNotifications(notificationsWithNames);
+      // 过滤掉没有到期单词的通知
+      const validNotifications = notificationsWithNames.filter(
+        (n) => n.actualDueWords > 0
+      );
+
+      setNotifications(validNotifications);
     } catch (error) {
       handleError(error, { operation: "checkReviewNotifications" });
     } finally {
@@ -99,7 +123,10 @@ export default function ReviewNotification({
     width: "100%",
   };
 
-  const getNotificationStyle = (isCurrent: boolean, isQueued: boolean): React.CSSProperties => ({
+  const getNotificationStyle = (
+    isCurrent: boolean,
+    isQueued: boolean
+  ): React.CSSProperties => ({
     background: isCurrent
       ? isDark
         ? "linear-gradient(135deg, rgba(0, 180, 255, 0.15) 0%, rgba(0, 150, 212, 0.1) 100%)"
@@ -179,11 +206,11 @@ export default function ReviewNotification({
               <strong>{notification.wordSetName}</strong>
             </div>
             <div style={textStyle}>
-              {getReviewStageDescription(notification.reviewStage)}
+              {getReviewStageDescription(notification.reviewStage, t)}
             </div>
             <div style={textStyle}>
               {t("reviewWordsCount") || "需要复习的单词"}:{" "}
-              {notification.totalWords}
+              {notification.actualDueWords || 0}
             </div>
             {isQueued && (
               <div
@@ -266,4 +293,3 @@ export default function ReviewNotification({
     </div>
   );
 }
-
