@@ -249,10 +249,15 @@ export async function fuzzySearchWords(
     // 并行执行所有查询策略
     const queryResults = await Promise.all(queries);
 
-    // 合并结果并去重（按 id）
+    // 合并结果并去重（按 id），同时确保只包含指定单词集的单词
     for (const words of queryResults) {
       for (const word of words) {
-        if (word.id !== undefined && !resultsMap.has(word.id)) {
+        // 双重验证：确保单词属于指定单词集（防御性编程）
+        if (
+          word.id !== undefined &&
+          word.setId === wordSetId &&
+          !resultsMap.has(word.id)
+        ) {
           resultsMap.set(word.id, word);
           // 如果已达到限制，提前终止
           if (resultsMap.size >= limit) {
@@ -694,16 +699,17 @@ export async function deleteDatabase() {
 // 备份数据库
 export async function backupDatabase() {
   await ensureDBOpen();
-  
+
   // 获取所有单词集，但排除默认单词集
   const allWordSets = await db.wordSets.toArray();
   const wordSets = allWordSets.filter(
-    (set) => set.id !== DEFAULT_WORD_SET_ID && set.name !== DEFAULT_WORD_SET_NAME
+    (set) =>
+      set.id !== DEFAULT_WORD_SET_ID && set.name !== DEFAULT_WORD_SET_NAME
   );
 
   // 获取所有单词
   const allWords = await db.words.toArray();
-  
+
   // 处理单词：对于属于默认单词集的单词，添加 wordSet 字段以便恢复时映射
   const words = allWords.map((word) => {
     if (word.setId === DEFAULT_WORD_SET_ID) {
@@ -810,7 +816,8 @@ async function restoreFromBackupFormat(
   // 处理单词集：不使用文件中的 id，使用数据库自增 id
   for (const rawSet of wordSets) {
     const cloned = { ...rawSet } as Partial<WordSet>;
-    const originalId = typeof (rawSet as any)?.id === "number" ? (rawSet as any).id : undefined;
+    const originalId =
+      typeof (rawSet as any)?.id === "number" ? (rawSet as any).id : undefined;
 
     // 移除文件中的 id，让数据库自动分配
     delete (cloned as any).id;
@@ -865,12 +872,12 @@ async function restoreFromBackupFormat(
 
       // 处理单词集 ID 映射
       let setId = DEFAULT_WORD_SET_ID;
-      const originalSetId = typeof cloned.setId === "number" ? cloned.setId : undefined;
+      const originalSetId =
+        typeof cloned.setId === "number" ? cloned.setId : undefined;
 
       // 优先通过单词集名称查找（如果文件中有 wordSetName 或 wordSet 字段）
       const wordSetName =
-        (rawWord as any)?.wordSetName ||
-        (rawWord as any)?.wordSet;
+        (rawWord as any)?.wordSetName || (rawWord as any)?.wordSet;
 
       if (typeof wordSetName === "string" && wordSetName.trim() !== "") {
         const setName = wordSetName.trim();
@@ -916,10 +923,7 @@ async function restoreFromBackupFormat(
         cloned.meaning.trim() === "" ||
         cloned.example.trim() === ""
       ) {
-        console.warn(
-          "restoreFromBackupFormat: 跳过缺少必填字段的单词",
-          cloned
-        );
+        console.warn("restoreFromBackupFormat: 跳过缺少必填字段的单词", cloned);
         continue;
       }
 

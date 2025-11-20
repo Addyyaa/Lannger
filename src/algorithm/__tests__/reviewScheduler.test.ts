@@ -136,6 +136,9 @@ describe("reviewScheduler", () => {
       await db.words.add(word2);
 
       // 为两个单词创建进度记录
+      // 设置 nextReviewAt 为过去的时间，确保单词被识别为到期
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
       const progress1: WordProgress = {
         wordId: 1,
         setId: 1,
@@ -146,6 +149,7 @@ describe("reviewScheduler", () => {
         repetitions: 2,
         easeFactor: 2.5,
         intervalDays: 1,
+        nextReviewAt: pastDate.toISOString(),
       };
       const progress2: WordProgress = {
         wordId: 2,
@@ -157,6 +161,7 @@ describe("reviewScheduler", () => {
         repetitions: 2,
         easeFactor: 2.5,
         intervalDays: 1,
+        nextReviewAt: pastDate.toISOString(),
       };
       await db.wordProgress.add(progress1);
       await db.wordProgress.add(progress2);
@@ -376,6 +381,8 @@ describe("reviewScheduler", () => {
       await db.words.add(word2);
 
       // word1: 低掌握度
+      const pastDate = new Date();
+      pastDate.setDate(pastDate.getDate() - 1);
       const progress1: WordProgress = {
         wordId: 1,
         setId: 1,
@@ -386,6 +393,7 @@ describe("reviewScheduler", () => {
         repetitions: 0,
         easeFactor: 2.5,
         intervalDays: 1,
+        nextReviewAt: pastDate.toISOString(),
       };
 
       // word2: 高掌握度
@@ -399,6 +407,7 @@ describe("reviewScheduler", () => {
         repetitions: 5,
         easeFactor: 2.5,
         intervalDays: 1,
+        nextReviewAt: pastDate.toISOString(),
       };
 
       await db.wordProgress.add(progress1);

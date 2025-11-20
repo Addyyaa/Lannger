@@ -201,9 +201,21 @@ export async function fixDataIntegrity(dryRun: boolean = false): Promise<{
   }
 
   // 执行修复
+  // 使用 Set 跟踪已修复的记录，避免重复修复
+  const fixedRecords = new Set<string>();
+
   for (const issue of validationResult.issues) {
     try {
       let fixedThisIssue = false;
+      const recordKey = `${issue.table}:${issue.recordId}`;
+
+      // 对于 array_invalid_item 类型，每个无效的 wordId 都会创建一个 issue
+      // 但同一个记录只需要修复一次
+      if (issue.type === "array_invalid_item" && fixedRecords.has(recordKey)) {
+        // 已经修复过这个记录，跳过
+        details.push({ issue, fixed: true });
+        continue;
+      }
 
       if (issue.type === "orphaned_record") {
         if (issue.table === "wordProgress") {
@@ -238,6 +250,8 @@ export async function fixDataIntegrity(dryRun: boolean = false): Promise<{
       } else if (issue.type === "array_invalid_item") {
         if (issue.table === "dailyStats" && issue.field === "learnedWordIds") {
           // 从 dailyStats.learnedWordIds 中移除无效的 wordId
+          // 注意：同一个记录可能有多个 issues（每个无效的 wordId 一个），
+          // 但我们只需要修复一次，所以使用 Set 来跟踪已修复的记录
           const stat = await db.dailyStats.get(issue.recordId as string);
           if (stat && stat.learnedWordIds) {
             const allWordIds = new Set(
@@ -246,11 +260,21 @@ export async function fixDataIntegrity(dryRun: boolean = false): Promise<{
             const validWordIds = stat.learnedWordIds.filter((id) =>
               allWordIds.has(id)
             );
-            await db.dailyStats.update(issue.recordId as string, {
-              learnedWordIds: validWordIds,
-              updatedAt: new Date().toISOString(),
-            });
-            fixedThisIssue = true;
+            // 只有当有效 wordIds 数量发生变化时才更新
+            if (validWordIds.length !== stat.learnedWordIds.length) {
+              const updateResult = await db.dailyStats.update(
+                issue.recordId as string,
+                {
+                  learnedWordIds: validWordIds,
+                  updatedAt: new Date().toISOString(),
+                }
+              );
+              // 如果更新成功（返回 1），标记为已修复
+              fixedThisIssue = updateResult > 0;
+              if (fixedThisIssue) {
+                fixedRecords.add(recordKey);
+              }
+            }
           }
         } else if (
           issue.table === "reviewPlans" &&
@@ -265,11 +289,21 @@ export async function fixDataIntegrity(dryRun: boolean = false): Promise<{
             const validWordIds = plan.learnedWordIds.filter((id) =>
               allWordIds.has(id)
             );
-            await db.reviewPlans.update(issue.recordId as number, {
-              learnedWordIds: validWordIds,
-              updatedAt: new Date().toISOString(),
-            });
-            fixedThisIssue = true;
+            // 只有当有效 wordIds 数量发生变化时才更新
+            if (validWordIds.length !== plan.learnedWordIds.length) {
+              const updateResult = await db.reviewPlans.update(
+                issue.recordId as number,
+                {
+                  learnedWordIds: validWordIds,
+                  updatedAt: new Date().toISOString(),
+                }
+              );
+              // 如果更新成功（返回 1），标记为已修复
+              fixedThisIssue = updateResult > 0;
+              if (fixedThisIssue) {
+                fixedRecords.add(recordKey);
+              }
+            }
           }
         }
       }

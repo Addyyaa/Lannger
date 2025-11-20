@@ -23,14 +23,15 @@ class MockTable<T = any, TKey = any> {
   private data: Map<TKey, T> = new Map();
 
   async get(key: TKey): Promise<T | undefined> {
-    // 如果直接 key 找不到，尝试通过 wordId 查找（用于 wordProgress）
+    // 如果直接 key 找不到，尝试通过 wordId 或 wordSetId 查找
     const result = this.data.get(key);
     if (result !== undefined) {
       return result;
     }
     // 对于 wordProgress，key 可能是 wordId
+    // 对于 reviewPlans，key 可能是 wordSetId
     for (const [, v] of this.data.entries()) {
-      if ((v as any).wordId === key) {
+      if ((v as any).wordId === key || (v as any).wordSetId === key) {
         return v;
       }
     }
@@ -38,19 +39,20 @@ class MockTable<T = any, TKey = any> {
   }
 
   async put(item: T): Promise<TKey> {
-    // 支持多种主键类型：id, date, wordId (for wordProgress)
+    // 支持多种主键类型：id, date, wordId (for wordProgress), wordSetId (for reviewPlans)
     const key =
       (item as any).id ??
       (item as any).date ??
       (item as any).wordId ??
+      (item as any).wordSetId ??
       this.data.size;
     this.data.set(key as TKey, item);
     return key as TKey;
   }
 
   async add(item: T): Promise<TKey> {
-    // 对于 add，如果没有 id，自动生成一个唯一的 id
-    if (!(item as any).id) {
+    // 对于 add，如果没有 id 且没有 date（dailyStats 使用 date 作为主键），自动生成一个唯一的 id
+    if (!(item as any).id && !(item as any).date) {
       // 生成一个唯一的 id（使用当前时间戳 + 随机数，确保唯一性）
       const newId = Date.now() + Math.random();
       (item as any).id = newId;
@@ -67,6 +69,17 @@ class MockTable<T = any, TKey = any> {
     if (existing === undefined) {
       for (const [k, v] of this.data.entries()) {
         if ((v as any).wordId === key) {
+          existing = v;
+          actualKey = k;
+          break;
+        }
+      }
+    }
+
+    // 如果还是找不到，尝试通过 date 字段查找（用于 dailyStats）
+    if (existing === undefined && typeof key === "string") {
+      for (const [k, v] of this.data.entries()) {
+        if ((v as any).date === key) {
           existing = v;
           actualKey = k;
           break;
@@ -121,7 +134,21 @@ class MockTable<T = any, TKey = any> {
   }
 
   async bulkGet(keys: TKey[]): Promise<(T | undefined)[]> {
-    return keys.map((key) => this.data.get(key));
+    return keys.map((key) => {
+      // 先尝试直接 key
+      const result = this.data.get(key);
+      if (result !== undefined) {
+        return result;
+      }
+      // 对于 wordProgress，key 可能是 wordId
+      // 对于 reviewPlans，key 可能是 wordSetId
+      for (const [, v] of this.data.entries()) {
+        if ((v as any).wordId === key || (v as any).wordSetId === key) {
+          return v;
+        }
+      }
+      return undefined;
+    });
   }
 
   filter(predicate: (item: T) => boolean): {
@@ -145,7 +172,7 @@ class MockTable<T = any, TKey = any> {
     return filterResult;
   }
 
-  where(index: string): {
+  where(index: string | string[]): {
     equals: (value: any) => {
       toArray: () => Promise<T[]>;
       first: () => Promise<T | undefined>;
@@ -159,6 +186,12 @@ class MockTable<T = any, TKey = any> {
       upper: any
     ) => {
       toArray: () => Promise<T[]>;
+      limit: (count: number) => {
+        toArray: () => Promise<T[]>;
+      };
+    };
+    anyOf: (values: any[]) => {
+      toArray: () => Promise<T[]>;
     };
     belowOrEqual: (value: any) => {
       toArray: () => Promise<T[]>;
@@ -171,17 +204,81 @@ class MockTable<T = any, TKey = any> {
       equals: (value: any) => ({
         toArray: async () => {
           const all = await this.toArray();
+          if (Array.isArray(index)) {
+            // 复合索引比较
+            return all.filter((item: any) => {
+              const itemValue = index.map((idx) => (item as any)[idx]);
+              return JSON.stringify(itemValue) === JSON.stringify(value);
+            });
+          }
           return all.filter((item: any) => item[index] === value);
         },
         first: async () => {
           const all = await this.toArray();
+          if (Array.isArray(index)) {
+            return all.find((item: any) => {
+              const itemValue = index.map((idx) => (item as any)[idx]);
+              return JSON.stringify(itemValue) === JSON.stringify(value);
+            });
+          }
           return all.find((item: any) => item[index] === value);
         },
+        filter: (predicate: (item: any) => boolean) => ({
+          toArray: async () => {
+            const all = await this.toArray();
+            const filtered = all.filter((item: any) => {
+              const matches = Array.isArray(index)
+                ? (() => {
+                    const itemValue = index.map((idx) => (item as any)[idx]);
+                    return JSON.stringify(itemValue) === JSON.stringify(value);
+                  })()
+                : item[index] === value;
+              return matches && predicate(item);
+            });
+            return filtered;
+          },
+          limit: (count: number) => ({
+            toArray: async () => {
+              const all = await this.toArray();
+              const filtered = all.filter((item: any) => {
+                const matches = Array.isArray(index)
+                  ? (() => {
+                      const itemValue = index.map((idx) => (item as any)[idx]);
+                      return (
+                        JSON.stringify(itemValue) === JSON.stringify(value)
+                      );
+                    })()
+                  : item[index] === value;
+                return matches && predicate(item);
+              });
+              return filtered.slice(0, count);
+            },
+          }),
+        }),
+        limit: (count: number) => ({
+          toArray: async () => {
+            const all = await this.toArray();
+            const filtered = Array.isArray(index)
+              ? all.filter((item: any) => {
+                  const itemValue = index.map((idx) => (item as any)[idx]);
+                  return JSON.stringify(itemValue) === JSON.stringify(value);
+                })
+              : all.filter((item: any) => item[index] === value);
+            return filtered.slice(0, count);
+          },
+        }),
         delete: async () => {
           const all = await this.toArray();
           let deleted = 0;
           for (const item of all) {
-            if ((item as any)[index] === value) {
+            let matches = false;
+            if (Array.isArray(index)) {
+              const itemValue = index.map((idx) => (item as any)[idx]);
+              matches = JSON.stringify(itemValue) === JSON.stringify(value);
+            } else {
+              matches = (item as any)[index] === value;
+            }
+            if (matches) {
               // 尝试多种可能的主键字段
               const key =
                 (item as any).id ?? (item as any).date ?? (item as any).userId;
@@ -204,10 +301,31 @@ class MockTable<T = any, TKey = any> {
           return deleted;
         },
       }),
+      anyOf: (values: any[]) => ({
+        toArray: async () => {
+          const all = await this.toArray();
+          const valueSet = new Set(values);
+          if (Array.isArray(index)) {
+            return all.filter((item: any) => {
+              const itemValue = index.map((idx) => (item as any)[idx]);
+              return valueSet.has(itemValue[0]); // 对于 anyOf，通常只比较第一个字段
+            });
+          }
+          return all.filter((item: any) => valueSet.has(item[index]));
+        },
+      }),
       startsWith: (prefix: string) => ({
         toArray: async () => {
           const all = await this.toArray();
           return all.filter((item: any) => {
+            // startsWith 只支持单字段索引
+            if (Array.isArray(index)) {
+              // 对于复合索引，使用第一个字段
+              const fieldValue = item[index[0]];
+              return (
+                typeof fieldValue === "string" && fieldValue.startsWith(prefix)
+              );
+            }
             const fieldValue = item[index];
             return (
               typeof fieldValue === "string" && fieldValue.startsWith(prefix)
@@ -219,16 +337,67 @@ class MockTable<T = any, TKey = any> {
         toArray: async () => {
           const all = await this.toArray();
           return all.filter((item: any) => {
-            const fieldValue = item[index];
+            // 支持复合索引 [setId+kana] 等
+            if (Array.isArray(lower) && Array.isArray(upper)) {
+              // 复合索引比较
+              const itemValue = Array.isArray(index)
+                ? index.map((idx) => (item as any)[idx])
+                : [item[index as string]];
+              // 比较每个维度
+              for (
+                let i = 0;
+                i < Math.min(itemValue.length, lower.length);
+                i++
+              ) {
+                if (itemValue[i] < lower[i]) return false;
+                if (itemValue[i] > upper[i]) return false;
+              }
+              return true;
+            }
+            // 单字段索引
+            const fieldValue = Array.isArray(index)
+              ? item[index[0]]
+              : item[index as string];
             return fieldValue >= lower && fieldValue <= upper;
           });
         },
+        limit: (count: number) => ({
+          toArray: async () => {
+            const all = await this.toArray();
+            const filtered = all.filter((item: any) => {
+              // 支持复合索引 [setId+kana] 等
+              if (Array.isArray(lower) && Array.isArray(upper)) {
+                const itemValue = Array.isArray(index)
+                  ? index.map((idx) => (item as any)[idx])
+                  : [item[index as string]];
+                for (
+                  let i = 0;
+                  i < Math.min(itemValue.length, lower.length);
+                  i++
+                ) {
+                  if (itemValue[i] < lower[i]) return false;
+                  if (itemValue[i] > upper[i]) return false;
+                }
+                return true;
+              }
+              // 单字段索引
+              const fieldValue = Array.isArray(index)
+                ? item[index[0]]
+                : item[index as string];
+              return fieldValue >= lower && fieldValue <= upper;
+            });
+            return filtered.slice(0, count);
+          },
+        }),
       }),
       belowOrEqual: (value: any) => ({
         toArray: async () => {
           const all = await this.toArray();
           return all.filter((item: any) => {
-            const fieldValue = item[index];
+            // belowOrEqual 只支持单字段索引
+            const fieldValue = Array.isArray(index)
+              ? item[index[0]]
+              : item[index as string];
             return fieldValue <= value;
           });
         },
@@ -237,7 +406,10 @@ class MockTable<T = any, TKey = any> {
         toArray: async () => {
           const all = await this.toArray();
           return all.filter((item: any) => {
-            const fieldValue = item[index];
+            // aboveOrEqual 只支持单字段索引
+            const fieldValue = Array.isArray(index)
+              ? item[index[0]]
+              : item[index as string];
             return fieldValue >= value;
           });
         },
@@ -265,6 +437,10 @@ const mockDb = {
 
   isOpen(): boolean {
     return true;
+  },
+
+  async close(): Promise<void> {
+    // Mock 关闭数据库
   },
 
   async delete(): Promise<void> {

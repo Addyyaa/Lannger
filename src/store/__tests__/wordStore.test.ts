@@ -345,8 +345,14 @@ describe("wordStore", () => {
 
       await deleteWordSet(wordSetId);
 
+      // 删除单词集后，单词应该被移动到默认单词集（ID=0），而不是被删除
       const word = await db.words.get(wordId);
-      expect(word).toBeUndefined();
+      expect(word).toBeDefined();
+      expect(word?.setId).toBe(0); // 应该移动到默认单词集
+
+      // 验证单词集已被删除
+      const wordSet = await db.wordSets.get(wordSetId);
+      expect(wordSet).toBeUndefined();
     });
   });
 
