@@ -6,6 +6,7 @@ import {
   safeDbOperation,
   safeBatchDbOperation,
   safeTransaction,
+  DbOperationOptions,
 } from "../dbWrapper";
 
 // Mock errorHandler
@@ -167,4 +168,3 @@ describe("dbWrapper", () => {
     });
   });
 });
-

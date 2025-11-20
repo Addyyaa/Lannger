@@ -23,11 +23,27 @@ class MockTable<T = any, TKey = any> {
   private data: Map<TKey, T> = new Map();
 
   async get(key: TKey): Promise<T | undefined> {
-    return this.data.get(key);
+    // 如果直接 key 找不到，尝试通过 wordId 查找（用于 wordProgress）
+    const result = this.data.get(key);
+    if (result !== undefined) {
+      return result;
+    }
+    // 对于 wordProgress，key 可能是 wordId
+    for (const [, v] of this.data.entries()) {
+      if ((v as any).wordId === key) {
+        return v;
+      }
+    }
+    return undefined;
   }
 
   async put(item: T): Promise<TKey> {
-    const key = (item as any).id ?? (item as any).date ?? this.data.size;
+    // 支持多种主键类型：id, date, wordId (for wordProgress)
+    const key =
+      (item as any).id ??
+      (item as any).date ??
+      (item as any).wordId ??
+      this.data.size;
     this.data.set(key as TKey, item);
     return key as TKey;
   }
@@ -37,16 +53,41 @@ class MockTable<T = any, TKey = any> {
   }
 
   async update(key: TKey, changes: Partial<T>): Promise<number> {
-    const existing = this.data.get(key);
+    // 先尝试直接 key
+    let existing = this.data.get(key);
+    let actualKey = key;
+
+    // 如果找不到，尝试通过 wordId 查找（用于 wordProgress）
+    if (existing === undefined) {
+      for (const [k, v] of this.data.entries()) {
+        if ((v as any).wordId === key) {
+          existing = v;
+          actualKey = k;
+          break;
+        }
+      }
+    }
+
     if (existing) {
-      this.data.set(key, { ...existing, ...changes } as T);
+      this.data.set(actualKey, { ...existing, ...changes } as T);
       return 1;
     }
     return 0;
   }
 
   async delete(key: TKey): Promise<void> {
-    this.data.delete(key);
+    // 先尝试直接 key
+    if (this.data.has(key)) {
+      this.data.delete(key);
+      return;
+    }
+    // 如果找不到，尝试通过 wordId 查找并删除（用于 wordProgress）
+    for (const [k, v] of this.data.entries()) {
+      if ((v as any).wordId === key) {
+        this.data.delete(k);
+        return;
+      }
+    }
   }
 
   async clear(): Promise<void> {
@@ -79,13 +120,23 @@ class MockTable<T = any, TKey = any> {
 
   filter(predicate: (item: T) => boolean): {
     toArray: () => Promise<T[]>;
+    limit: (count: number) => {
+      toArray: () => Promise<T[]>;
+    };
   } {
-    return {
+    const filterResult = {
       toArray: async () => {
         const all = await this.toArray();
         return all.filter(predicate);
       },
+      limit: (count: number) => ({
+        toArray: async () => {
+          const all = await this.toArray();
+          return all.filter(predicate).slice(0, count);
+        },
+      }),
     };
+    return filterResult;
   }
 
   where(index: string): {
@@ -101,6 +152,12 @@ class MockTable<T = any, TKey = any> {
       lower: any,
       upper: any
     ) => {
+      toArray: () => Promise<T[]>;
+    };
+    belowOrEqual: (value: any) => {
+      toArray: () => Promise<T[]>;
+    };
+    aboveOrEqual: (value: any) => {
       toArray: () => Promise<T[]>;
     };
   } {
@@ -149,6 +206,24 @@ class MockTable<T = any, TKey = any> {
           });
         },
       }),
+      belowOrEqual: (value: any) => ({
+        toArray: async () => {
+          const all = await this.toArray();
+          return all.filter((item: any) => {
+            const fieldValue = item[index];
+            return fieldValue <= value;
+          });
+        },
+      }),
+      aboveOrEqual: (value: any) => ({
+        toArray: async () => {
+          const all = await this.toArray();
+          return all.filter((item: any) => {
+            const fieldValue = item[index];
+            return fieldValue >= value;
+          });
+        },
+      }),
     };
   }
 }
@@ -178,16 +253,17 @@ const mockDb = {
     // Mock 删除数据库
   },
 
-  async transaction<T>(
-    _mode: string,
-    _tables: any,
-    callback: (trans: any) => Promise<T>
-  ): Promise<T> {
+  async transaction<T>(_mode: string, ...args: any[]): Promise<T> {
     // 简化的事务实现
-    const trans = {
-      table: (name: string) => (mockDb as any)[name],
-    };
-    return await callback(trans);
+    // 最后一个参数是 callback
+    const callback = args[args.length - 1];
+    if (typeof callback === "function") {
+      const trans = {
+        table: (name: string) => (mockDb as any)[name],
+      };
+      return await callback(trans);
+    }
+    throw new Error("Transaction callback is not a function");
   },
 };
 
@@ -244,6 +320,10 @@ vi.mock("../db", () => {
       await initializeDefaultData();
       return mockDb;
     },
+    // 导出常量
+    DEFAULT_WORD_TYPE: "undefined",
+    DEFAULT_WORD_SET_NAME: "Default",
+    DEFAULT_WORD_SET_ID: 0,
     // 导出 JpLearnDB 类（虽然测试中可能不会直接使用，但为了完整性）
     JpLearnDB: class {
       constructor() {
