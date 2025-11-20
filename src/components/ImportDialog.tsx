@@ -15,9 +15,23 @@ interface ImportDialogProps {
 type FileFormat = "json" | "xlsx" | "xls" | "xml";
 type Encoding = "utf-8" | "utf-16" | "gbk";
 
+// 导入阶段枚举
+type ImportStage = "file-selection" | "wordset-selection" | "importing" | "complete";
+
+// 单词集导入信息
+interface WordSetImportInfo {
+  name: string;
+  wordCount: number;
+  exists: boolean;
+  existingId?: number;
+  conflictResolution?: "overwrite" | "skip" | "rename";
+  newName?: string;
+}
+
 /**
  * 单词批量导入组件
  * 支持多种文件格式（JSON、XLSX、XLS、XML）和编码（UTF-8、UTF-16、GBK）
+ * 支持选择性导入和冲突处理
  */
 export default function ImportDialog({
   closePopup,
@@ -31,6 +45,19 @@ export default function ImportDialog({
   const [fileFormat, setFileFormat] = useState<FileFormat>("json");
   const [encoding, setEncoding] = useState<Encoding>("utf-8");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 新增状态：导入流程管理
+  const [importStage, setImportStage] = useState<ImportStage>("file-selection");
+  const [parsedWordsData, setParsedWordsData] = useState<any[]>([]);
+  const [wordSetImportInfos, setWordSetImportInfos] = useState<WordSetImportInfo[]>([]);
+  const [selectedWordSetNames, setSelectedWordSetNames] = useState<Set<string>>(new Set());
+  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentWordSet: "" });
+  const [importStats, setImportStats] = useState({
+    successWordSets: 0,
+    successWords: 0,
+    skippedWordSets: 0,
+    renamedWordSets: 0,
+  });
 
   // 获取文件扩展名对应的格式
   const getFileFormatFromExtension = (filename: string): FileFormat => {
@@ -405,8 +432,8 @@ export default function ImportDialog({
     return wordsData;
   };
 
-  // 导入单词
-  const handleImport = async () => {
+  // 解析文件并提取单词集列表（用于选择性导入）
+  const parseFileAndExtractWordSets = async (): Promise<void> => {
     if (!selectedFile) {
       alert(t("pleaseSelectFile") || "请先选择文件");
       return;
@@ -436,227 +463,283 @@ export default function ImportDialog({
         return;
       }
 
-      // 获取所有单词集，用于名称到ID的映射
-      let wordSets: WordSet[] = [];
-      try {
-        const fetchedWordSets = await dbOperator.getAllWordSets();
-        // 防御性检查：确保 wordSets 是数组
-        if (Array.isArray(fetchedWordSets)) {
-          wordSets = fetchedWordSets;
-        } else {
-          console.error(
-            "getAllWordSets 返回了非数组值:",
-            fetchedWordSets,
-            typeof fetchedWordSets
-          );
-          wordSets = [];
-        }
-      } catch (error) {
-        console.error("获取单词集失败:", error);
-        wordSets = [];
-      }
+      // 保存解析的单词数据
+      setParsedWordsData(wordsData);
 
+      // 提取单词集列表
       const wordSetMap = new Map<string, number>();
-      // 确保 wordSets 是数组后再遍历
-      if (Array.isArray(wordSets)) {
-        wordSets.forEach((set) => {
-          if (set && set.name && typeof set.id === "number") {
-            wordSetMap.set(set.name, set.id);
-          }
-        });
-      } else {
-        console.error(
-          "wordSets 不是数组，无法遍历:",
-          wordSets,
-          typeof wordSets
+      wordsData.forEach((word) => {
+        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
+        wordSetMap.set(wordSetName, (wordSetMap.get(wordSetName) || 0) + 1);
+      });
+
+      // 获取现有单词集，用于冲突检测
+      const existingWordSets = await dbOperator.getAllWordSets();
+      const existingWordSetNames = new Set(
+        existingWordSets.map((set) => set.name)
+      );
+
+      // 构建单词集导入信息
+      const importInfos: WordSetImportInfo[] = Array.from(
+        wordSetMap.entries()
+      ).map(([name, count]) => {
+        const existing = existingWordSets.find((set) => set.name === name);
+        return {
+          name,
+          wordCount: count,
+          exists: existing !== undefined,
+          existingId: existing?.id,
+          conflictResolution: existing ? "rename" : undefined, // 默认重命名
+        };
+      });
+
+      setWordSetImportInfos(importInfos);
+      // 默认全选
+      setSelectedWordSetNames(new Set(importInfos.map((info) => info.name)));
+      // 进入单词集选择阶段
+      setImportStage("wordset-selection");
+    } catch (error) {
+      console.error("解析文件失败:", error);
+      alert(
+        (t("parseFileFailed") || "解析文件失败") +
+          `: ${error instanceof Error ? error.message : String(error)}`
+      );
+    }
+  };
+
+  // 导入单词（支持选择性导入和冲突处理）
+  const handleImport = async () => {
+    if (importStage === "file-selection") {
+      // 如果还在文件选择阶段，先解析文件
+      await parseFileAndExtractWordSets();
+      return;
+    }
+
+    if (selectedWordSetNames.size === 0) {
+      alert(t("pleaseSelectWordSet") || "请至少选择一个单词集");
+      return;
+    }
+
+    try {
+      // 导入前自动备份
+      const backupResult = await createBackupBeforeImport();
+      if (!backupResult.success) {
+        alert(
+          (t("backupFailed") || "备份失败") +
+            `: ${backupResult.error || "未知错误"}`
         );
+        return;
       }
 
-      let successCount = 0;
-      let failCount = 0;
-      const failReasons: Map<string, number> = new Map(); // 失败原因统计
+      // 进入导入阶段
+      setImportStage("importing");
 
-      for (const wordData of wordsData) {
-        try {
-          // 验证必填字段
-          const missingFields: string[] = [];
-          if (!wordData.kana || wordData.kana.trim() === "")
-            missingFields.push(t("kana"));
-          if (!wordData.kanji || wordData.kanji.trim() === "")
-            missingFields.push(t("kanji"));
-          if (!wordData.meaning || wordData.meaning.trim() === "")
-            missingFields.push(t("meaning"));
-          if (!wordData.example || wordData.example.trim() === "")
-            missingFields.push(t("example"));
+      // 过滤选中的单词集数据
+      const selectedWords = parsedWordsData.filter((word) => {
+        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
+        return selectedWordSetNames.has(wordSetName);
+      });
 
-          if (missingFields.length > 0) {
-            failCount++;
-            const reason = `${t("missingRequiredField")}: ${missingFields.join(
-              ", "
-            )}`;
-            failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
+      // 获取现有单词集，用于冲突处理
+      const existingWordSets = await dbOperator.getAllWordSets();
+      const wordSetMap = new Map<string, number>();
+      existingWordSets.forEach((set) => {
+        wordSetMap.set(set.name, set.id);
+      });
+
+      // 统计信息
+      let successWordSets = 0;
+      let successWords = 0;
+      let skippedWordSets = 0;
+      let renamedWordSets = 0;
+
+      // 按单词集分组处理
+      const wordsByWordSet = new Map<string, any[]>();
+      selectedWords.forEach((word) => {
+        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
+        if (!wordsByWordSet.has(wordSetName)) {
+          wordsByWordSet.set(wordSetName, []);
+        }
+        wordsByWordSet.get(wordSetName)!.push(word);
+      });
+
+      const totalWordSets = wordsByWordSet.size;
+      let processedWordSets = 0;
+
+      // 逐个单词集导入
+      for (const [wordSetName, words] of wordsByWordSet.entries()) {
+        setImportProgress({
+          current: processedWordSets,
+          total: totalWordSets,
+          currentWordSet: wordSetName,
+        });
+
+        const importInfo = wordSetImportInfos.find(
+          (info) => info.name === wordSetName
+        );
+        if (!importInfo) continue;
+
+        // 处理冲突
+        let finalWordSetName = wordSetName;
+        let finalWordSetId: number | undefined = undefined;
+
+        if (importInfo.exists) {
+          const resolution = importInfo.conflictResolution || "rename";
+          if (resolution === "skip") {
+            skippedWordSets++;
+            processedWordSets++;
             continue;
-          }
-
-          // 验证难度系数（必须是1-5之间的整数）
-          const difficultyCoefficient = parseInt(
-            wordData.difficultyCoefficient || "5",
-            10
-          );
-          if (isNaN(difficultyCoefficient)) {
-            failCount++;
-            const reason = `${t("difficultyNotNumber")}: ${
-              wordData.difficultyCoefficient
-            }`;
-            failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
-            continue;
-          }
-          if (difficultyCoefficient < 1 || difficultyCoefficient > 5) {
-            failCount++;
-            const reason = `${t(
-              "difficultyOutOfRange"
-            )}: ${difficultyCoefficient}`;
-            failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
-            continue;
-          }
-
-          // 处理单词集ID，如果不存在则创建
-          let setId: number | undefined = undefined; // 初始化为 undefined，而不是默认词集
-
-          // 确保 wordSet 字段存在且不为空
-          if (
-            wordData.wordSet &&
-            typeof wordData.wordSet === "string" &&
-            wordData.wordSet.trim() !== ""
-          ) {
-            const wordSetName = wordData.wordSet.trim();
-
-            // 如果词集名称是 "Default"，直接使用默认词集ID
-            if (wordSetName === DEFAULT_WORD_SET_NAME) {
-              setId = DEFAULT_WORD_SET_ID;
-            } else {
-              // 检查词集是否存在
-              if (!wordSetMap.has(wordSetName)) {
-                // 创建新的单词集
-                try {
-                  const newSetId = await dbOperator.createWordSet({
-                    name: wordSetName,
-                    mark: "",
-                  });
-                  wordSetMap.set(wordSetName, newSetId);
-                  // 更新wordSets列表
-                  try {
-                    const updatedWordSets = await dbOperator.getAllWordSets();
-                    // 防御性检查：确保返回的是数组
-                    if (Array.isArray(updatedWordSets)) {
-                      wordSets = updatedWordSets;
-                      // 更新 wordSetMap（重新构建以确保完整性）
-                      updatedWordSets.forEach((set) => {
-                        if (set && set.name && typeof set.id === "number") {
-                          wordSetMap.set(set.name, set.id);
-                        }
-                      });
-                    } else {
-                      console.error(
-                        "getAllWordSets 返回了非数组值:",
-                        updatedWordSets,
-                        typeof updatedWordSets
-                      );
-                      // 即使获取失败，wordSetMap 中已经有新创建的词集了，所以可以继续
-                    }
-                  } catch (error) {
-                    console.error("更新单词集列表失败:", error);
-                    // 即使更新失败，wordSetMap 中已经有新创建的词集了，所以可以继续
-                  }
-                } catch (error) {
-                  console.error("创建单词集失败:", error);
-                  // 如果创建失败，跳过该单词（不导入到默认词集）
-                  failCount++;
-                  const reason =
-                    t("createWordSetFailed", { wordSetName }) ||
-                    `创建单词集失败: ${wordSetName}`;
-                  failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
-                  continue;
+          } else if (resolution === "overwrite") {
+            finalWordSetId = importInfo.existingId;
+            // 删除现有单词集中的所有单词
+            if (finalWordSetId !== undefined) {
+              const existingWords = await dbOperator.getWordsByWordSet(
+                finalWordSetId
+              );
+              for (const word of existingWords) {
+                if (word.id !== undefined) {
+                  await dbOperator.deleteWord(word.id);
                 }
               }
-              setId = wordSetMap.get(wordSetName);
-              // 如果仍然找不到词集ID，跳过该单词
-              if (setId === undefined) {
-                failCount++;
-                const reason =
-                  t("wordSetNotFound", { wordSetName }) ||
-                  `找不到单词集: ${wordSetName}`;
-                failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
-                continue;
-              }
             }
-          } else {
-            // 如果没有指定词集，使用默认词集
-            setId = DEFAULT_WORD_SET_ID;
+          } else if (resolution === "rename") {
+            // 生成新名称
+            let newName = wordSetName;
+            let counter = 1;
+            while (wordSetMap.has(newName)) {
+              newName = `${wordSetName}_${counter}`;
+              counter++;
+            }
+            finalWordSetName = newName;
+            renamedWordSets++;
           }
-
-          // 确保 setId 不是 undefined（此时应该已经设置好了）
-          if (setId === undefined) {
-            failCount++;
-            const reason = t("cannotDetermineWordSetId") || "无法确定单词集ID";
-            failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
-            continue;
-          }
-
-          // 构建单词对象，明确设置 setId（确保是数字类型，不是 undefined）
-          const word: Omit<Word, "id" | "createdAt" | "updatedAt"> = {
-            kana: wordData.kana,
-            kanji: wordData.kanji,
-            meaning: wordData.meaning,
-            example: wordData.example,
-            mark: wordData.mark || "",
-            setId: setId as number, // 明确设置 setId，确保是数字类型
-            review: {
-              times: 0,
-              difficulty: difficultyCoefficient,
-            },
-          };
-
-          await dbOperator.createWord(word);
-          successCount++;
-        } catch (error) {
-          console.error("导入单词失败:", error);
-          failCount++;
-          const errorMessage =
-            error instanceof Error ? error.message : String(error);
-          const reason =
-            t("importError", { error: errorMessage }) ||
-            `导入错误: ${errorMessage}`;
-          failReasons.set(reason, (failReasons.get(reason) || 0) + 1);
         }
+
+        // 创建或获取单词集ID
+        if (finalWordSetId === undefined) {
+          if (finalWordSetName === DEFAULT_WORD_SET_NAME) {
+            finalWordSetId = DEFAULT_WORD_SET_ID;
+          } else {
+            const existingId = wordSetMap.get(finalWordSetName);
+            if (existingId !== undefined) {
+              finalWordSetId = existingId;
+            } else {
+              finalWordSetId = await dbOperator.createWordSet({
+                name: finalWordSetName,
+                mark: "",
+              });
+              wordSetMap.set(finalWordSetName, finalWordSetId);
+            }
+          }
+        }
+
+        // 导入该单词集的所有单词
+        let wordSuccessCount = 0;
+        for (const wordData of words) {
+          try {
+            // 验证必填字段
+            if (
+              !wordData.kana ||
+              wordData.kana.trim() === "" ||
+              !wordData.meaning ||
+              wordData.meaning.trim() === ""
+            ) {
+              continue;
+            }
+
+            // 验证难度系数
+            const difficultyCoefficient = parseInt(
+              wordData.difficultyCoefficient || "5",
+              10
+            );
+            if (
+              isNaN(difficultyCoefficient) ||
+              difficultyCoefficient < 1 ||
+              difficultyCoefficient > 5
+            ) {
+              continue;
+            }
+
+            // 创建单词
+            const word: Omit<Word, "id" | "createdAt" | "updatedAt"> = {
+              kana: wordData.kana,
+              kanji: wordData.kanji || "",
+              meaning: wordData.meaning,
+              example: wordData.example || "",
+              mark: wordData.mark || "",
+              setId: finalWordSetId,
+              review: {
+                times: 0,
+                difficulty: difficultyCoefficient,
+              },
+            };
+
+            await dbOperator.createWord(word);
+            wordSuccessCount++;
+            successWords++;
+          } catch (error) {
+            console.error("导入单词失败:", error);
+          }
+        }
+
+        if (wordSuccessCount > 0) {
+          successWordSets++;
+        }
+
+        processedWordSets++;
       }
 
-      // 构建结果消息
-      let resultMessage = `${t("importComplete") || "导入完成"}：${
-        t("success") || "成功"
-      } ${successCount}，${t("failed") || "失败"} ${failCount}`;
+      // 更新统计信息
+      setImportStats({
+        successWordSets,
+        successWords,
+        skippedWordSets,
+        renamedWordSets,
+      });
 
-      // 如果有失败，显示详细原因
-      if (failCount > 0 && failReasons.size > 0) {
-        resultMessage += `\n\n${t("failedDetails") || "失败详情"}：\n`;
-        failReasons.forEach((count, reason) => {
-          resultMessage += `- ${reason} (${count}次)\n`;
-        });
-      }
-
-      alert(resultMessage);
-      // 调用导入完成回调，通知父组件刷新数据
-      if (onImportComplete) {
-        onImportComplete();
-      }
-      closePopup();
+      setImportStage("complete");
     } catch (error) {
       console.error("导入失败:", error);
       alert(
-        t("importFailed") ||
-          "导入失败：" +
-            (error instanceof Error ? error.message : String(error))
+        (t("importFailed") || "导入失败") +
+          `: ${error instanceof Error ? error.message : String(error)}`
       );
+      setImportStage("wordset-selection"); // 回到选择阶段
+    }
+  };
+
+  // 创建导入前备份
+  const createBackupBeforeImport = async (): Promise<{
+    success: boolean;
+    error?: string;
+    backupPath?: string;
+  }> => {
+    try {
+      const data = await dbOperator.backupDatabase();
+      const timestamp = new Date()
+        .toISOString()
+        .replace(/[:.]/g, "-")
+        .slice(0, 19);
+      const backupFileName = `backup_before_import_${timestamp}.json`;
+      const langggerDBString = JSON.stringify(data, null, 2);
+      const blob = new Blob([langggerDBString], { type: "application/json" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = backupFileName;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      return {
+        success: true,
+        backupPath: backupFileName,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error:
+          error instanceof Error ? error.message : "备份失败：未知错误",
+      };
     }
   };
 
@@ -789,18 +872,340 @@ export default function ImportDialog({
               data-test-id="button-test"
               style={ButtonStyle(isDark, !selectedFile, isPortrait)}
               onClick={handleImport}
-              disabled={!selectedFile}
+              disabled={!selectedFile || importStage !== "file-selection"}
             >
-              {t("import")}
+              {importStage === "file-selection"
+                ? t("next") || "下一步"
+                : t("import") || "导入"}
             </button>
           </div>
 
-          {fileName && (
+          {fileName && importStage === "file-selection" && (
             <div
               data-test-id="div-test"
               style={FileNameStyle(isDark, isPortrait)}
             >
               {t("selectedFile")}: {fileName}
+            </div>
+          )}
+
+          {/* 单词集选择界面 */}
+          {importStage === "wordset-selection" && (
+            <div style={{ marginTop: isPortrait ? "3vw" : "1vw" }}>
+              <h3
+                style={{
+                  fontSize: isPortrait ? "4vw" : "1.2vw",
+                  color: isDark ? "#fff" : "#333",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                }}
+              >
+                {t("selectWordSetsToImport") || "选择要导入的单词集"}
+              </h3>
+
+              {/* 全选/反选 */}
+              <button
+                onClick={() => {
+                  if (selectedWordSetNames.size === wordSetImportInfos.length) {
+                    setSelectedWordSetNames(new Set());
+                  } else {
+                    setSelectedWordSetNames(
+                      new Set(wordSetImportInfos.map((info) => info.name))
+                    );
+                  }
+                }}
+                style={{
+                  ...ButtonStyle(isDark, false, isPortrait),
+                  marginBottom: isPortrait ? "2vw" : "0.75vw",
+                  width: "100%",
+                }}
+              >
+                {selectedWordSetNames.size === wordSetImportInfos.length
+                  ? t("deselectAll") || "取消全选"
+                  : t("selectAll") || "全选"}
+              </button>
+
+              {/* 单词集列表 */}
+              <div
+                style={{
+                  maxHeight: isPortrait ? "40vh" : "50vh",
+                  overflowY: "auto",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                }}
+              >
+                {wordSetImportInfos.map((info) => {
+                  const isSelected = selectedWordSetNames.has(info.name);
+                  return (
+                    <div
+                      key={info.name}
+                      style={{
+                        display: "flex",
+                        alignItems: "center",
+                        padding: isPortrait ? "2.5vw" : "0.75vw",
+                        marginBottom: isPortrait ? "1.5vw" : "0.5vw",
+                        background: isSelected
+                          ? isDark
+                            ? "rgba(0, 180, 255, 0.2)"
+                            : "rgba(0, 180, 255, 0.1)"
+                          : isDark
+                          ? "rgba(255, 255, 255, 0.05)"
+                          : "rgba(0, 0, 0, 0.02)",
+                        borderRadius: isPortrait ? "1.5vw" : "0.4vw",
+                        cursor: "pointer",
+                        border: isSelected
+                          ? "1px solid #00b4ff"
+                          : "1px solid transparent",
+                      }}
+                      onClick={() => {
+                        const newSelected = new Set(selectedWordSetNames);
+                        if (newSelected.has(info.name)) {
+                          newSelected.delete(info.name);
+                        } else {
+                          newSelected.add(info.name);
+                        }
+                        setSelectedWordSetNames(newSelected);
+                      }}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() => {
+                          const newSelected = new Set(selectedWordSetNames);
+                          if (newSelected.has(info.name)) {
+                            newSelected.delete(info.name);
+                          } else {
+                            newSelected.add(info.name);
+                          }
+                          setSelectedWordSetNames(newSelected);
+                        }}
+                        style={{
+                          width: isPortrait ? "4vw" : "1.2vw",
+                          height: isPortrait ? "4vw" : "1.2vw",
+                          marginRight: isPortrait ? "2vw" : "0.75vw",
+                          cursor: "pointer",
+                        }}
+                      />
+                      <div style={{ flex: 1 }}>
+                        <div
+                          style={{
+                            fontSize: isPortrait ? "3.5vw" : "1vw",
+                            color: isDark ? "#fff" : "#333",
+                            fontWeight: "500",
+                          }}
+                        >
+                          {info.name}
+                        </div>
+                        <div
+                          style={{
+                            fontSize: isPortrait ? "3vw" : "0.85vw",
+                            color: isDark ? "#aaa" : "#666",
+                            marginTop: isPortrait ? "0.5vw" : "0.2vw",
+                          }}
+                        >
+                          {t("wordCount") || "单词数量"}: {info.wordCount}
+                          {info.exists && (
+                            <span
+                              style={{
+                                color: "#ff9800",
+                                marginLeft: isPortrait ? "1vw" : "0.5vw",
+                              }}
+                            >
+                              ({t("exists") || "已存在"})
+                            </span>
+                          )}
+                        </div>
+                        {info.exists && (
+                          <select
+                            value={info.conflictResolution || "rename"}
+                            onChange={(e) => {
+                              const newInfos = wordSetImportInfos.map((i) =>
+                                i.name === info.name
+                                  ? {
+                                      ...i,
+                                      conflictResolution: e.target
+                                        .value as "overwrite" | "skip" | "rename",
+                                    }
+                                  : i
+                              );
+                              setWordSetImportInfos(newInfos);
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{
+                              marginTop: isPortrait ? "1vw" : "0.3vw",
+                              fontSize: isPortrait ? "3vw" : "0.85vw",
+                              padding: isPortrait ? "1vw" : "0.3vw",
+                              borderRadius: isPortrait ? "1vw" : "0.3vw",
+                              border: `1px solid ${isDark ? "#555" : "#ccc"}`,
+                              background: isDark ? "#333" : "#fff",
+                              color: isDark ? "#fff" : "#333",
+                              cursor: "pointer",
+                            }}
+                          >
+                            <option value="rename">
+                              {t("rename") || "重命名"}
+                            </option>
+                            <option value="overwrite">
+                              {t("overwrite") || "覆盖"}
+                            </option>
+                            <option value="skip">{t("skip") || "跳过"}</option>
+                          </select>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 统计信息 */}
+              <div
+                style={{
+                  fontSize: isPortrait ? "3vw" : "0.9vw",
+                  color: isDark ? "#aaa" : "#666",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                  textAlign: "center",
+                }}
+              >
+                {t("selectedCount") || "已选择"}：{selectedWordSetNames.size} /{" "}
+                {wordSetImportInfos.length}
+              </div>
+
+              {/* 操作按钮 */}
+              <div style={ButtonContainerStyle(isPortrait)}>
+                <button
+                  onClick={() => {
+                    setImportStage("file-selection");
+                    setSelectedWordSetNames(new Set());
+                    setWordSetImportInfos([]);
+                  }}
+                  style={ButtonStyle(isDark, false, isPortrait)}
+                >
+                  {t("back") || "返回"}
+                </button>
+                <button
+                  onClick={handleImport}
+                  disabled={selectedWordSetNames.size === 0}
+                  style={ButtonStyle(
+                    isDark,
+                    selectedWordSetNames.size === 0,
+                    isPortrait
+                  )}
+                >
+                  {t("startImport") || "开始导入"}
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* 导入进度界面 */}
+          {importStage === "importing" && (
+            <div style={{ marginTop: isPortrait ? "3vw" : "1vw" }}>
+              <h3
+                style={{
+                  fontSize: isPortrait ? "4vw" : "1.2vw",
+                  color: isDark ? "#fff" : "#333",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                  textAlign: "center",
+                }}
+              >
+                {t("importing") || "正在导入..."}
+              </h3>
+              <div
+                style={{
+                  fontSize: isPortrait ? "3.5vw" : "1vw",
+                  color: isDark ? "#aaa" : "#666",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                  textAlign: "center",
+                }}
+              >
+                {t("currentWordSet") || "当前单词集"}:{" "}
+                {importProgress.currentWordSet}
+              </div>
+              <div
+                style={{
+                  width: "100%",
+                  height: isPortrait ? "2vw" : "0.5vw",
+                  background: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
+                  borderRadius: isPortrait ? "1vw" : "0.25vw",
+                  overflow: "hidden",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                }}
+              >
+                <div
+                  style={{
+                    width: `${
+                      importProgress.total > 0
+                        ? (importProgress.current / importProgress.total) * 100
+                        : 0
+                    }%`,
+                    height: "100%",
+                    background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
+                    transition: "width 0.3s ease",
+                  }}
+                />
+              </div>
+              <div
+                style={{
+                  fontSize: isPortrait ? "3vw" : "0.9vw",
+                  color: isDark ? "#aaa" : "#666",
+                  textAlign: "center",
+                }}
+              >
+                {importProgress.current} / {importProgress.total}
+              </div>
+            </div>
+          )}
+
+          {/* 完成界面 */}
+          {importStage === "complete" && (
+            <div style={{ marginTop: isPortrait ? "3vw" : "1vw" }}>
+              <h3
+                style={{
+                  fontSize: isPortrait ? "4vw" : "1.2vw",
+                  color: isDark ? "#fff" : "#333",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                  textAlign: "center",
+                }}
+              >
+                {t("importComplete") || "导入完成"}
+              </h3>
+              <div
+                style={{
+                  fontSize: isPortrait ? "3.5vw" : "1vw",
+                  color: isDark ? "#aaa" : "#666",
+                  marginBottom: isPortrait ? "2vw" : "1vw",
+                }}
+              >
+                <div>
+                  {t("successWordSets") || "成功导入单词集"}:{" "}
+                  {importStats.successWordSets}
+                </div>
+                <div>
+                  {t("successWords") || "成功导入单词"}:{" "}
+                  {importStats.successWords}
+                </div>
+                {importStats.skippedWordSets > 0 && (
+                  <div>
+                    {t("skippedWordSets") || "跳过的单词集"}:{" "}
+                    {importStats.skippedWordSets}
+                  </div>
+                )}
+                {importStats.renamedWordSets > 0 && (
+                  <div>
+                    {t("renamedWordSets") || "重命名的单词集"}:{" "}
+                    {importStats.renamedWordSets}
+                  </div>
+                )}
+              </div>
+              <div style={ButtonContainerStyle(isPortrait)}>
+                <button
+                  onClick={() => {
+                    onImportComplete?.();
+                    closePopup();
+                  }}
+                  style={ButtonStyle(isDark, false, isPortrait)}
+                >
+                  {t("close") || "关闭"}
+                </button>
+              </div>
             </div>
           )}
         </div>

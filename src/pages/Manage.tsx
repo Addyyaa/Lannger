@@ -12,6 +12,7 @@ import * as dbOperator from "../store/wordStore";
 import WordSetsManage from "../components/WordSetsManage";
 import AddWordSets from "../components/AddWordSets";
 import ImportDialog from "../components/ImportDialog";
+import ExportDialog from "../components/ExportDialog";
 import ConfirmWidget from "../components/ConfirmWidget";
 import RestoreData from "../components/RestoreData";
 import { handleManagementTitleClick } from "../utils/errorMonitorToggle";
@@ -84,6 +85,17 @@ function ImportWordsAction(
         } catch (error) {
           console.error("刷新单词集列表失败:", error);
         }
+      }}
+    />
+  );
+}
+
+function ExportWordsAction(dispatch: (action: Action) => void) {
+  return ComponentAsModel(
+    <ExportDialog
+      closePopup={() => dispatch({ type: "CLOSE_POPUP" })}
+      onExportComplete={() => {
+        // 导出完成后的回调（可选）
       }}
     />
   );
@@ -338,6 +350,8 @@ export default function Manage() {
               dispatch as (action: Action) => void,
               setWordSets
             )}
+          {state.popup === "SET_EXPORT_WORDS" &&
+            ExportWordsAction(dispatch as (action: Action) => void)}
           <WordSetsManage
             data-test-id="word-sets-manage-test"
             manageReducer={manageReducer}
@@ -501,8 +515,8 @@ export default function Manage() {
                     ...buttonStyle,
                     width: "100%",
                   }}
-                  onClick={async () => {
-                    await dbOperator.backupDatabase();
+                  onClick={() => {
+                    dispatch({ type: "SET_EXPORT_WORDS", payload: {} });
                   }}
                   onMouseEnter={(e) => {
                     if (!isPortrait) {

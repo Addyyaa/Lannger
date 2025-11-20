@@ -697,58 +697,99 @@ export async function deleteDatabase() {
 }
 
 // 备份数据库
-export async function backupDatabase() {
+/**
+ * 备份数据库（支持选择性导出单词集）
+ * @param selectedWordSetIds 可选的单词集ID列表，如果未指定则导出所有单词集（排除默认单词集）
+ * @returns 导出的数据对象（包含 wordSets 和 words）
+ */
+export async function backupDatabase(
+  selectedWordSetIds?: number[]
+): Promise<{ wordSets: WordSet[]; words: any[] }> {
   await ensureDBOpen();
 
-  // 获取所有单词集，但排除默认单词集
+  // 获取所有单词集
   const allWordSets = await db.wordSets.toArray();
-  const wordSets = allWordSets.filter(
-    (set) =>
-      set.id !== DEFAULT_WORD_SET_ID && set.name !== DEFAULT_WORD_SET_NAME
-  );
 
-  // 获取所有单词
+  // 根据 selectedWordSetIds 过滤单词集
+  let wordSets: WordSet[];
+  if (selectedWordSetIds && selectedWordSetIds.length > 0) {
+    // 只导出选中的单词集（排除默认单词集）
+    wordSets = allWordSets.filter(
+      (set) =>
+        selectedWordSetIds.includes(set.id) &&
+        set.id !== DEFAULT_WORD_SET_ID &&
+        set.name !== DEFAULT_WORD_SET_NAME
+    );
+  } else {
+    // 未指定时，导出所有单词集（排除默认单词集）
+    wordSets = allWordSets.filter(
+      (set) =>
+        set.id !== DEFAULT_WORD_SET_ID && set.name !== DEFAULT_WORD_SET_NAME
+    );
+  }
+
+  // 获取选中单词集的ID集合（用于过滤单词）
+  const selectedSetIds = new Set(wordSets.map((set) => set.id));
+
+  // 获取所有单词，但只保留属于选中单词集的单词
   const allWords = await db.words.toArray();
-
-  // 处理单词：对于属于默认单词集的单词，添加 wordSet 字段以便恢复时映射
-  const words = allWords.map((word) => {
-    if (word.setId === DEFAULT_WORD_SET_ID) {
-      // 属于默认单词集的单词，添加 wordSet 字段，移除 setId（恢复时会通过名称映射）
+  const words = allWords
+    .filter((word) => {
+      // 如果单词属于选中的单词集，或者属于默认单词集（如果默认单词集被选中）
+      if (word.setId === undefined || word.setId === null) {
+        return false; // 没有单词集的单词不导出
+      }
+      return (
+        selectedSetIds.has(word.setId) ||
+        (word.setId === DEFAULT_WORD_SET_ID &&
+          (!selectedWordSetIds ||
+            selectedWordSetIds.includes(DEFAULT_WORD_SET_ID)))
+      );
+    })
+    .map((word) => {
+      if (word.setId === DEFAULT_WORD_SET_ID) {
+        // 属于默认单词集的单词，添加 wordSet 字段，移除 setId（恢复时会通过名称映射）
+        const { setId, ...wordWithoutSetId } = word;
+        return {
+          ...wordWithoutSetId,
+          wordSet: DEFAULT_WORD_SET_NAME,
+        };
+      }
+      // 不属于默认单词集的单词，保持原样（但需要找到对应的单词集名称）
+      const wordSet = allWordSets.find((set) => set.id === word.setId);
+      if (wordSet) {
+        const { setId, ...wordWithoutSetId } = word;
+        return {
+          ...wordWithoutSetId,
+          wordSet: wordSet.name,
+        };
+      }
+      // 如果找不到对应的单词集，也添加 wordSet 字段（使用默认名称）
       const { setId, ...wordWithoutSetId } = word;
       return {
         ...wordWithoutSetId,
         wordSet: DEFAULT_WORD_SET_NAME,
       };
-    }
-    // 不属于默认单词集的单词，保持原样（但需要找到对应的单词集名称）
-    const wordSet = allWordSets.find((set) => set.id === word.setId);
-    if (wordSet) {
-      const { setId, ...wordWithoutSetId } = word;
-      return {
-        ...wordWithoutSetId,
-        wordSet: wordSet.name,
-      };
-    }
-    // 如果找不到对应的单词集，也添加 wordSet 字段（使用默认名称）
-    const { setId, ...wordWithoutSetId } = word;
-    return {
-      ...wordWithoutSetId,
-      wordSet: DEFAULT_WORD_SET_NAME,
-    };
-  });
+    });
 
   const langggerDB = {
     wordSets,
     words,
   };
-  const langggerDBString = JSON.stringify(langggerDB, null, 2);
-  const blob = new Blob([langggerDBString], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = "langggerDB.json";
-  a.click();
-  URL.revokeObjectURL(url);
+
+  // 如果未指定 selectedWordSetIds，直接下载文件（保持向后兼容）
+  if (!selectedWordSetIds || selectedWordSetIds.length === 0) {
+    const langggerDBString = JSON.stringify(langggerDB, null, 2);
+    const blob = new Blob([langggerDBString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "langggerDB.json";
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  return langggerDB;
 }
 
 // 恢复数据库
