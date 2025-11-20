@@ -57,6 +57,7 @@ export async function safeDbOperation<T>(
       // 如果是最后一次尝试，处理错误
       if (attempts > retries) {
         // 异步处理错误，不阻塞
+        // 异步处理错误，不阻塞
         handleError(
           error,
           {
@@ -66,9 +67,13 @@ export async function safeDbOperation<T>(
             retries,
           },
           { showUserMessage: !silent }
-        ).catch((err) => {
-          console.error("handleError failed:", err);
-        });
+        )
+          .catch((err) => {
+            console.error("handleError failed:", err);
+          })
+          .catch(() => {
+            // 忽略 handleError 本身的错误
+          });
 
         // 如果有默认值，返回默认值
         if (fallback !== undefined) {
@@ -133,9 +138,13 @@ export async function safeBatchDbOperation<T>(
           operationIndex: index,
         },
         { showUserMessage: !options.silent }
-      ).catch((err) => {
-        console.error("handleError failed:", err);
-      });
+      )
+        .catch((err) => {
+          console.error("handleError failed:", err);
+        })
+        .catch(() => {
+          // 忽略 handleError 本身的错误
+        });
 
       return { success: false, error };
     }

@@ -11,7 +11,7 @@ import {
 
 // Mock errorHandler
 vi.mock("../errorHandler", () => ({
-  handleError: vi.fn(),
+  handleError: vi.fn().mockResolvedValue(undefined), // 返回 Promise<void>
   createAppError: vi.fn((message: string) => {
     return new Error(message);
   }),

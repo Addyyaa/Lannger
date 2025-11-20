@@ -49,6 +49,12 @@ class MockTable<T = any, TKey = any> {
   }
 
   async add(item: T): Promise<TKey> {
+    // 对于 add，如果没有 id，自动生成一个唯一的 id
+    if (!(item as any).id) {
+      // 生成一个唯一的 id（使用当前时间戳 + 随机数，确保唯一性）
+      const newId = Date.now() + Math.random();
+      (item as any).id = newId;
+    }
     return this.put(item);
   }
 
@@ -176,10 +182,22 @@ class MockTable<T = any, TKey = any> {
           let deleted = 0;
           for (const item of all) {
             if ((item as any)[index] === value) {
-              const key = (item as any).id ?? (item as any).date;
+              // 尝试多种可能的主键字段
+              const key =
+                (item as any).id ?? (item as any).date ?? (item as any).userId;
               if (key !== undefined) {
                 this.data.delete(key);
                 deleted++;
+              } else {
+                // 如果没有找到主键，尝试通过值本身删除
+                // 查找匹配的键
+                for (const [k, v] of this.data.entries()) {
+                  if (v === item) {
+                    this.data.delete(k);
+                    deleted++;
+                    break;
+                  }
+                }
               }
             }
           }
