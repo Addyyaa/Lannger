@@ -441,6 +441,13 @@ export default function ReviewStudy({
   };
 
   /**
+   * 显示答案
+   */
+  const handleShowAnswer = () => {
+    setShowAnswer(true);
+  };
+
+  /**
    * 处理学习结果
    */
   const handleResult = async (result: "correct" | "wrong" | "skip") => {
@@ -1060,6 +1067,7 @@ export default function ReviewStudy({
         >
           {!showAnswer ? (
             <>
+              {/* 未显示答案时：显示"已学会"和"显示答案"两个按钮（与闪卡学习保持一致） */}
               <button
                 onClick={() => handleResult("correct")}
                 style={{
@@ -1092,10 +1100,10 @@ export default function ReviewStudy({
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {t("correct")}
+                {t("learned")}
               </button>
               <button
-                onClick={() => handleResult("wrong")}
+                onClick={handleShowAnswer}
                 style={{
                   borderRadius: isPortrait ? "2vh" : "1vh",
                   border: "none",
@@ -1111,62 +1119,27 @@ export default function ReviewStudy({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgb(255, 59, 48)",
+                  backgroundColor: "rgb(197, 150, 241)",
                   color: "#fff",
                   ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-0.2vh)";
                   e.currentTarget.style.boxShadow = isDark
-                    ? "0 0.4vh 1.2vh rgba(255, 59, 48, 0.5)"
-                    : "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
+                    ? "0 0.4vh 1.2vh rgba(10, 132, 255, 0.5)"
+                    : "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {t("wrong")}
-              </button>
-              <button
-                onClick={() => handleResult("skip")}
-                style={{
-                  borderRadius: isPortrait ? "2vh" : "1vh",
-                  border: "none",
-                  fontSize: isPortrait
-                    ? "clamp(3vw, 1.2rem, 4vw)"
-                    : "clamp(0.8vw, 0.8rem, 1.2vw)",
-                  fontWeight: 500,
-                  cursor: "pointer",
-                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
-                  padding: isPortrait ? "2.2vh 0" : "1.2vh 2.4vw",
-                  minHeight: isPortrait ? "6vh" : "4.4vh",
-                  flex: isPortrait ? "1 1 0" : "0 0 auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  backgroundColor: isDark
-                    ? "rgba(142, 142, 147, 0.3)"
-                    : "rgba(0, 0, 0, 0.1)",
-                  color: isDark ? "#fff" : "#333",
-                  ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "translateY(-0.2vh)";
-                  e.currentTarget.style.boxShadow = isDark
-                    ? "0 0.4vh 1.2vh rgba(0, 0, 0, 0.3)"
-                    : "0 0.4vh 1.2vh rgba(0, 0, 0, 0.2)";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "translateY(0)";
-                  e.currentTarget.style.boxShadow = "none";
-                }}
-              >
-                {t("skip")}
+                {t("showAnswer")}
               </button>
             </>
           ) : (
             <>
+              {/* 显示答案后：显示"正确"、"错误"、"跳过"三个按钮（与闪卡学习保持一致） */}
               <button
                 onClick={() => handleResult("correct")}
                 style={{

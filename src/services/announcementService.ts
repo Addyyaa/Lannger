@@ -34,6 +34,18 @@ export interface AnnouncementConfig {
    * 默认: true
    */
   enabled?: boolean;
+  /**
+   * 生效开始时间（ISO 8601 格式，可选）
+   * 如果设置，通告只在此时间之后生效
+   * 例如: "2024-01-01T00:00:00.000Z"
+   */
+  startTime?: string;
+  /**
+   * 生效结束时间（ISO 8601 格式，可选）
+   * 如果设置，通告只在此时间之前生效
+   * 例如: "2024-12-31T23:59:59.999Z"
+   */
+  endTime?: string;
 }
 
 /**
@@ -135,16 +147,30 @@ function saveRecord(filename: string, record: AnnouncementRecord): void {
 /**
  * 检查是否应该弹出通告
  */
-export function shouldShowAnnouncement(
-  config: AnnouncementConfig
-): boolean {
+export function shouldShowAnnouncement(config: AnnouncementConfig): boolean {
   if (!config.enabled) {
     return false;
   }
 
+  // 检查生效时间范围
+  const now = getCurrentTimestamp();
+  if (config.startTime) {
+    const startTime = new Date(config.startTime).getTime();
+    if (now < startTime) {
+      // 还未到生效时间
+      return false;
+    }
+  }
+  if (config.endTime) {
+    const endTime = new Date(config.endTime).getTime();
+    if (now > endTime) {
+      // 已过生效时间
+      return false;
+    }
+  }
+
   const record = getRecord(config.filename);
   const today = getTodayString();
-  const now = getCurrentTimestamp();
 
   switch (config.strategy) {
     case "once_per_day":
@@ -152,17 +178,21 @@ export function shouldShowAnnouncement(
       return record.lastShownDate !== today;
 
     case "every_launch":
-      // 每次打开程序弹出一次：检查本次会话是否已弹出
-      // 注意：这里使用 sessionStorage 更合适，但为了统一使用 localStorage
-      // 我们通过检查时间戳来判断（如果时间戳很新，说明可能是同一次会话）
-      // 更简单的方式：每次检查都返回 true，然后在显示后标记
-      // 但这样会导致刷新页面就弹出，所以使用时间戳判断
-      // 如果上次显示时间超过 5 分钟，认为是新的会话
-      if (record.lastShownTimestamp) {
-        const fiveMinutes = 5 * 60 * 1000;
-        return now - record.lastShownTimestamp > fiveMinutes;
+      // 每次打开程序弹出一次：使用 sessionStorage 检查本次会话是否已弹出
+      // sessionStorage 在标签页关闭时自动清除，完美符合"每次打开程序"的需求
+      try {
+        const sessionKey = `session_${getStorageKey(config.filename)}`;
+        const shownInSession = sessionStorage.getItem(sessionKey);
+        return !shownInSession; // 如果未在本次会话中显示过，返回 true
+      } catch (error) {
+        console.error("读取 sessionStorage 失败:", error);
+        // 降级方案：使用时间戳判断（如果上次显示时间超过 5 分钟，认为是新的会话）
+        if (record.lastShownTimestamp) {
+          const fiveMinutes = 5 * 60 * 1000;
+          return now - record.lastShownTimestamp > fiveMinutes;
+        }
+        return true;
       }
-      return true;
 
     case "interval_minutes":
       // 间隔xx分钟弹出一次
@@ -193,14 +223,22 @@ export function markAnnouncementShown(config: AnnouncementConfig): void {
   };
 
   saveRecord(config.filename, newRecord);
+
+  // 对于 every_launch 策略，同时在 sessionStorage 中标记
+  if (config.strategy === "every_launch") {
+    try {
+      const sessionKey = `session_${getStorageKey(config.filename)}`;
+      sessionStorage.setItem(sessionKey, "1");
+    } catch (error) {
+      console.error("保存 sessionStorage 失败:", error);
+    }
+  }
 }
 
 /**
  * 加载通告HTML内容
  */
-export async function loadAnnouncementHTML(
-  filename: string
-): Promise<string> {
+export async function loadAnnouncementHTML(filename: string): Promise<string> {
   try {
     // 从 public/announcements/ 目录加载
     const url = `${import.meta.env.BASE_URL}announcements/${filename}`;
@@ -220,35 +258,42 @@ export async function loadAnnouncementHTML(
 
 /**
  * 获取通告配置
- * 可以从配置文件或环境变量读取，这里先使用默认配置
- * 未来可以扩展为从服务器或配置文件读取
+ * 优先从配置文件读取（发布者配置），如果没有则使用默认配置
  */
-export function getAnnouncementConfig(): AnnouncementConfig {
-  // 可以从 localStorage 读取用户配置，或从服务器获取
-  // 目前使用默认配置
+export async function getAnnouncementConfig(): Promise<AnnouncementConfig> {
   try {
-    const stored = localStorage.getItem(`${STORAGE_PREFIX}config`);
-    if (stored) {
-      return { ...DEFAULT_CONFIG, ...JSON.parse(stored) };
+    // 尝试从 public/announcements/config.json 读取发布者配置
+    const configUrl = `${import.meta.env.BASE_URL}announcements/config.json`;
+    const response = await fetch(configUrl, {
+      // 添加时间戳防止缓存
+      cache: "no-cache",
+    });
+
+    if (response.ok) {
+      const config = (await response.json()) as AnnouncementConfig;
+      // 验证配置格式
+      if (config.filename && config.strategy) {
+        return { ...DEFAULT_CONFIG, ...config };
+      }
     }
   } catch (error) {
-    console.error("读取通告配置失败:", error);
+    // 配置文件不存在或读取失败，使用默认配置
+    console.debug("未找到通告配置文件，使用默认配置:", error);
   }
+
+  // 返回默认配置
   return DEFAULT_CONFIG;
 }
 
 /**
- * 设置通告配置
+ * 设置通告配置（已废弃，配置由发布者通过 config.json 文件设置）
+ * @deprecated 请使用 public/announcements/config.json 文件配置
  */
-export function setAnnouncementConfig(config: AnnouncementConfig): void {
-  try {
-    localStorage.setItem(
-      `${STORAGE_PREFIX}config`,
-      JSON.stringify(config)
-    );
-  } catch (error) {
-    console.error("保存通告配置失败:", error);
-  }
+export function setAnnouncementConfig(_config: AnnouncementConfig): void {
+  console.warn(
+    "setAnnouncementConfig 已废弃，请使用 public/announcements/config.json 文件配置"
+  );
+  // 保留此函数以保持向后兼容，但不执行任何操作
 }
 
 /**
@@ -280,4 +325,3 @@ export function clearAllAnnouncementRecords(): void {
     console.error("清除所有通告记录失败:", error);
   }
 }
-

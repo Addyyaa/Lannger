@@ -20,6 +20,7 @@ import { initSentry } from "./utils/sentry";
 import { handleError } from "./utils/errorHandler";
 import { ErrorMonitor } from "./components/ErrorMonitor";
 import { shouldRunArchive, runFullArchive } from "./services/archiveService";
+import AnnouncementManager from "./components/AnnouncementManager";
 
 declare global {
   interface Window {
@@ -463,6 +464,8 @@ function RootLayout() {
           </Layout>
           {/* 开发环境错误监控 Dashboard */}
           {process.env.NODE_ENV === "development" && <ErrorMonitor />}
+          {/* 通告管理器：自动检查并显示通告 */}
+          <AnnouncementManager />
         </ThemeProvider>
       </OrientationProvider>
     </ErrorBoundary>
