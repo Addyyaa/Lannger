@@ -433,5 +433,5 @@ langger/
 ---
 
 **最后更新**：2024-12-19  
-**版本**：查看 `version.json` 获取最新版本信息  
+**版本**：查看 `version.json` 获取最新版本信息
 **工单系统**：查看 [tickets/README.md](./tickets/README.md) 了解工单管理方式

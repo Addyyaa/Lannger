@@ -545,6 +545,11 @@ export default function ReviewStudy({
     };
   }, []);
 
+  // ========================================
+  // 所有 Hooks 必须在这里定义完成
+  // 早期返回必须在所有 Hooks 之后
+  // ========================================
+
   // 使用共享样式工具函数（与 FlashcardStudy 和 TestStudy 保持一致）
   const containerStyle: React.CSSProperties = useMemo(
     () => getContainerStyle(themeTokens, isPortrait),
@@ -556,7 +561,23 @@ export default function ReviewStudy({
     [themeTokens, isPortrait]
   );
 
-  // 加载中
+  // 内容区域样式（可滚动）- 必须在早期返回之前定义，遵守 Hooks 规则
+  // 注意：即使早期返回不使用此样式，也必须调用此 Hook，以确保 Hooks 调用顺序一致
+  const contentAreaStyle: React.CSSProperties = useMemo(
+    () => ({
+      flex: 1,
+      width: "100%",
+      overflowY: "auto",
+      overflowX: "hidden",
+      paddingBottom: isPortrait ? "12vh" : "8vh", // 预留底部空间，避免内容被按钮遮挡
+      minHeight: 0, // 允许 flex 子元素缩小
+    }),
+    [isPortrait]
+  );
+
+  // ========================================
+  // 早期返回 - 必须在所有 Hooks 之后
+  // ========================================
   if (loading || !currentWord) {
     return (
       <div style={containerStyle}>
@@ -574,19 +595,6 @@ export default function ReviewStudy({
       </div>
     );
   }
-
-  // 内容区域样式（可滚动）
-  const contentAreaStyle: React.CSSProperties = useMemo(
-    () => ({
-      flex: 1,
-      width: "100%",
-      overflowY: "auto",
-      overflowX: "hidden",
-      paddingBottom: isPortrait ? "12vh" : "8vh", // 预留底部空间，避免内容被按钮遮挡
-      minHeight: 0, // 允许 flex 子元素缩小
-    }),
-    [isPortrait]
-  );
 
   return (
     <div style={containerStyle}>
