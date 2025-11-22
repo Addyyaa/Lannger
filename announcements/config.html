@@ -1,0 +1,618 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>通告配置工具</title>
+    <style>
+      * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+      }
+
+      body {
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+          "Helvetica Neue", Arial, sans-serif;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 100vh;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+      }
+
+      .container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+        padding: 40px;
+        max-width: 700px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+
+      h1 {
+        color: #333;
+        margin-bottom: 10px;
+        font-size: 28px;
+      }
+
+      .subtitle {
+        color: #666;
+        margin-bottom: 30px;
+        font-size: 14px;
+      }
+
+      .form-group {
+        margin-bottom: 25px;
+      }
+
+      label {
+        display: block;
+        margin-bottom: 8px;
+        color: #333;
+        font-weight: 500;
+        font-size: 14px;
+      }
+
+      input[type="text"],
+      input[type="number"],
+      input[type="datetime-local"],
+      select {
+        width: 100%;
+        padding: 12px;
+        border: 2px solid #e0e0e0;
+        border-radius: 6px;
+        font-size: 14px;
+        transition: border-color 0.3s;
+      }
+
+      input[type="text"]:focus,
+      input[type="number"]:focus,
+      input[type="datetime-local"]:focus,
+      select:focus {
+        outline: none;
+        border-color: #00b4ff;
+      }
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+        margin-right: 10px;
+        cursor: pointer;
+      }
+
+      .checkbox-group {
+        display: flex;
+        align-items: center;
+      }
+
+      .hint {
+        font-size: 12px;
+        color: #999;
+        margin-top: 5px;
+      }
+
+      .strategy-desc {
+        font-size: 12px;
+        color: #666;
+        margin-top: 5px;
+        padding: 8px;
+        background: #f5f5f5;
+        border-radius: 4px;
+      }
+
+      .button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 30px;
+      }
+
+      button {
+        flex: 1;
+        padding: 12px 24px;
+        border: none;
+        border-radius: 6px;
+        font-size: 16px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+      }
+
+      .btn-primary {
+        background: linear-gradient(135deg, #00b4ff 0%, #0096d4 100%);
+        color: white;
+      }
+
+      .btn-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 180, 255, 0.4);
+      }
+
+      .btn-secondary {
+        background: #f0f0f0;
+        color: #333;
+      }
+
+      .btn-secondary:hover {
+        background: #e0e0e0;
+      }
+
+      .message {
+        margin-top: 20px;
+        padding: 12px;
+        border-radius: 6px;
+        font-size: 14px;
+        display: none;
+      }
+
+      .message.success {
+        background: #d4edda;
+        color: #155724;
+        border: 1px solid #c3e6cb;
+        display: block;
+      }
+
+      .message.error {
+        background: #f8d7da;
+        color: #721c24;
+        border: 1px solid #f5c6cb;
+        display: block;
+      }
+
+      .info-box {
+        background: #e7f3ff;
+        border-left: 4px solid #00b4ff;
+        padding: 15px;
+        margin-bottom: 25px;
+        border-radius: 4px;
+      }
+
+      .info-box p {
+        margin: 5px 0;
+        font-size: 13px;
+        color: #333;
+      }
+
+      .info-box strong {
+        color: #00b4ff;
+      }
+
+      .time-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 15px;
+      }
+
+      @media (max-width: 600px) {
+        .time-group {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>📢 通告配置工具</h1>
+      <p class="subtitle">发布者专用 - 编辑通告配置文件</p>
+
+      <div class="info-box">
+        <p><strong>使用说明：</strong></p>
+        <p>
+          1. 点击"加载配置文件"按钮，选择 public/announcements/config.json 文件
+        </p>
+        <p>2. 修改配置信息</p>
+        <p>3. 点击"保存配置文件"按钮下载修改后的配置文件</p>
+        <p>
+          4. 将下载的 config.json 文件替换 public/announcements/ 目录下的原文件
+        </p>
+        <p>5. 重新构建并发布应用</p>
+      </div>
+
+      <form id="configForm">
+        <!-- 启用/禁用 -->
+        <div class="form-group">
+          <div class="checkbox-group">
+            <input type="checkbox" id="enabled" name="enabled" checked />
+            <label for="enabled">启用通告功能</label>
+          </div>
+        </div>
+
+        <!-- 文件名 -->
+        <div class="form-group">
+          <label for="filename">通告文件名 *</label>
+          <input
+            type="text"
+            id="filename"
+            name="filename"
+            value="announcement.html"
+            required
+            placeholder="announcement.html"
+          />
+          <div class="hint">文件应位于 public/announcements/ 目录下</div>
+        </div>
+
+        <!-- 弹出策略 -->
+        <div class="form-group">
+          <label for="strategy">弹出策略 *</label>
+          <select id="strategy" name="strategy" required>
+            <option value="once_per_day">当天仅弹出一次</option>
+            <option value="every_launch">每次打开程序弹出一次</option>
+            <option value="interval_minutes">间隔XX分钟弹出一次</option>
+          </select>
+          <div class="strategy-desc" id="strategyDesc">
+            每天第一次打开应用时弹出，同一天内不会重复弹出
+          </div>
+        </div>
+
+        <!-- 间隔时间 -->
+        <div class="form-group" id="intervalGroup" style="display: none">
+          <label for="intervalMinutes">间隔时间（分钟） *</label>
+          <input
+            type="number"
+            id="intervalMinutes"
+            name="intervalMinutes"
+            value="60"
+            min="1"
+            required
+          />
+          <div class="hint">设置两次弹出之间的间隔时间（分钟）</div>
+        </div>
+
+        <!-- 生效时间 -->
+        <div class="form-group">
+          <label>生效时间（可选，仅针对本次公告）</label>
+          <div class="time-group">
+            <div>
+              <label for="startTime" style="font-size: 12px; color: #666">
+                开始时间
+              </label>
+              <input type="datetime-local" id="startTime" name="startTime" />
+              <div class="hint">留空表示立即生效</div>
+            </div>
+            <div>
+              <label for="endTime" style="font-size: 12px; color: #666">
+                结束时间
+              </label>
+              <input type="datetime-local" id="endTime" name="endTime" />
+              <div class="hint">留空表示永久生效</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 按钮组 -->
+        <div class="button-group">
+          <button type="button" class="btn-primary" id="saveBtn">
+            保存配置文件
+          </button>
+          <button type="button" class="btn-secondary" id="loadBtn">
+            加载配置文件
+          </button>
+        </div>
+        <div class="button-group" style="margin-top: 10px">
+          <button
+            type="button"
+            class="btn-secondary"
+            id="directSaveBtn"
+            style="display: none"
+          >
+            直接保存到文件
+          </button>
+        </div>
+
+        <!-- 消息提示 -->
+        <div class="message" id="message"></div>
+      </form>
+    </div>
+
+    <script>
+      const form = document.getElementById("configForm");
+      const strategySelect = document.getElementById("strategy");
+      const intervalGroup = document.getElementById("intervalGroup");
+      const intervalInput = document.getElementById("intervalMinutes");
+      const strategyDesc = document.getElementById("strategyDesc");
+      const saveBtn = document.getElementById("saveBtn");
+      const loadBtn = document.getElementById("loadBtn");
+      const directSaveBtn = document.getElementById("directSaveBtn");
+      const messageDiv = document.getElementById("message");
+      const startTimeInput = document.getElementById("startTime");
+      const endTimeInput = document.getElementById("endTime");
+
+      let fileHandle = null; // 保存文件句柄
+
+      // 获取配置对象
+      function getConfigFromForm() {
+        const formData = new FormData(form);
+        const config = {
+          filename: formData.get("filename") || "announcement.html",
+          strategy: formData.get("strategy") || "once_per_day",
+          enabled: formData.get("enabled") === "on",
+        };
+
+        // 添加间隔时间（如果策略是 interval_minutes）
+        if (config.strategy === "interval_minutes") {
+          const interval = parseInt(
+            formData.get("intervalMinutes") || "60",
+            10
+          );
+          if (interval > 0) {
+            config.intervalMinutes = interval;
+          }
+        }
+
+        // 添加生效时间
+        const startTime = formData.get("startTime");
+        const endTime = formData.get("endTime");
+        if (startTime) {
+          config.startTime = localToISO(startTime);
+        }
+        if (endTime) {
+          config.endTime = localToISO(endTime);
+        }
+
+        return config;
+      }
+
+      // 验证配置
+      function validateConfig(config) {
+        if (!config.filename) {
+          showMessage("请输入通告文件名", "error");
+          return false;
+        }
+
+        if (!config.strategy) {
+          showMessage("请选择弹出策略", "error");
+          return false;
+        }
+
+        if (
+          config.strategy === "interval_minutes" &&
+          (!config.intervalMinutes || config.intervalMinutes < 1)
+        ) {
+          showMessage("间隔时间必须大于0", "error");
+          return false;
+        }
+
+        // 验证时间范围
+        if (config.startTime && config.endTime) {
+          const start = new Date(config.startTime).getTime();
+          const end = new Date(config.endTime).getTime();
+          if (start >= end) {
+            showMessage("开始时间必须早于结束时间", "error");
+            return false;
+          }
+        }
+
+        return true;
+      }
+
+      // 检查是否支持 File System Access API
+      if (window.showSaveFilePicker) {
+        directSaveBtn.style.display = "block";
+
+        // 绑定直接保存事件
+        directSaveBtn.addEventListener("click", async function () {
+          const config = getConfigFromForm();
+          if (!validateConfig(config)) {
+            return;
+          }
+
+          try {
+            // 如果没有文件句柄，先选择文件
+            if (!fileHandle) {
+              fileHandle = await window.showSaveFilePicker({
+                suggestedName: "config.json",
+                types: [
+                  {
+                    description: "JSON 配置文件",
+                    accept: {
+                      "application/json": [".json"],
+                    },
+                  },
+                ],
+              });
+            }
+
+            // 写入文件
+            const jsonContent = JSON.stringify(config, null, 2);
+            const writable = await fileHandle.createWritable();
+            await writable.write(jsonContent);
+            await writable.close();
+
+            showMessage("配置文件已直接保存！", "success");
+          } catch (error) {
+            if (error.name === "AbortError") {
+              // 用户取消了操作
+              return;
+            }
+            console.error("保存文件失败:", error);
+            showMessage("保存失败：" + error.message, "error");
+          }
+        });
+      }
+
+      // 策略描述
+      const strategyDescriptions = {
+        once_per_day: "每天第一次打开应用时弹出，同一天内不会重复弹出",
+        every_launch:
+          "每次打开应用（新标签页/新会话）时弹出，刷新页面不会重复弹出",
+        interval_minutes: "根据设置的间隔时间（分钟）弹出，默认间隔为 60 分钟",
+      };
+
+      // 监听策略变化
+      strategySelect.addEventListener("change", function () {
+        const strategy = this.value;
+        strategyDesc.textContent = strategyDescriptions[strategy] || "";
+
+        // 显示/隐藏间隔时间输入
+        if (strategy === "interval_minutes") {
+          intervalGroup.style.display = "block";
+          intervalInput.required = true;
+        } else {
+          intervalGroup.style.display = "none";
+          intervalInput.required = false;
+        }
+      });
+
+      // 将本地时间转换为 ISO 8601 格式
+      function localToISO(localDateTime) {
+        if (!localDateTime) return undefined;
+        // datetime-local 格式: "2024-01-01T12:00"
+        // 转换为 ISO 8601: "2024-01-01T12:00:00.000Z"
+        const date = new Date(localDateTime);
+        return date.toISOString();
+      }
+
+      // 将 ISO 8601 格式转换为本地时间（用于 datetime-local）
+      function isoToLocal(isoString) {
+        if (!isoString) return "";
+        const date = new Date(isoString);
+        // 转换为本地时间，格式: "YYYY-MM-DDTHH:mm"
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, "0");
+        const day = String(date.getDate()).padStart(2, "0");
+        const hours = String(date.getHours()).padStart(2, "0");
+        const minutes = String(date.getMinutes()).padStart(2, "0");
+        return `${year}-${month}-${day}T${hours}:${minutes}`;
+      }
+
+      // 保存配置文件（下载方式）
+      saveBtn.addEventListener("click", function () {
+        const config = getConfigFromForm();
+        if (!validateConfig(config)) {
+          return;
+        }
+
+        // 生成JSON文件内容
+        const jsonContent = JSON.stringify(config, null, 2);
+        const blob = new Blob([jsonContent], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "config.json";
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        showMessage(
+          "配置文件已生成！请将 config.json 替换 public/announcements/ 目录下的原文件",
+          "success"
+        );
+      });
+
+      // 填充表单数据
+      function fillFormFromConfig(config) {
+        document.getElementById("enabled").checked = config.enabled !== false;
+        document.getElementById("filename").value =
+          config.filename || "announcement.html";
+        document.getElementById("strategy").value =
+          config.strategy || "once_per_day";
+        document.getElementById("intervalMinutes").value =
+          config.intervalMinutes || 60;
+
+        // 填充生效时间
+        if (config.startTime) {
+          startTimeInput.value = isoToLocal(config.startTime);
+        } else {
+          startTimeInput.value = "";
+        }
+        if (config.endTime) {
+          endTimeInput.value = isoToLocal(config.endTime);
+        } else {
+          endTimeInput.value = "";
+        }
+
+        // 触发策略变化事件
+        strategySelect.dispatchEvent(new Event("change"));
+      }
+
+      // 加载现有配置（传统文件选择方式）
+      loadBtn.addEventListener("click", function () {
+        const input = document.createElement("input");
+        input.type = "file";
+        input.accept = ".json";
+        input.onchange = function (e) {
+          const file = e.target.files[0];
+          if (!file) return;
+
+          const reader = new FileReader();
+          reader.onload = function (event) {
+            try {
+              const config = JSON.parse(event.target.result);
+              fillFormFromConfig(config);
+              showMessage("配置加载成功！", "success");
+            } catch (error) {
+              showMessage("配置文件格式错误：" + error.message, "error");
+            }
+          };
+          reader.readAsText(file);
+        };
+        input.click();
+      });
+
+      // 使用 File System Access API 打开文件（如果支持）
+      if (window.showOpenFilePicker) {
+        // 添加"打开文件"按钮
+        const openFileBtn = document.createElement("button");
+        openFileBtn.type = "button";
+        openFileBtn.className = "btn-secondary";
+        openFileBtn.textContent = "打开文件";
+        openFileBtn.style.marginTop = "10px";
+        openFileBtn.style.width = "100%";
+        loadBtn.parentElement.appendChild(openFileBtn);
+
+        openFileBtn.addEventListener("click", async function () {
+          try {
+            const [fileHandle] = await window.showOpenFilePicker({
+              types: [
+                {
+                  description: "JSON 配置文件",
+                  accept: {
+                    "application/json": [".json"],
+                  },
+                },
+              ],
+            });
+
+            const file = await fileHandle.getFile();
+            const text = await file.text();
+            const config = JSON.parse(text);
+
+            fillFormFromConfig(config);
+            fileHandle = fileHandle; // 保存文件句柄，以便后续直接保存
+
+            showMessage("文件已打开，可以直接保存修改！", "success");
+          } catch (error) {
+            if (error.name !== "AbortError") {
+              console.error("打开文件失败:", error);
+              showMessage("打开文件失败：" + error.message, "error");
+            }
+          }
+        });
+      }
+
+      // 页面加载时尝试自动加载配置文件（如果通过 HTTP 服务器访问）
+      window.addEventListener("load", function () {
+        // 尝试从相对路径加载配置文件
+        fetch("./config.json")
+          .then((response) => {
+            if (response.ok) {
+              return response.json();
+            }
+            throw new Error("配置文件不存在");
+          })
+          .then((config) => {
+            fillFormFromConfig(config);
+            showMessage("已自动加载配置文件", "success");
+          })
+          .catch(() => {
+            // 配置文件不存在，使用默认值
+            console.log("未找到配置文件，使用默认配置");
+          });
+      });
+    </script>
+  </body>
+</html>
