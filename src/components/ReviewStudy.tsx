@@ -575,6 +575,19 @@ export default function ReviewStudy({
     );
   }
 
+  // 内容区域样式（可滚动）
+  const contentAreaStyle: React.CSSProperties = useMemo(
+    () => ({
+      flex: 1,
+      width: "100%",
+      overflowY: "auto",
+      overflowX: "hidden",
+      paddingBottom: isPortrait ? "12vh" : "8vh", // 预留底部空间，避免内容被按钮遮挡
+      minHeight: 0, // 允许 flex 子元素缩小
+    }),
+    [isPortrait]
+  );
+
   return (
     <div style={containerStyle}>
       <div style={cardStyle}>
@@ -712,293 +725,239 @@ export default function ReviewStudy({
           </div>
         )}
 
-        {/* 复习阶段显示 */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: isPortrait ? "4vw" : "1.5vw",
-            marginTop: notificationMessage ? (isPortrait ? "8vw" : "3vw") : 0,
-            fontSize: isPortrait ? "3.5vw" : "1vw",
-            color: "#00b4ff",
-            fontWeight: "bold",
-            transition: "margin-top 0.3s ease-out",
-            opacity: allMastered ? 0.3 : 1, // 全部掌握后降低不透明度
-          }}
-        >
-          {getReviewStageDescription(currentReviewStage, t)}
-        </div>
-
-        {/* 进度显示 */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: isPortrait ? "4vw" : "1.5vw",
-            fontSize: isPortrait ? "3.5vw" : "1vw",
-            color: isDark ? "#ccc" : "#666",
-          }}
-        >
-          {t("progress")}: {currentIndex + 1} / {wordIds.length}
-        </div>
-
-        {/* 切换按钮（参考 FlashcardStudy 的样式） */}
-        <div
-          style={{
-            position: "absolute",
-            top: isPortrait ? "4%" : "6%",
-            width: "100%",
-            display: "flex",
-            justifyContent: "center",
-            pointerEvents: "none",
-            zIndex: 25,
-          }}
-        >
-          <div
-            style={{
-              pointerEvents: "auto",
-              position: "relative",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              width: isPortrait ? "30%" : "12%",
-              aspectRatio: isPortrait ? "3/1.2" : "3/1",
-              borderRadius: isPortrait ? "7vw" : "3vw",
-              background: themeTokens.glassBackground,
-              border: themeTokens.glassBorder,
-              boxShadow: themeTokens.glassShadow,
-              backdropFilter: "blur(22px) saturate(135%)",
-              WebkitBackdropFilter: "blur(22px) saturate(135%)",
-              backgroundClip: "padding-box",
-              transition:
-                "background 0.35s ease, border 0.35s ease, box-shadow 0.35s ease",
-              overflow: "hidden",
-            }}
-          >
-            <div
-              style={{
-                position: "absolute",
-                top: 0,
-                left: 0,
-                width: "50%",
-                height: "100%",
-                borderRadius: isPortrait ? "7vw" : "3vw",
-                background: themeTokens.glassHighlightBackground,
-                boxShadow: themeTokens.glassHighlightShadow,
-                zIndex: 0,
-                ["--mode-fluid-color" as any]: themeTokens.highlightFluidColor,
-                ["--mode-fluid-sheen" as any]: themeTokens.highlightFluidSheen,
-                ["--mode-fluid-halo" as any]: themeTokens.highlightHaloShadow,
-              }}
-              className={`flashcard-mode-highlight ${
-                cardFrontMode === "meaning"
-                  ? "flashcard-mode-highlight--left"
-                  : "flashcard-mode-highlight--right"
-              } ${highlightAnimationClass}`}
-              aria-hidden="true"
-            />
-            <button
-              type="button"
-              className="flashcard-mode-button"
-              style={{
-                width: "50%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                borderRadius: "0",
-                position: "relative",
-                zIndex: 1,
-                transition: "background-color 0.35s ease",
-                color: isDark ? "#f5f5f7" : "#202022",
-                outline: "none",
-                boxShadow: "none",
-                backgroundColor: "transparent",
-              }}
-              onClick={() => handleChangeFrontMode("meaning")}
-              title={t("flashcardFrontToggleToMeaning")}
-              aria-pressed={cardFrontMode === "meaning"}
-              aria-label={t("flashcardFrontToggleToMeaning")}
-            >
-              <div
-                style={{
-                  width: "auto",
-                  height: "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width={isPortrait ? "8vw" : "2vw"}
-                  height={isPortrait ? "8vw" : "2vw"}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill={
-                      cardFrontMode === "meaning"
-                        ? themeTokens.lightbulbActivePrimary
-                        : themeTokens.lightbulbInactivePrimary
-                    }
-                    d="M14 20a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2h1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1zm1-3a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-2c-1.8-1.18-3-3.2-3-5.5A6.5 6.5 0 0 1 11.5 3A6.5 6.5 0 0 1 18 9.5c0 2.3-1.2 4.32-3 5.5zm-6 0a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-2.6c1.78-.9 3-2.76 3-4.9A5.5 5.5 0 0 0 11.5 4A5.5 5.5 0 0 0 6 9.5c0 2.14 1.22 4 3 4.9z"
-                  />
-                  <path
-                    fill={
-                      cardFrontMode === "meaning"
-                        ? themeTokens.lightbulbActiveAccent
-                        : themeTokens.lightbulbInactiveAccent
-                    }
-                    d="M8.13 10.12l2.37-2.37l2 2L14.25 8l.71.71l-2.46 2.45l-2-2l-1.66 1.67z"
-                  />
-                </svg>
-              </div>
-            </button>
-            <button
-              type="button"
-              className="flashcard-mode-button"
-              style={{
-                width: "50%",
-                height: "100%",
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                cursor: "pointer",
-                border: "none",
-                background: "transparent",
-                padding: 0,
-                borderRadius: "0",
-                position: "relative",
-                zIndex: 1,
-                transition: "background-color 0.35s ease",
-                color: isDark ? "#f5f5f7" : "#202022",
-                outline: "none",
-                boxShadow: "none",
-                backgroundColor: "transparent",
-              }}
-              onClick={() => handleChangeFrontMode("writing")}
-              title={t("flashcardFrontToggleToWriting")}
-              aria-pressed={cardFrontMode === "writing"}
-              aria-label={t("flashcardFrontToggleToWriting")}
-            >
-              <div
-                style={{
-                  width: "auto",
-                  height: "auto",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  paddingRight: isPortrait ? "0" : "10%",
-                }}
-              >
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  width={isPortrait ? "8vw" : "2vw"}
-                  height={isPortrait ? "8vw" : "2vw"}
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    fill={
-                      cardFrontMode === "meaning"
-                        ? themeTokens.wandInactivePrimary
-                        : themeTokens.wandActivePrimary
-                    }
-                    d="M16.15 13.05L14 16.5q-.275.425-.762.35t-.613-.575l-.7-2.8L5.1 20.3q-.275.275-.687.288T3.7 20.3q-.275-.275-.275-.7t.275-.7l6.825-6.85l-2.8-.7q-.5-.125-.575-.612t.35-.763l3.45-2.125l-.3-4.075q-.05-.5.4-.725t.825.1L15 5.775l3.775-1.525q.475-.2.825.15t.15.825L18.225 9l2.625 3.1q.325.375.1.825t-.725.4zm-12.8-6.7Q3.2 6.2 3.2 6t.15-.35l1.3-1.3Q4.8 4.2 5 4.2t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3Q5.2 7.8 5 7.8t-.35-.15zm14.3 14.3l-1.3-1.3q-.15-.15-.15-.35t.15-.35l1.3-1.3q.15-.15.35-.15t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3q-.15.15-.35.15t-.35-.15"
-                  />
-                </svg>
-              </div>
-            </button>
-          </div>
-        </div>
-
-        {/* 卡片正面 */}
-        <div
-          style={{
-            textAlign: "center",
-            marginBottom: isPortrait ? "6vw" : "2vw",
-            padding: isPortrait ? "4vw" : "2vw",
-            background: isDark
-              ? "rgba(255, 255, 255, 0.05)"
-              : "rgba(0, 0, 0, 0.02)",
-            borderRadius: isPortrait ? "2vw" : "0.5vw",
-            border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${
-              themeTokens.cardBorderColor
-            }`,
-            minHeight: isPortrait ? "30vh" : "200px",
-            display: "flex",
-            flexDirection: "column",
-            justifyContent: "center",
-            alignItems: "center",
-          }}
-        >
-          {cardFrontMode === "writing" ? (
-            <div>
-              <div
-                style={{
-                  fontSize: isPortrait ? "6vw" : "2.5vw",
-                  fontWeight: "bold",
-                  color: "#00b4ff",
-                  marginBottom: isPortrait ? "3vw" : "1vw",
-                }}
-              >
-                {currentWord.kanji || currentWord.kana}
-              </div>
-              {currentWord.kana && currentWord.kanji && (
-                <div
-                  style={{
-                    fontSize: isPortrait ? "4vw" : "1.5vw",
-                    color: isDark ? "#999" : "#666",
-                  }}
-                >
-                  {currentWord.kana}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div
-              style={{
-                fontSize: isPortrait ? "5vw" : "2vw",
-                fontWeight: "bold",
-                color: "#00b4ff",
-              }}
-            >
-              {currentWord.meaning}
-            </div>
-          )}
-        </div>
-
-        {/* 显示答案区域 */}
-        {showAnswer && (
+        {/* 内容区域（可滚动） */}
+        <div style={contentAreaStyle}>
+          {/* 复习阶段显示 */}
           <div
             style={{
               textAlign: "center",
               marginBottom: isPortrait ? "4vw" : "1.5vw",
-              padding: isPortrait ? "3vw" : "1.5vw",
+              marginTop: notificationMessage ? (isPortrait ? "8vw" : "3vw") : 0,
+              fontSize: isPortrait ? "3.5vw" : "1vw",
+              color: "#00b4ff",
+              fontWeight: "bold",
+              transition: "margin-top 0.3s ease-out",
+              opacity: allMastered ? 0.3 : 1, // 全部掌握后降低不透明度
+            }}
+          >
+            {getReviewStageDescription(currentReviewStage, t)}
+          </div>
+
+          {/* 进度显示 */}
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: isPortrait ? "4vw" : "1.5vw",
+              fontSize: isPortrait ? "3.5vw" : "1vw",
+              color: isDark ? "#ccc" : "#666",
+            }}
+          >
+            {t("progress")}: {currentIndex + 1} / {wordIds.length}
+          </div>
+
+          {/* 切换按钮（参考 FlashcardStudy 的样式） */}
+          <div
+            style={{
+              position: "absolute",
+              top: isPortrait ? "4%" : "6%",
+              width: "100%",
+              display: "flex",
+              justifyContent: "center",
+              pointerEvents: "none",
+              zIndex: 25,
+            }}
+          >
+            <div
+              style={{
+                pointerEvents: "auto",
+                position: "relative",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                width: isPortrait ? "30%" : "12%",
+                aspectRatio: isPortrait ? "3/1.2" : "3/1",
+                borderRadius: isPortrait ? "7vw" : "3vw",
+                background: themeTokens.glassBackground,
+                border: themeTokens.glassBorder,
+                boxShadow: themeTokens.glassShadow,
+                backdropFilter: "blur(22px) saturate(135%)",
+                WebkitBackdropFilter: "blur(22px) saturate(135%)",
+                backgroundClip: "padding-box",
+                transition:
+                  "background 0.35s ease, border 0.35s ease, box-shadow 0.35s ease",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                style={{
+                  position: "absolute",
+                  top: 0,
+                  left: 0,
+                  width: "50%",
+                  height: "100%",
+                  borderRadius: isPortrait ? "7vw" : "3vw",
+                  background: themeTokens.glassHighlightBackground,
+                  boxShadow: themeTokens.glassHighlightShadow,
+                  zIndex: 0,
+                  ["--mode-fluid-color" as any]:
+                    themeTokens.highlightFluidColor,
+                  ["--mode-fluid-sheen" as any]:
+                    themeTokens.highlightFluidSheen,
+                  ["--mode-fluid-halo" as any]: themeTokens.highlightHaloShadow,
+                }}
+                className={`flashcard-mode-highlight ${
+                  cardFrontMode === "meaning"
+                    ? "flashcard-mode-highlight--left"
+                    : "flashcard-mode-highlight--right"
+                } ${highlightAnimationClass}`}
+                aria-hidden="true"
+              />
+              <button
+                type="button"
+                className="flashcard-mode-button"
+                style={{
+                  width: "50%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  borderRadius: "0",
+                  position: "relative",
+                  zIndex: 1,
+                  transition: "background-color 0.35s ease",
+                  color: isDark ? "#f5f5f7" : "#202022",
+                  outline: "none",
+                  boxShadow: "none",
+                  backgroundColor: "transparent",
+                }}
+                onClick={() => handleChangeFrontMode("meaning")}
+                title={t("flashcardFrontToggleToMeaning")}
+                aria-pressed={cardFrontMode === "meaning"}
+                aria-label={t("flashcardFrontToggleToMeaning")}
+              >
+                <div
+                  style={{
+                    width: "auto",
+                    height: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={isPortrait ? "8vw" : "2vw"}
+                    height={isPortrait ? "8vw" : "2vw"}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill={
+                        cardFrontMode === "meaning"
+                          ? themeTokens.lightbulbActivePrimary
+                          : themeTokens.lightbulbInactivePrimary
+                      }
+                      d="M14 20a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2h1a1 1 0 0 0 1 1h1a1 1 0 0 0 1-1zm1-3a2 2 0 0 1-2 2h-3a2 2 0 0 1-2-2v-2c-1.8-1.18-3-3.2-3-5.5A6.5 6.5 0 0 1 11.5 3A6.5 6.5 0 0 1 18 9.5c0 2.3-1.2 4.32-3 5.5zm-6 0a1 1 0 0 0 1 1h3a1 1 0 0 0 1-1v-2.6c1.78-.9 3-2.76 3-4.9A5.5 5.5 0 0 0 11.5 4A5.5 5.5 0 0 0 6 9.5c0 2.14 1.22 4 3 4.9z"
+                    />
+                    <path
+                      fill={
+                        cardFrontMode === "meaning"
+                          ? themeTokens.lightbulbActiveAccent
+                          : themeTokens.lightbulbInactiveAccent
+                      }
+                      d="M8.13 10.12l2.37-2.37l2 2L14.25 8l.71.71l-2.46 2.45l-2-2l-1.66 1.67z"
+                    />
+                  </svg>
+                </div>
+              </button>
+              <button
+                type="button"
+                className="flashcard-mode-button"
+                style={{
+                  width: "50%",
+                  height: "100%",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  cursor: "pointer",
+                  border: "none",
+                  background: "transparent",
+                  padding: 0,
+                  borderRadius: "0",
+                  position: "relative",
+                  zIndex: 1,
+                  transition: "background-color 0.35s ease",
+                  color: isDark ? "#f5f5f7" : "#202022",
+                  outline: "none",
+                  boxShadow: "none",
+                  backgroundColor: "transparent",
+                }}
+                onClick={() => handleChangeFrontMode("writing")}
+                title={t("flashcardFrontToggleToWriting")}
+                aria-pressed={cardFrontMode === "writing"}
+                aria-label={t("flashcardFrontToggleToWriting")}
+              >
+                <div
+                  style={{
+                    width: "auto",
+                    height: "auto",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    paddingRight: isPortrait ? "0" : "10%",
+                  }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width={isPortrait ? "8vw" : "2vw"}
+                    height={isPortrait ? "8vw" : "2vw"}
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      fill={
+                        cardFrontMode === "meaning"
+                          ? themeTokens.wandInactivePrimary
+                          : themeTokens.wandActivePrimary
+                      }
+                      d="M16.15 13.05L14 16.5q-.275.425-.762.35t-.613-.575l-.7-2.8L5.1 20.3q-.275.275-.687.288T3.7 20.3q-.275-.275-.275-.7t.275-.7l6.825-6.85l-2.8-.7q-.5-.125-.575-.612t.35-.763l3.45-2.125l-.3-4.075q-.05-.5.4-.725t.825.1L15 5.775l3.775-1.525q.475-.2.825.15t.15.825L18.225 9l2.625 3.1q.325.375.1.825t-.725.4zm-12.8-6.7Q3.2 6.2 3.2 6t.15-.35l1.3-1.3Q4.8 4.2 5 4.2t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3Q5.2 7.8 5 7.8t-.35-.15zm14.3 14.3l-1.3-1.3q-.15-.15-.15-.35t.15-.35l1.3-1.3q.15-.15.35-.15t.35.15l1.3 1.3q.15.15.15.35t-.15.35l-1.3 1.3q-.15.15-.35.15t-.35-.15"
+                    />
+                  </svg>
+                </div>
+              </button>
+            </div>
+          </div>
+
+          {/* 卡片正面 */}
+          <div
+            style={{
+              textAlign: "center",
+              marginBottom: isPortrait ? "6vw" : "2vw",
+              padding: isPortrait ? "4vw" : "2vw",
               background: isDark
-                ? "rgba(0, 180, 255, 0.1)"
-                : "rgba(0, 180, 255, 0.05)",
+                ? "rgba(255, 255, 255, 0.05)"
+                : "rgba(0, 0, 0, 0.02)",
               borderRadius: isPortrait ? "2vw" : "0.5vw",
+              border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${
+                themeTokens.cardBorderColor
+              }`,
+              minHeight: isPortrait ? "30vh" : "200px",
+              display: "flex",
+              flexDirection: "column",
+              justifyContent: "center",
+              alignItems: "center",
             }}
           >
             {cardFrontMode === "writing" ? (
-              <div
-                style={{
-                  fontSize: isPortrait ? "4.5vw" : "1.8vw",
-                  color: isDark ? "#fff" : "#333",
-                }}
-              >
-                {currentWord.meaning}
-              </div>
-            ) : (
               <div>
                 <div
                   style={{
-                    fontSize: isPortrait ? "5vw" : "2vw",
+                    fontSize: isPortrait ? "6vw" : "2.5vw",
                     fontWeight: "bold",
                     color: "#00b4ff",
-                    marginBottom: isPortrait ? "2vw" : "0.5vw",
+                    marginBottom: isPortrait ? "3vw" : "1vw",
                   }}
                 >
                   {currentWord.kanji || currentWord.kana}
@@ -1014,24 +973,81 @@ export default function ReviewStudy({
                   </div>
                 )}
               </div>
+            ) : (
+              <div
+                style={{
+                  fontSize: isPortrait ? "5vw" : "2vw",
+                  fontWeight: "bold",
+                  color: "#00b4ff",
+                }}
+              >
+                {currentWord.meaning}
+              </div>
             )}
           </div>
-        )}
+
+          {/* 显示答案区域 */}
+          {showAnswer && (
+            <div
+              style={{
+                textAlign: "center",
+                marginBottom: isPortrait ? "4vw" : "1.5vw",
+                padding: isPortrait ? "3vw" : "1.5vw",
+                background: isDark
+                  ? "rgba(0, 180, 255, 0.1)"
+                  : "rgba(0, 180, 255, 0.05)",
+                borderRadius: isPortrait ? "2vw" : "0.5vw",
+              }}
+            >
+              {cardFrontMode === "writing" ? (
+                <div
+                  style={{
+                    fontSize: isPortrait ? "4.5vw" : "1.8vw",
+                    color: isDark ? "#fff" : "#333",
+                  }}
+                >
+                  {currentWord.meaning}
+                </div>
+              ) : (
+                <div>
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "5vw" : "2vw",
+                      fontWeight: "bold",
+                      color: "#00b4ff",
+                      marginBottom: isPortrait ? "2vw" : "0.5vw",
+                    }}
+                  >
+                    {currentWord.kanji || currentWord.kana}
+                  </div>
+                  {currentWord.kana && currentWord.kanji && (
+                    <div
+                      style={{
+                        fontSize: isPortrait ? "4vw" : "1.5vw",
+                        color: isDark ? "#999" : "#666",
+                      }}
+                    >
+                      {currentWord.kana}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         {/* 操作按钮（与 FlashcardStudy 保持一致） */}
         <div
           style={{
             display: allMastered ? "none" : "flex", // 全部掌握后隐藏操作按钮
-            position: "absolute",
             width: "100%",
             height: "auto",
-            bottom: 0,
             gap: isPortrait ? "2.5vw" : "2vw",
             justifyContent: "center",
             alignItems: "center",
-            padding: isPortrait ? "0 2vw 2vh 2vw" : "0 0 1% 0",
-            zIndex: 20,
+            padding: isPortrait ? "2vh 2vw" : "1vh 2vw",
             boxSizing: "border-box",
+            flexShrink: 0, // 防止按钮区域被压缩
           }}
         >
           {!showAnswer ? (
@@ -1068,10 +1084,10 @@ export default function ReviewStudy({
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {t("learned")}
+                {t("correct")}
               </button>
               <button
-                onClick={() => setShowAnswer(true)}
+                onClick={() => handleResult("wrong")}
                 style={{
                   borderRadius: isPortrait ? "2vh" : "1vh",
                   border: "none",
@@ -1087,22 +1103,58 @@ export default function ReviewStudy({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgb(197, 150, 241)",
+                  backgroundColor: "rgb(255, 59, 48)",
                   color: "#fff",
                   ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.transform = "translateY(-0.2vh)";
                   e.currentTarget.style.boxShadow = isDark
-                    ? "0 0.4vh 1.2vh rgba(10, 132, 255, 0.5)"
-                    : "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
+                    ? "0 0.4vh 1.2vh rgba(255, 59, 48, 0.5)"
+                    : "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.transform = "translateY(0)";
                   e.currentTarget.style.boxShadow = "none";
                 }}
               >
-                {t("showAnswer")}
+                {t("wrong")}
+              </button>
+              <button
+                onClick={() => handleResult("skip")}
+                style={{
+                  borderRadius: isPortrait ? "2vh" : "1vh",
+                  border: "none",
+                  fontSize: isPortrait
+                    ? "clamp(3vw, 1.2rem, 4vw)"
+                    : "clamp(0.8vw, 0.8rem, 1.2vw)",
+                  fontWeight: 500,
+                  cursor: "pointer",
+                  transition: "all 0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+                  padding: isPortrait ? "2.2vh 0" : "1.2vh 2.4vw",
+                  minHeight: isPortrait ? "6vh" : "4.4vh",
+                  flex: isPortrait ? "1 1 0" : "0 0 auto",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  backgroundColor: isDark
+                    ? "rgba(142, 142, 147, 0.3)"
+                    : "rgba(0, 0, 0, 0.1)",
+                  color: isDark ? "#fff" : "#333",
+                  ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "translateY(-0.2vh)";
+                  e.currentTarget.style.boxShadow = isDark
+                    ? "0 0.4vh 1.2vh rgba(0, 0, 0, 0.3)"
+                    : "0 0.4vh 1.2vh rgba(0, 0, 0, 0.2)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "translateY(0)";
+                  e.currentTarget.style.boxShadow = "none";
+                }}
+              >
+                {t("skip")}
               </button>
             </>
           ) : (
@@ -1179,7 +1231,7 @@ export default function ReviewStudy({
                 onClick={() => handleResult("skip")}
                 style={{
                   borderRadius: isPortrait ? "2vh" : "1vh",
-                  border: `1px solid ${isDark ? "#555" : "#e0e0e0"}`,
+                  border: "none",
                   fontSize: isPortrait
                     ? "clamp(3vw, 1.2rem, 4vw)"
                     : "clamp(0.8vw, 0.8rem, 1.2vw)",
@@ -1192,7 +1244,9 @@ export default function ReviewStudy({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "transparent",
+                  backgroundColor: isDark
+                    ? "rgba(142, 142, 147, 0.3)"
+                    : "rgba(0, 0, 0, 0.1)",
                   color: isDark ? "#fff" : "#333",
                   ...(isPortrait ? { aspectRatio: "2.6 / 1" } : {}),
                 }}

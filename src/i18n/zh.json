@@ -268,5 +268,15 @@
   "noWordsToTest": "没有可测试的单词",
   "currentStageNoWords": "当前阶段没有单词",
   "timeout": "超时",
-  "applicationErrorOccurred": "应用遇到了一个错误。我们已经记录了这个问题，请尝试刷新页面。"
+  "applicationErrorOccurred": "应用遇到了一个错误。我们已经记录了这个问题，请尝试刷新页面。",
+  "todayLearningGoal": "今日学习目标",
+  "keepGoing": "连续学习 {{days}} 天，继续保持！",
+  "totalWordsLearned": "总学习单词数",
+  "mastered": "已掌握",
+  "recommended": "推荐",
+  "newWords": "新单词",
+  "reviewReminder": "复习提醒",
+  "reviewStage": "复习阶段",
+  "wordsToReview": "需要复习的单词数",
+  "dismiss": "关闭"
 }

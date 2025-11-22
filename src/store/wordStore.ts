@@ -13,6 +13,7 @@ import {
   UserSettings,
   DailyStat,
 } from "../db";
+import { queryCache } from "../utils/queryCache";
 
 /**
  * 生成导入时的临时词集名称，避免硬编码常量
@@ -36,7 +37,10 @@ export async function createWordSet(
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
-  return await db.wordSets.add(newWordSet as WordSet);
+  const id = await db.wordSets.add(newWordSet as WordSet);
+  // 清除单词集列表缓存
+  queryCache.invalidate("wordSets:*");
+  return id;
 }
 
 /**
@@ -76,6 +80,14 @@ export async function createWord(
 }
 
 export async function getAllWordSets(): Promise<WordSet[]> {
+  // 尝试从缓存获取
+  const cacheKey = "wordSets:all";
+  const cached = queryCache.get<WordSet[]>(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
+  // 缓存未命中，从数据库查询
   try {
     // 确保数据库打开且默认单词集存在
     await ensureDBOpen();
@@ -114,7 +126,13 @@ export async function getAllWordSets(): Promise<WordSet[]> {
       console.warn("getAllWordSets: 所有单词集数据无效", result);
     }
 
-    return validWordSets.length > 0 ? validWordSets : (result as WordSet[]);
+    const wordSets =
+      validWordSets.length > 0 ? validWordSets : (result as WordSet[]);
+
+    // 存入缓存（无过期时间，通过失效机制清除）
+    queryCache.set(cacheKey, wordSets);
+
+    return wordSets;
   } catch (error) {
     console.error("获取单词集失败:", error);
     // 如果是数据库未打开的错误，尝试重新打开
@@ -124,7 +142,10 @@ export async function getAllWordSets(): Promise<WordSet[]> {
         // 重试一次
         const retryResult = await db.wordSets.toArray();
         if (Array.isArray(retryResult)) {
-          return retryResult as WordSet[];
+          const wordSets = retryResult as WordSet[];
+          // 存入缓存
+          queryCache.set(cacheKey, wordSets);
+          return wordSets;
         }
       } catch (retryError) {
         console.error("重试获取单词集失败:", retryError);
@@ -542,7 +563,10 @@ export async function getWordByIndex(setId: number, kanaPrefix: string) {
 export async function updateWordSet(wordSet: WordSet) {
   await ensureDBOpen();
   wordSet.updatedAt = new Date().toISOString();
-  return await db.wordSets.put(wordSet);
+  const result = await db.wordSets.put(wordSet);
+  // 清除单词集列表缓存
+  queryCache.invalidate("wordSets:*");
+  return result;
 }
 
 export async function updateWord(word: Word) {
@@ -618,6 +642,9 @@ export async function deleteWordSet(id: number): Promise<boolean> {
         await db.wordSets.delete(id);
       }
     );
+    // 清除单词集列表缓存和复习计划缓存
+    queryCache.invalidate("wordSets:*");
+    queryCache.invalidate("reviewPlans:*");
 
     return true;
   } catch (error) {

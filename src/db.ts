@@ -1,4 +1,12 @@
 import Dexie, { Table } from "dexie";
+// 导入迁移函数（用于在 upgrade 回调中调用，实现代码复用）
+import { v1Migration } from "./db/migrations/v1";
+import { v2Migration } from "./db/migrations/v2";
+import { v3Migration } from "./db/migrations/v3";
+import { v4Migration } from "./db/migrations/v4";
+import { v5Migration } from "./db/migrations/v5";
+import { v6Migration } from "./db/migrations/v6";
+import { v7Migration } from "./db/migrations/v7";
 
 // 默认值常量
 export const DEFAULT_WORD_TYPE = "undefined";
@@ -173,6 +181,20 @@ export interface ReviewPlan {
   updatedAt?: string;
 }
 
+// 复习日志归档表（v7 新增：用于归档 90-365 天的日志）
+export interface ReviewLogsArchive {
+  id?: number; // 自增主键
+  date: string; // YYYY-MM-DD
+  wordIds?: number[]; // 单词 ID 列表（可选，如果数据量大则只保留数量）
+  wordCount?: number; // 单词数量（当 wordIds 过大时使用）
+  totalCount: number; // 总记录数
+  correctCount: number; // 正确数量
+  wrongCount: number; // 错误数量
+  skipCount: number; // 跳过数量
+  avgResponseTime?: number; // 平均响应时间（毫秒）
+  createdAt: string; // 归档时间
+}
+
 export class JpLearnDB extends Dexie {
   wordSets!: Table<WordSet, number>;
   words!: Table<Word, number>;
@@ -185,6 +207,7 @@ export class JpLearnDB extends Dexie {
   reviewPlans!: Table<ReviewPlan, number>; // 复习计划表（v4 新增）
   flashcardSessions!: Table<FlashcardSession, number>; // 闪卡会话状态表（v6 新增）
   reviewLocks!: Table<ReviewLock, number>; // 复习锁定状态表（v6 新增）
+  reviewLogsArchive!: Table<ReviewLogsArchive, number>; // 复习日志归档表（v7 新增）
 
   constructor() {
     super("jpLearnDB");
@@ -194,29 +217,9 @@ export class JpLearnDB extends Dexie {
     });
 
     // 数据库升级时初始化默认数据
-    this.version(1).upgrade(async (trans) => {
-      // 确保默认单词集存在，使用固定ID 0
-      const defaultWordSet = await trans
-        .table("wordSets")
-        .get(DEFAULT_WORD_SET_ID);
-
-      if (!defaultWordSet) {
-        await trans.table("wordSets").put({
-          id: DEFAULT_WORD_SET_ID,
-          name: DEFAULT_WORD_SET_NAME,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        } as WordSet);
-      }
-
-      // 为没有 type 的单词设置默认 type
-      const wordsTable = trans.table("words");
-      const wordsWithoutType = await wordsTable
-        .filter((word) => word.type === undefined || word.type === null)
-        .toArray();
-      for (const word of wordsWithoutType) {
-        await wordsTable.update(word.id, { type: DEFAULT_WORD_TYPE });
-      }
+    // 使用模块化迁移函数（保持向后兼容）
+    this.version(1).upgrade(async () => {
+      await v1Migration.up(this);
     });
 
     // v2：扩展表结构以支持学习统计、间隔重复与模式参数
@@ -232,63 +235,9 @@ export class JpLearnDB extends Dexie {
         reviewLogs:
           "++id, wordId, timestamp, mode, result, grade, nextReviewAt",
       })
-      .upgrade(async (trans) => {
-        // 初始化用户设置（若不存在）
-        const settingsTable = trans.table("userSettings");
-        const existingSettings = await settingsTable.get(1);
-        if (!existingSettings) {
-          const nowIso = new Date().toISOString();
-          await settingsTable.put({
-            id: 1,
-            currentMode: "flashcard",
-            dailyGoal: 20,
-            currentStreak: 0,
-            longestStreak: 0,
-            updatedAt: nowIso,
-            createdAt: nowIso,
-          } as UserSettings);
-        }
-
-        // 将 words 中已有数据迁移到 wordProgress（若不存在）
-        const wordsTable = trans.table("words");
-        const progressTable = trans.table("wordProgress");
-        const allWords = await wordsTable.toArray();
-        const now = new Date();
-        for (const w of allWords) {
-          if (!w || typeof w.id !== "number") continue;
-          const existing = await progressTable.get(w.id);
-          if (existing) continue;
-
-          const review = w.review || {
-            times: 0,
-            difficulty: undefined,
-            nextReview: undefined,
-          };
-          const repetitions = review.times ?? 0;
-          const difficulty = review.difficulty ?? undefined;
-          const nextReviewAt = review.nextReview ?? undefined;
-
-          const initial: WordProgress = {
-            wordId: w.id,
-            setId: typeof w.setId === "number" ? w.setId : DEFAULT_WORD_SET_ID,
-            // SM-2 风格的初始参数（保守值，后续按答题动态调整）
-            easeFactor: 2.5,
-            intervalDays: 0,
-            repetitions,
-            difficulty,
-            timesSeen: 0,
-            timesCorrect: 0,
-            correctStreak: 0,
-            wrongStreak: 0,
-            lastResult: undefined,
-            lastMode: undefined,
-            lastReviewedAt: undefined,
-            nextReviewAt: nextReviewAt,
-            createdAt: now.toISOString(),
-            updatedAt: now.toISOString(),
-          };
-          await progressTable.put(initial);
-        }
+      .upgrade(async () => {
+        // 使用模块化迁移函数（保持向后兼容）
+        await v2Migration.up(this);
       });
 
     // v3：添加答题速度支持
@@ -304,20 +253,9 @@ export class JpLearnDB extends Dexie {
         reviewLogs:
           "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
       })
-      .upgrade(async (trans) => {
-        // 为现有的 wordProgress 记录添加答题速度字段的默认值
-        const progressTable = trans.table("wordProgress");
-        const allProgress = await progressTable.toArray();
-        for (const progress of allProgress) {
-          if (progress.averageResponseTime === undefined) {
-            await progressTable.update(progress.wordId, {
-              averageResponseTime: undefined,
-              lastResponseTime: undefined,
-              fastResponseCount: 0,
-              slowResponseCount: 0,
-            });
-          }
-        }
+      .upgrade(async () => {
+        // 使用模块化迁移函数（保持向后兼容）
+        await v3Migration.up(this);
       });
 
     // v4：添加复习计划表（支持艾宾浩斯遗忘曲线）
@@ -335,46 +273,9 @@ export class JpLearnDB extends Dexie {
         reviewPlans:
           "++id, wordSetId, reviewStage, nextReviewAt, isCompleted, [wordSetId+reviewStage], [nextReviewAt+isCompleted]",
       })
-      .upgrade(async (trans) => {
-        // 为所有现有单词集创建初始复习计划
-        const wordSetsTable = trans.table("wordSets");
-        const wordsTable = trans.table("words");
-        const reviewPlansTable = trans.table("reviewPlans");
-
-        const allWordSets = await wordSetsTable.toArray();
-        const now = new Date();
-
-        for (const wordSet of allWordSets) {
-          // 检查是否已存在复习计划（防止重复创建）
-          const existing = await reviewPlansTable
-            .where("wordSetId")
-            .equals(wordSet.id)
-            .first();
-
-          if (!existing) {
-            // 统计该单词集的单词数
-            const wordCount = await wordsTable
-              .where("setId")
-              .equals(wordSet.id)
-              .count();
-
-            // 创建初始复习计划（阶段1，1小时后复习）
-            const firstReviewTime = new Date(now);
-            firstReviewTime.setHours(firstReviewTime.getHours() + 1);
-
-            await reviewPlansTable.add({
-              wordSetId: wordSet.id,
-              reviewStage: 1,
-              nextReviewAt: firstReviewTime.toISOString(),
-              completedStages: [],
-              startedAt: now.toISOString(),
-              isCompleted: false,
-              totalWords: wordCount,
-              createdAt: now.toISOString(),
-              updatedAt: now.toISOString(),
-            } as ReviewPlan);
-          }
-        }
+      .upgrade(async () => {
+        // 使用模块化迁移函数（保持向后兼容）
+        await v4Migration.up(this);
       });
 
     // v5：优化索引（性能优化）
@@ -401,9 +302,8 @@ export class JpLearnDB extends Dexie {
         reviewPlans: "++id, wordSetId, nextReviewAt, [wordSetId+reviewStage]",
       })
       .upgrade(async () => {
-        // v5 升级：索引优化，无需数据迁移
-        // 索引的减少不会影响现有数据，只是减少了索引维护开销
-        console.log("数据库升级到 v5：索引优化完成");
+        // 使用模块化迁移函数（保持向后兼容）
+        await v5Migration.up(this);
       });
 
     // v6：优化 userSettings 表结构（将会话状态和锁定状态独立存储）
@@ -424,56 +324,31 @@ export class JpLearnDB extends Dexie {
         flashcardSessions: "++id, userId, savedAt", // 新增表
         reviewLocks: "++id, userId, wordSetId", // 新增表
       })
-      .upgrade(async (trans) => {
-        // v6 升级：数据迁移
-        const settingsTable = trans.table("userSettings");
-        const flashcardSessionsTable = trans.table("flashcardSessions");
-        const reviewLocksTable = trans.table("reviewLocks");
+      .upgrade(async () => {
+        // 使用模块化迁移函数（保持向后兼容）
+        await v6Migration.up(this);
+      });
 
-        // 1. 迁移 flashcardSessionState
-        const settings = await settingsTable.get(1);
-        if (settings?.flashcardSessionState) {
-          const sessionState = settings.flashcardSessionState;
-          const now = sessionState.savedAt || new Date().toISOString();
-          await flashcardSessionsTable.add({
-            userId: 1,
-            wordSetId: sessionState.wordSetId,
-            wordIds: sessionState.wordIds,
-            currentIndex: sessionState.currentIndex,
-            sessionStats: sessionState.sessionStats,
-            showAnswer: sessionState.showAnswer,
-            currentWordId: sessionState.currentWordId,
-            savedAt: sessionState.savedAt,
-            createdAt: now,
-            updatedAt: now,
-          } as FlashcardSession);
-
-          // 从 userSettings 中移除
-          await settingsTable.update(1, {
-            flashcardSessionState: undefined,
-          });
-        }
-
-        // 2. 迁移 activeReviewLock
-        if (settings?.activeReviewLock) {
-          const lock = settings.activeReviewLock;
-          const now = lock.lockedAt || new Date().toISOString();
-          await reviewLocksTable.add({
-            userId: 1,
-            wordSetId: lock.wordSetId,
-            reviewStage: lock.reviewStage,
-            lockedAt: lock.lockedAt,
-            createdAt: now,
-            updatedAt: now,
-          } as ReviewLock);
-
-          // 从 userSettings 中移除
-          await settingsTable.update(1, {
-            activeReviewLock: undefined,
-          });
-        }
-
-        console.log("数据库升级到 v6：会话状态和锁定状态已迁移到独立表");
+    // v7：添加复习日志归档表（用于归档 90-365 天的日志）
+    this.version(7)
+      .stores({
+        wordSets: "++id, name, createdAt",
+        words: "++id, kana, kanji, meaning, type, [setId+kana]",
+        userSettings: "id",
+        studySessions: "++id, mode, startedAt, finishedAt, date, [date+mode]",
+        dailyStats: "date",
+        wordProgress:
+          "wordId, setId, nextReviewAt, lastReviewedAt, [setId+nextReviewAt]",
+        reviewLogs:
+          "++id, wordId, timestamp, mode, result, grade, nextReviewAt, responseTime",
+        reviewPlans: "++id, wordSetId, nextReviewAt, [wordSetId+reviewStage]",
+        flashcardSessions: "++id, userId, savedAt",
+        reviewLocks: "++id, userId, wordSetId",
+        reviewLogsArchive: "++id, date, [date+wordId]", // 新增归档表
+      })
+      .upgrade(async () => {
+        // 使用模块化迁移函数（保持向后兼容）
+        await v7Migration.up(this);
       });
   }
 }
@@ -545,4 +420,27 @@ export async function resetDB() {
     await db.open(); // 立刻打开，避免后续第一笔操作再碰 closed
   }
   return db;
+}
+
+/**
+ * 导出迁移管理器（用于高级功能：手动迁移、回滚等）
+ *
+ * 使用示例：
+ * ```typescript
+ * import { db, getMigrationManager } from "./db";
+ *
+ * const manager = getMigrationManager();
+ * // 手动迁移到指定版本
+ * await manager.migrate(6);
+ * // 回滚到指定版本
+ * await manager.rollback(5);
+ * // 查看迁移日志
+ * const logs = manager.getMigrationLogs();
+ * ```
+ */
+export function getMigrationManager() {
+  // 使用动态导入避免循环依赖
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { MigrationManager } = require("./db/migrations/MigrationManager");
+  return new MigrationManager(db);
 }

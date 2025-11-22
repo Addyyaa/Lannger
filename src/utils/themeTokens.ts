@@ -155,6 +155,7 @@ export function getCardStyle(
     padding: isPortrait ? "8vw" : "3vw",
     maxWidth: isPortrait ? "90%" : "700px",
     width: "100%",
+    maxHeight: isPortrait ? "85vh" : "80vh",
     boxShadow: isPortrait
       ? themeTokens.cardShadowPortrait
       : themeTokens.cardShadowLandscape,
@@ -165,8 +166,9 @@ export function getCardStyle(
     minHeight: isPortrait ? "60vh" : "400px",
     display: "flex",
     flexDirection: "column",
-    justifyContent: "center",
+    justifyContent: "flex-start",
     alignItems: "center",
+    overflow: "hidden", // 防止内容溢出
   };
 }
 
