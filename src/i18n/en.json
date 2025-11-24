@@ -268,5 +268,15 @@
   "noWordsToTest": "No words to test",
   "currentStageNoWords": "No words in current stage",
   "timeout": "Timeout",
-  "applicationErrorOccurred": "Application error occurred, please refresh the page and try again."
+  "applicationErrorOccurred": "Application error occurred, please refresh the page and try again.",
+  "todayLearningGoal": "Today's Learning Goal",
+  "keepGoing": "{{days}} days streak, keep going!",
+  "totalWordsLearned": "Total Words Learned",
+  "mastered": "Mastered",
+  "recommended": "Recommended",
+  "newWords": "New Words",
+  "reviewReminder": "Review Reminder",
+  "reviewStage": "Review Stage",
+  "wordsToReview": "Words to Review",
+  "dismiss": "Dismiss"
 }

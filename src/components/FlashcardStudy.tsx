@@ -381,13 +381,13 @@ export default function FlashcardStudy({
     position: "relative",
     display: "flex",
     flexDirection: "column",
+    overflow: "hidden", // 防止内容溢出
   };
 
   // 卡片容器包装（提供 perspective）
   const cardWrapperStyle: React.CSSProperties = {
     display: "flex",
     width: "100%",
-    height: "100%",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
@@ -396,6 +396,7 @@ export default function FlashcardStudy({
     perspective: isPortrait ? "200vw" : "100vw",
     WebkitPerspective: isPortrait ? "200vw" : "100vw",
     overflow: "hidden",
+    minHeight: 0, // 允许 flex 子元素缩小
   };
 
   // 3D卡片容器
@@ -478,6 +479,7 @@ export default function FlashcardStudy({
     boxSizing: "border-box",
     scrollbarWidth: "none", // Firefox: 隐藏滚动条
     msOverflowStyle: "none", // IE/Edge: 隐藏滚动条
+    paddingBottom: isPortrait ? "12vh" : "8vh", // 预留底部空间，避免内容被按钮遮挡
   };
 
   const isMeaningFront = cardFrontMode === "meaning";
@@ -554,16 +556,14 @@ export default function FlashcardStudy({
 
   const buttonGroupStyle: React.CSSProperties = {
     display: "flex",
-    position: "absolute",
     width: "100%",
     height: "auto",
-    bottom: 0,
     gap: isPortrait ? "2.5vw" : "2vw",
     justifyContent: "center",
     alignItems: "center",
-    padding: isPortrait ? "0 2vw 2vh 2vw" : "0 0 1% 0",
-    zIndex: 20,
+    padding: isPortrait ? "2vh 2vw" : "1vh 2vw",
     boxSizing: "border-box",
+    flexShrink: 0, // 防止按钮区域被压缩
   };
 
   const buttonStyle: React.CSSProperties = {

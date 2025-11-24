@@ -133,6 +133,12 @@ class MockTable<T = any, TKey = any> {
     }
   }
 
+  async bulkDelete(keys: TKey[]): Promise<void> {
+    for (const key of keys) {
+      await this.delete(key);
+    }
+  }
+
   async bulkGet(keys: TKey[]): Promise<(T | undefined)[]> {
     return keys.map((key) => {
       // 先尝试直接 key
@@ -191,6 +197,9 @@ class MockTable<T = any, TKey = any> {
       };
     };
     anyOf: (values: any[]) => {
+      toArray: () => Promise<T[]>;
+    };
+    below: (value: any) => {
       toArray: () => Promise<T[]>;
     };
     belowOrEqual: (value: any) => {
@@ -390,6 +399,18 @@ class MockTable<T = any, TKey = any> {
           },
         }),
       }),
+      below: (value: any) => ({
+        toArray: async () => {
+          const all = await this.toArray();
+          return all.filter((item: any) => {
+            // below 只支持单字段索引
+            const fieldValue = Array.isArray(index)
+              ? item[index[0]]
+              : item[index as string];
+            return fieldValue < value;
+          });
+        },
+      }),
       belowOrEqual: (value: any) => ({
         toArray: async () => {
           const all = await this.toArray();
@@ -430,6 +451,7 @@ const mockDb = {
   reviewPlans: new MockTable(),
   flashcardSessions: new MockTable(), // v6 新增
   reviewLocks: new MockTable(), // v6 新增
+  reviewLogsArchive: new MockTable(), // v7 新增
 
   async open(): Promise<void> {
     // Mock 打开数据库
@@ -439,12 +461,27 @@ const mockDb = {
     return true;
   },
 
+  get verno(): number {
+    // 返回当前数据库版本（mock 为最新版本 7）
+    return 7;
+  },
+
   async close(): Promise<void> {
     // Mock 关闭数据库
   },
 
   async delete(): Promise<void> {
-    // Mock 删除数据库
+    this.wordSets.clear();
+    this.words.clear();
+    this.userSettings.clear();
+    this.studySessions.clear();
+    this.dailyStats.clear();
+    this.wordProgress.clear();
+    this.reviewLogs.clear();
+    this.reviewPlans.clear();
+    this.flashcardSessions.clear();
+    this.reviewLocks.clear();
+    this.reviewLogsArchive.clear();
   },
 
   async transaction<T>(_mode: string, ...args: any[]): Promise<T> {

@@ -1,4 +1,3 @@
-/* @react-compiler-disable */
 import { useCallback, useEffect, useState } from "react";
 
 // Chrome 扩展的 beforeinstallprompt 事件类型声明

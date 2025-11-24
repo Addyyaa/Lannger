@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
+// 确保 React Compiler 运行时正确初始化
+import "react-compiler-runtime";
 import "./index.css";
 import "./i18n/i18n";
 
@@ -18,6 +20,8 @@ import { ensureDBOpen } from "./db";
 import { initSentry } from "./utils/sentry";
 import { handleError } from "./utils/errorHandler";
 import { ErrorMonitor } from "./components/ErrorMonitor";
+import { shouldRunArchive, runFullArchive } from "./services/archiveService";
+import AnnouncementManager from "./components/AnnouncementManager";
 
 declare global {
   interface Window {
@@ -50,17 +54,23 @@ function setupPWAAssets() {
     const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     const register = () => {
       navigator.serviceWorker
-        .register(swUrl, { scope: import.meta.env.BASE_URL })
+        .register(swUrl, {
+          scope: import.meta.env.BASE_URL,
+          // 更新检查策略：不缓存 Service Worker 文件本身，确保获取最新版本
+          updateViaCache: "none",
+        })
         .then((registration) => {
           const notifyUpdate = (waitingWorker: ServiceWorker) => {
             window.__lanngerSwWaiting = waitingWorker;
             window.dispatchEvent(new CustomEvent("sw-update-available"));
           };
 
+          // 立即检查是否有等待中的更新
           if (registration.waiting) {
             notifyUpdate(registration.waiting);
           }
 
+          // 监听更新发现
           registration.addEventListener("updatefound", () => {
             const newWorker = registration.installing;
             if (!newWorker) {
@@ -75,6 +85,13 @@ function setupPWAAssets() {
               }
             });
           });
+
+          // 定期检查更新（每 1 小时）
+          setInterval(() => {
+            registration.update().catch((error) => {
+              console.warn("Service Worker 更新检查失败:", error);
+            });
+          }, 60 * 60 * 1000);
         })
         .catch((error) => {
           console.error("Service Worker 注册失败:", error);
@@ -450,6 +467,8 @@ function RootLayout() {
           </Layout>
           {/* 开发环境错误监控 Dashboard */}
           {process.env.NODE_ENV === "development" && <ErrorMonitor />}
+          {/* 通告管理器：自动检查并显示通告 */}
+          <AnnouncementManager />
         </ThemeProvider>
       </OrientationProvider>
     </ErrorBoundary>
@@ -518,9 +537,29 @@ if (typeof window !== "undefined") {
 }
 
 // 在应用启动时初始化数据库
-ensureDBOpen().catch((error) => {
-  console.error("数据库初始化失败:", error);
-});
+ensureDBOpen()
+  .then(async () => {
+    // 检查是否需要执行归档（后台执行，不阻塞应用启动）
+    try {
+      const shouldArchive = await shouldRunArchive();
+      if (shouldArchive) {
+        // 使用 setTimeout 延迟执行，避免阻塞应用启动
+        setTimeout(async () => {
+          try {
+            const result = await runFullArchive();
+            console.log("归档完成:", result);
+          } catch (error) {
+            console.error("归档执行失败:", error);
+          }
+        }, 2000); // 延迟 2 秒执行
+      }
+    } catch (error) {
+      console.error("归档检查失败:", error);
+    }
+  })
+  .catch((error) => {
+    console.error("数据库初始化失败:", error);
+  });
 
 // 在开发环境中保持单例 Root，避免 HMR 多次创建导致容器不一致
 const existingRoot = (window as any).__lanngerRoot;

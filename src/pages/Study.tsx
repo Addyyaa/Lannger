@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
+import { useLocation } from "react-router-dom";
 import { useTheme, useOrientation } from "../main";
 import { db, StudyMode, UserSettings, DailyStat, ensureDBOpen } from "../db";
 import ComponentAsModel from "../utils/componentAsModel";
@@ -15,6 +16,15 @@ export default function Study() {
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { isPortrait } = useOrientation();
+  const location = useLocation();
+
+  // 从路由 state 获取参数（从 Home 页面传递）
+  const routeState = location.state as {
+    mode?: StudyMode;
+    wordSetId?: number;
+    reviewStage?: number;
+  } | null;
+
   const [studyStats, setStudyStats] = useState({
     totalWords: 0,
     studiedToday: 0,
@@ -27,17 +37,38 @@ export default function Study() {
   const [showTestStudy, setShowTestStudy] = useState(false);
   const [showReviewStudy, setShowReviewStudy] = useState(false);
   const [showReviewNotification, setShowReviewNotification] = useState(true);
-  const [selectedMode, setSelectedMode] = useState<StudyMode | null>(null);
+  const [selectedMode, setSelectedMode] = useState<StudyMode | null>(
+    routeState?.mode || null
+  );
   const [selectedWordSetId, setSelectedWordSetId] = useState<
     number | undefined
-  >(undefined);
+  >(routeState?.wordSetId);
   const [selectedReviewStage, setSelectedReviewStage] = useState<
     number | undefined
-  >(undefined);
+  >(routeState?.reviewStage);
 
   useEffect(() => {
     loadStudyStats();
     checkReviewNotificationsOnStart();
+
+    // 如果从 Home 页面传递了参数，直接进入对应的学习模式
+    if (routeState?.mode) {
+      if (routeState.mode === "review" && routeState.wordSetId !== undefined) {
+        // 复习模式：直接开始复习
+        void handleStartReview(
+          routeState.wordSetId,
+          routeState.reviewStage || 1
+        );
+      } else if (routeState.wordSetId !== undefined) {
+        // 其他模式：直接开始学习
+        setSelectedMode(routeState.mode);
+        void handleSelectWordSet(routeState.wordSetId);
+      } else {
+        // 没有指定 wordSetId，显示单词集选择器
+        setSelectedMode(routeState.mode);
+        setShowWordSetSelector(true);
+      }
+    }
 
     // 监听窗口焦点，刷新统计数据并检查复习通知
     const handleFocus = () => {

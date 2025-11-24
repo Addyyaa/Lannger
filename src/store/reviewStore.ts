@@ -9,6 +9,7 @@ import {
   isReviewDue,
 } from "../utils/ebbinghausCurve";
 import { safeDbOperation } from "../utils/dbWrapper";
+import { queryCache } from "../utils/queryCache";
 
 /**
  * 获取单词集的复习计划
@@ -92,6 +93,8 @@ export async function getOrCreateReviewPlan(
           learnedWordIds
         );
         await db.reviewPlans.add(newPlan);
+        // 清除复习计划缓存
+        queryCache.invalidate("reviewPlans:*");
         return newPlan;
       }
 
@@ -105,6 +108,8 @@ export async function getOrCreateReviewPlan(
         // 创建新的复习计划
         plan = createReviewPlan(wordSetId, totalWords);
         await db.reviewPlans.add(plan);
+        // 清除复习计划缓存
+        queryCache.invalidate("reviewPlans:*");
       }
 
       return plan;
@@ -128,6 +133,8 @@ export async function updateReviewPlan(plan: ReviewPlan): Promise<void> {
     async () => {
       await ensureDBOpen();
       await db.reviewPlans.put(plan);
+      // 清除复习计划缓存
+      queryCache.invalidate("reviewPlans:*");
     },
     {
       context: { operation: "updateReviewPlan", wordSetId: plan.wordSetId },
@@ -172,6 +179,9 @@ export async function completeReviewStage(
       const updatedPlan = advanceReviewStage(plan, completedAt);
       await db.reviewPlans.put(updatedPlan);
 
+      // 清除复习计划缓存
+      queryCache.invalidate("reviewPlans:*");
+
       return updatedPlan;
     },
     {
@@ -184,6 +194,14 @@ export async function completeReviewStage(
  * 获取所有到期的复习计划（性能优化：使用索引查询）
  */
 export async function getDueReviewPlans(): Promise<ReviewPlan[]> {
+  // 尝试从缓存获取（5 分钟过期，因为时间会推进）
+  const cacheKey = "reviewPlans:due";
+  const cached = queryCache.get<ReviewPlan[]>(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
+  // 缓存未命中，从数据库查询
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
@@ -210,6 +228,9 @@ export async function getDueReviewPlans(): Promise<ReviewPlan[]> {
         return timeA - timeB;
       });
 
+      // 存入缓存（5 分钟过期）
+      queryCache.set(cacheKey, duePlans, 5 * 60 * 1000);
+
       return duePlans;
     },
     {
@@ -223,10 +244,23 @@ export async function getDueReviewPlans(): Promise<ReviewPlan[]> {
  * 获取所有复习计划
  */
 export async function getAllReviewPlans(): Promise<ReviewPlan[]> {
+  // 尝试从缓存获取
+  const cacheKey = "reviewPlans:all";
+  const cached = queryCache.get<ReviewPlan[]>(cacheKey);
+  if (cached !== null) {
+    return cached;
+  }
+
+  // 缓存未命中，从数据库查询
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      return await db.reviewPlans.toArray();
+      const plans = await db.reviewPlans.toArray();
+
+      // 存入缓存（无过期时间，通过失效机制清除）
+      queryCache.set(cacheKey, plans);
+
+      return plans;
     },
     {
       context: { operation: "getAllReviewPlans" },
