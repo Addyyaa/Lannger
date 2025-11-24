@@ -51,18 +51,21 @@ export default function WordSetsTable({
   const buttonStyle: React.CSSProperties = {
     background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
     border: "none",
-    borderRadius: isPortrait ? "1.5vw" : "0.3vw",
-    fontSize: isPortrait ? "3vw" : "1vw",
+    borderRadius: isPortrait ? "2vw" : "0.5vw",
+    fontSize: isPortrait ? "3vw" : "0.9vw",
     width: "auto",
     height: "auto",
     minWidth: isPortrait ? "12vw" : "1vw",
-    padding: isPortrait ? "2vw 3vw" : "0.5vw 0.8vw",
+    padding: isPortrait ? "2.2vw 3.5vw" : "0.6vw 1vw",
     color: "#fff",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    fontWeight: "600",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     boxShadow: isPortrait
-      ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)"
-      : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)",
+      ? "0 1.2vw 3.5vw rgba(0, 180, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+      : "0 0.3vw 1vw rgba(0, 180, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+    position: "relative",
+    overflow: "hidden",
   };
 
   const thStyle: React.CSSProperties = {
@@ -78,34 +81,47 @@ export default function WordSetsTable({
     display: "flex",
     flexDirection: "column",
     overflow: "hidden",
-    borderRadius: isPortrait ? "2vw" : "0.7vw",
-    background: isDark ? "#111" : "#fff",
+    borderRadius: isPortrait ? "2.5vw" : "1vw",
+    background: isDark
+      ? "linear-gradient(135deg, rgba(17, 17, 17, 0.9) 0%, rgba(30, 30, 30, 0.85) 100%)"
+      : "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 249, 250, 0.9) 100%)",
+    backdropFilter: "blur(20px) saturate(180%)",
+    WebkitBackdropFilter: "blur(20px) saturate(180%)",
     boxShadow: isDark
       ? isPortrait
-        ? "0 1vw 5vw rgba(0, 0, 0, 0.3)"
-        : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+        ? "0 1.5vw 6vw rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+        : "0 0.5vw 2vw rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
       : isPortrait
-      ? "0 1vw 5vw rgba(0, 0, 0, 0.1)"
-      : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+      ? "0 1.5vw 6vw rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)"
+      : "0 0.5vw 2vw rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
     border: isDark
-      ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444`
-      : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
+      ? `${isPortrait ? "0.3vw" : "0.08vw"} solid rgba(255, 255, 255, 0.1)`
+      : `${isPortrait ? "0.3vw" : "0.08vw"} solid rgba(0, 0, 0, 0.08)`,
   };
 
   const stickyThStyle: React.CSSProperties = {
     ...thStyle,
     textAlign: "center",
-    background: isDark ? "rgb(0, 0, 0)" : "#eeeeee",
-    color: isDark ? "white" : "rgb(77, 76, 76)",
+    background: isDark
+      ? "linear-gradient(135deg, rgba(0, 0, 0, 0.85) 0%, rgba(20, 20, 20, 0.8) 100%)"
+      : "linear-gradient(135deg, rgba(238, 238, 238, 0.95) 0%, rgba(245, 245, 245, 0.9) 100%)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
+    color: isDark ? "rgba(255, 255, 255, 0.95)" : "rgba(77, 76, 76, 0.9)",
     position: "sticky",
     top: 0,
     zIndex: 10,
-    boxShadow: "0 0.125vw 0.25vw rgba(0, 0, 0, 0.1)",
+    boxShadow: isDark
+      ? "0 0.25vw 0.5vw rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+      : "0 0.25vw 0.5vw rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
     display: "grid",
     gridTemplateColumns: COLUMN_TEMPLATE,
     alignItems: "center",
-    borderRadius: isPortrait ? "2vw 2vw 0 0" : "1.5vw 1.5vw 0 0",
+    borderRadius: isPortrait ? "2.5vw 2.5vw 0 0" : "1vw 1vw 0 0",
     minHeight: isPortrait ? "70px" : "56px",
+    borderBottom: isDark
+      ? "1px solid rgba(255, 255, 255, 0.1)"
+      : "1px solid rgba(0, 0, 0, 0.08)",
   };
   const markHeaderStyle: React.CSSProperties = {
     textAlign: "center",

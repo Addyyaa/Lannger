@@ -192,22 +192,25 @@ export default function Manage() {
   const cardStyle: React.CSSProperties = {
     width: "100%",
     background: isDark
-      ? "linear-gradient(135deg, #2d2d2d 0%, #3a3a3a 100%)"
-      : "linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%)",
-    borderRadius: isPortrait ? "2vw" : "0.7vw",
-    marginBottom: isPortrait ? "3vw" : "1.25vw",
-    padding: isPortrait ? "4vw" : "1.5vw",
+      ? "linear-gradient(135deg, rgba(45, 45, 45, 0.85) 0%, rgba(58, 58, 58, 0.75) 100%)"
+      : "linear-gradient(135deg, rgba(255, 255, 255, 0.9) 0%, rgba(248, 249, 250, 0.85) 100%)",
+    backdropFilter: "blur(20px) saturate(180%)",
+    WebkitBackdropFilter: "blur(20px) saturate(180%)",
+    borderRadius: isPortrait ? "2.5vw" : "1vw",
+    marginBottom: isPortrait ? "3vw" : "1.5vw",
+    padding: isPortrait ? "4.5vw" : "2vw",
     boxShadow: isDark
       ? isPortrait
-        ? "0 1vw 5vw rgba(0, 0, 0, 0.3)"
-        : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.3)"
+        ? "0 1.5vw 6vw rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
+        : "0 0.5vw 2vw rgba(0, 0, 0, 0.4), inset 0 1px 0 rgba(255, 255, 255, 0.05)"
       : isPortrait
-      ? "0 1vw 5vw rgba(0, 0, 0, 0.1)"
-      : "0 0.25vw 1.25vw rgba(0, 0, 0, 0.1)",
+      ? "0 1.5vw 6vw rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)"
+      : "0 0.5vw 2vw rgba(0, 0, 0, 0.15), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
     border: isDark
-      ? `${isPortrait ? "0.25vw" : "0.06vw"} solid #444`
-      : `${isPortrait ? "0.25vw" : "0.06vw"} solid #e0e0e0`,
+      ? `${isPortrait ? "0.3vw" : "0.08vw"} solid rgba(255, 255, 255, 0.1)`
+      : `${isPortrait ? "0.3vw" : "0.08vw"} solid rgba(0, 0, 0, 0.08)`,
     boxSizing: "border-box",
+    transition: "all 0.3s ease",
   };
 
   const titleStyle: React.CSSProperties = {
@@ -222,15 +225,17 @@ export default function Manage() {
     background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
     color: "white",
     border: "none",
-    borderRadius: isPortrait ? "2vw" : "0.5vw",
-    padding: isPortrait ? "3vw 6vw" : "0.75vw 1.5vw",
+    borderRadius: isPortrait ? "2.5vw" : "0.75vw",
+    padding: isPortrait ? "3.5vw 6.5vw" : "0.9vw 1.8vw",
     fontSize: isPortrait ? "3.5vw" : "1vw",
-    fontWeight: "bold",
+    fontWeight: "600",
     cursor: "pointer",
-    transition: "all 0.3s ease",
+    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
     boxShadow: isPortrait
-      ? "0 1vw 3.75vw rgba(0, 180, 255, 0.3)"
-      : "0 0.25vw 0.9375vw rgba(0, 180, 255, 0.3)",
+      ? "0 1.5vw 4vw rgba(0, 180, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+      : "0 0.4vw 1.2vw rgba(0, 180, 255, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.2)",
+    position: "relative",
+    overflow: "hidden",
   };
 
   const senction1Style: React.CSSProperties = {

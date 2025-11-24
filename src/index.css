@@ -146,8 +146,7 @@ button:active {
     background 0.45s ease, box-shadow 0.45s ease;
   will-change: transform;
   overflow: visible;
-  background:
-    radial-gradient(
+  background: radial-gradient(
       120% 160% at var(--fluid-focus-x, 30%) 36%,
       var(--mode-fluid-sheen, rgba(255, 255, 255, 0.55)),
       rgba(255, 255, 255, 0) 72%
@@ -382,14 +381,14 @@ select {
   width: 100%;
   font-size: 1em;
   box-sizing: border-box;
-  font-family: inherit; 
+  font-family: inherit;
   line-height: 1.5;
   min-height: 4.4vh;
   background: var(--control-bg);
   color: var(--color-text-primary);
 }
 
-input[type="text"]:focus, 
+input[type="text"]:focus,
 input[type="email"]:focus,
 input[type="password"]:focus,
 input[type="number"]:focus,
@@ -492,4 +491,30 @@ input[type="radio"]:focus {
 .flashcard-back-container {
   -ms-overflow-style: none; /* IE and Edge */
   scrollbar-width: none; /* Firefox */
+}
+
+/* 樱花飘落特效样式 */
+.sakura-petal {
+  position: absolute;
+  border-radius: 100% 0 100% 0;
+  opacity: 0.75;
+  animation: sakura-fall linear infinite;
+  pointer-events: none;
+  will-change: transform, opacity;
+  filter: blur(0.5px); /* 轻微的模糊效果，更真实 */
+}
+
+/* 樱花下落动画 */
+@keyframes sakura-fall {
+  0% {
+    transform: translate(0, -10vh) rotate(0deg);
+    opacity: 0;
+  }
+  10% {
+    opacity: 0.8;
+  }
+  100% {
+    transform: translate(20vw, 110vh) rotate(360deg);
+    opacity: 0;
+  }
 }

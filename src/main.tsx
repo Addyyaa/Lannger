@@ -10,6 +10,7 @@ import Manage from "./pages/Manage";
 import WordsList from "./pages/wordsList";
 import Layout from "./components/Layout";
 import ErrorBoundary from "./components/ErrorBoundary";
+import SakuraEffect from "./components/SakuraEffect";
 import { useTranslation } from "react-i18next";
 import i18n from "./i18n/i18n";
 import languages from "./i18n/languages.json";
@@ -442,6 +443,8 @@ function RootLayout() {
     <ErrorBoundary>
       <OrientationProvider>
         <ThemeProvider>
+          {/* 樱花飘落特效 */}
+          <SakuraEffect />
           <Layout globalComponents={<GlobalHeader />}>
             <Outlet />
           </Layout>
