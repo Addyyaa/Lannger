@@ -16,7 +16,11 @@ type FileFormat = "json" | "xlsx" | "xls" | "xml";
 type Encoding = "utf-8" | "utf-16" | "gbk";
 
 // 导入阶段枚举
-type ImportStage = "file-selection" | "wordset-selection" | "importing" | "complete";
+type ImportStage =
+  | "file-selection"
+  | "wordset-selection"
+  | "importing"
+  | "complete";
 
 // 单词集导入信息
 interface WordSetImportInfo {
@@ -49,9 +53,17 @@ export default function ImportDialog({
   // 新增状态：导入流程管理
   const [importStage, setImportStage] = useState<ImportStage>("file-selection");
   const [parsedWordsData, setParsedWordsData] = useState<any[]>([]);
-  const [wordSetImportInfos, setWordSetImportInfos] = useState<WordSetImportInfo[]>([]);
-  const [selectedWordSetNames, setSelectedWordSetNames] = useState<Set<string>>(new Set());
-  const [importProgress, setImportProgress] = useState({ current: 0, total: 0, currentWordSet: "" });
+  const [wordSetImportInfos, setWordSetImportInfos] = useState<
+    WordSetImportInfo[]
+  >([]);
+  const [selectedWordSetNames, setSelectedWordSetNames] = useState<Set<string>>(
+    new Set()
+  );
+  const [importProgress, setImportProgress] = useState({
+    current: 0,
+    total: 0,
+    currentWordSet: "",
+  });
   const [importStats, setImportStats] = useState({
     successWordSets: 0,
     successWords: 0,
@@ -466,30 +478,110 @@ export default function ImportDialog({
       // 保存解析的单词数据
       setParsedWordsData(wordsData);
 
-      // 提取单词集列表
-      const wordSetMap = new Map<string, number>();
-      wordsData.forEach((word) => {
-        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
-        wordSetMap.set(wordSetName, (wordSetMap.get(wordSetName) || 0) + 1);
+      // 获取现有单词集，用于冲突检测和 ID 查找
+      const existingWordSets = await dbOperator.getAllWordSets();
+      const existingWordSetMap = new Map<number, WordSet>();
+      existingWordSets.forEach((set) => {
+        existingWordSetMap.set(set.id, set);
       });
 
-      // 获取现有单词集，用于冲突检测
-      const existingWordSets = await dbOperator.getAllWordSets();
-      const existingWordSetNames = new Set(
-        existingWordSets.map((set) => set.name)
-      );
+      // 提取单词集列表（支持 ID 和名称）
+      const wordSetMap = new Map<string, number>(); // key: 显示名称, value: 单词数量
+      const wordSetIdMap = new Map<string, number | null>(); // key: 显示名称, value: 实际ID（如果是ID导入）或null（如果是名称导入）
+
+      wordsData.forEach((word) => {
+        const wordSetValue = word.wordSet;
+        let displayName: string;
+        let setId: number | null = null;
+
+        if (wordSetValue === undefined || wordSetValue === null) {
+          displayName = DEFAULT_WORD_SET_NAME;
+        } else {
+          let setIdFromValue: number | null = null;
+          let isNumericId = false;
+
+          // 尝试将值转换为数字（支持数字类型和数字字符串）
+          if (typeof wordSetValue === "number") {
+            setIdFromValue = Number(wordSetValue);
+            isNumericId = !Number.isNaN(setIdFromValue) && setIdFromValue > 0;
+          } else if (
+            typeof wordSetValue === "string" &&
+            wordSetValue.trim() !== ""
+          ) {
+            // 字符串类型：先尝试转换为数字
+            const trimmedValue = wordSetValue.trim();
+            const numericValue = Number(trimmedValue);
+            // 如果字符串可以完全转换为数字（不是 "3abc" 这样的混合字符串）
+            if (
+              !Number.isNaN(numericValue) &&
+              numericValue > 0 &&
+              String(numericValue) === trimmedValue
+            ) {
+              setIdFromValue = numericValue;
+              isNumericId = true;
+            }
+          }
+
+          // 如果是数字 ID，先检查数据库中是否存在
+          if (isNumericId && setIdFromValue !== null) {
+            const existingSet = existingWordSetMap.get(setIdFromValue);
+            if (existingSet) {
+              // ID 存在，使用该单词集的名称作为显示名称，并记录 ID
+              displayName = existingSet.name;
+              setId = setIdFromValue;
+            } else {
+              // ID 不存在，将数字转换为字符串作为名称
+              displayName = String(setIdFromValue);
+            }
+          } else {
+            // 不是数字或数字 ID 不存在，作为名称处理
+            displayName =
+              typeof wordSetValue === "string"
+                ? wordSetValue.trim() || DEFAULT_WORD_SET_NAME
+                : String(wordSetValue) || DEFAULT_WORD_SET_NAME;
+          }
+        }
+
+        wordSetMap.set(displayName, (wordSetMap.get(displayName) || 0) + 1);
+        if (setId !== null) {
+          wordSetIdMap.set(displayName, setId);
+        }
+      });
 
       // 构建单词集导入信息
       const importInfos: WordSetImportInfo[] = Array.from(
         wordSetMap.entries()
       ).map(([name, count]) => {
-        const existing = existingWordSets.find((set) => set.name === name);
+        const setIdFromMap = wordSetIdMap.get(name);
+        let existing: WordSet | undefined;
+        let existingId: number | undefined;
+
+        if (setIdFromMap !== null && setIdFromMap !== undefined) {
+          // 这是通过 ID 导入的，直接使用该 ID
+          existing = existingWordSetMap.get(setIdFromMap);
+          existingId = setIdFromMap;
+        } else {
+          // 这是通过名称导入的，查找同名的单词集
+          existing = existingWordSets.find((set) => set.name === name);
+          existingId = existing?.id;
+        }
+
+        // 如果是通过 ID 匹配的，直接使用该 ID，不触发冲突处理
+        // 如果是通过名称匹配的，才需要冲突处理
+        const isIdMatched = setIdFromMap !== null && setIdFromMap !== undefined;
+
         return {
           name,
           wordCount: count,
           exists: existing !== undefined,
-          existingId: existing?.id,
-          conflictResolution: existing ? "rename" : undefined, // 默认重命名
+          existingId,
+          // 通过 ID 匹配时，使用 "overwrite" 策略（直接使用已有 ID）
+          // 通过名称匹配时，默认使用 "rename" 策略
+          conflictResolution: existing
+            ? isIdMatched
+              ? "overwrite"
+              : "rename"
+            : undefined,
         };
       });
 
@@ -534,18 +626,73 @@ export default function ImportDialog({
       // 进入导入阶段
       setImportStage("importing");
 
-      // 过滤选中的单词集数据
-      const selectedWords = parsedWordsData.filter((word) => {
-        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
-        return selectedWordSetNames.has(wordSetName);
+      // 获取现有单词集，用于 ID 查找和冲突处理
+      const allExistingWordSets = await dbOperator.getAllWordSets();
+      const existingWordSetMapForImport = new Map<number, WordSet>();
+      allExistingWordSets.forEach((set) => {
+        existingWordSetMapForImport.set(set.id, set);
       });
 
-      // 获取现有单词集，用于冲突处理
-      const existingWordSets = await dbOperator.getAllWordSets();
+      // 过滤选中的单词集数据（需要重新计算显示名称以匹配选中的单词集）
+      const selectedWords = parsedWordsData.filter((word) => {
+        const wordSetValue = word.wordSet;
+        let displayName: string;
+
+        if (wordSetValue === undefined || wordSetValue === null) {
+          displayName = DEFAULT_WORD_SET_NAME;
+        } else {
+          let setIdFromValue: number | null = null;
+          let isNumericId = false;
+
+          // 尝试将值转换为数字（支持数字类型和数字字符串）
+          if (typeof wordSetValue === "number") {
+            setIdFromValue = Number(wordSetValue);
+            isNumericId = !Number.isNaN(setIdFromValue) && setIdFromValue > 0;
+          } else if (
+            typeof wordSetValue === "string" &&
+            wordSetValue.trim() !== ""
+          ) {
+            // 字符串类型：先尝试转换为数字
+            const trimmedValue = wordSetValue.trim();
+            const numericValue = Number(trimmedValue);
+            // 如果字符串可以完全转换为数字（不是 "3abc" 这样的混合字符串）
+            if (
+              !Number.isNaN(numericValue) &&
+              numericValue > 0 &&
+              String(numericValue) === trimmedValue
+            ) {
+              setIdFromValue = numericValue;
+              isNumericId = true;
+            }
+          }
+
+          // 如果是数字 ID，先检查数据库中是否存在
+          if (isNumericId && setIdFromValue !== null) {
+            const existingSet = existingWordSetMapForImport.get(setIdFromValue);
+            if (existingSet) {
+              displayName = existingSet.name;
+            } else {
+              displayName = String(setIdFromValue);
+            }
+          } else {
+            // 不是数字或数字 ID 不存在，作为名称处理
+            displayName =
+              typeof wordSetValue === "string"
+                ? wordSetValue.trim() || DEFAULT_WORD_SET_NAME
+                : String(wordSetValue) || DEFAULT_WORD_SET_NAME;
+          }
+        }
+
+        return selectedWordSetNames.has(displayName);
+      });
+
+      // 建立单词集名称到ID的映射（包含现有单词集）
       const wordSetMap = new Map<string, number>();
-      existingWordSets.forEach((set) => {
+      allExistingWordSets.forEach((set) => {
         wordSetMap.set(set.name, set.id);
       });
+      // 添加默认单词集
+      wordSetMap.set(DEFAULT_WORD_SET_NAME, DEFAULT_WORD_SET_ID);
 
       // 统计信息
       let successWordSets = 0;
@@ -553,14 +700,71 @@ export default function ImportDialog({
       let skippedWordSets = 0;
       let renamedWordSets = 0;
 
-      // 按单词集分组处理
+      // 按单词集分组处理（支持 ID 和名称）
       const wordsByWordSet = new Map<string, any[]>();
+      const wordSetIdMap = new Map<string, number | null>(); // key: 显示名称, value: 实际ID或null
+
       selectedWords.forEach((word) => {
-        const wordSetName = word.wordSet || DEFAULT_WORD_SET_NAME;
-        if (!wordsByWordSet.has(wordSetName)) {
-          wordsByWordSet.set(wordSetName, []);
+        const wordSetValue = word.wordSet;
+        let displayName: string;
+        let setId: number | null = null;
+
+        if (wordSetValue === undefined || wordSetValue === null) {
+          displayName = DEFAULT_WORD_SET_NAME;
+        } else {
+          let setIdFromValue: number | null = null;
+          let isNumericId = false;
+
+          // 尝试将值转换为数字（支持数字类型和数字字符串）
+          if (typeof wordSetValue === "number") {
+            setIdFromValue = Number(wordSetValue);
+            isNumericId = !Number.isNaN(setIdFromValue) && setIdFromValue > 0;
+          } else if (
+            typeof wordSetValue === "string" &&
+            wordSetValue.trim() !== ""
+          ) {
+            // 字符串类型：先尝试转换为数字
+            const trimmedValue = wordSetValue.trim();
+            const numericValue = Number(trimmedValue);
+            // 如果字符串可以完全转换为数字（不是 "3abc" 这样的混合字符串）
+            if (
+              !Number.isNaN(numericValue) &&
+              numericValue > 0 &&
+              String(numericValue) === trimmedValue
+            ) {
+              setIdFromValue = numericValue;
+              isNumericId = true;
+            }
+          }
+
+          // 如果是数字 ID，先检查数据库中是否存在
+          if (isNumericId && setIdFromValue !== null) {
+            const existingSet = existingWordSetMapForImport.get(setIdFromValue);
+            if (existingSet) {
+              // ID 存在，使用该单词集的名称作为显示名称，并记录 ID
+              displayName = existingSet.name;
+              setId = setIdFromValue;
+            } else {
+              // ID 不存在，将数字转换为字符串作为名称
+              displayName = String(setIdFromValue);
+            }
+          } else {
+            // 不是数字或数字 ID 不存在，作为名称处理
+            displayName =
+              typeof wordSetValue === "string"
+                ? wordSetValue.trim() || DEFAULT_WORD_SET_NAME
+                : String(wordSetValue) || DEFAULT_WORD_SET_NAME;
+          }
         }
-        wordsByWordSet.get(wordSetName)!.push(word);
+
+        if (!wordsByWordSet.has(displayName)) {
+          wordsByWordSet.set(displayName, []);
+        }
+        wordsByWordSet.get(displayName)!.push(word);
+
+        if (setId !== null) {
+          wordSetIdMap.set(displayName, setId);
+        }
       });
 
       const totalWordSets = wordsByWordSet.size;
@@ -583,43 +787,57 @@ export default function ImportDialog({
         let finalWordSetName = wordSetName;
         let finalWordSetId: number | undefined = undefined;
 
+        // 首先检查是否是通过 ID 导入的
+        const setIdFromMap = wordSetIdMap.get(wordSetName);
+        const isIdMatched = setIdFromMap !== null && setIdFromMap !== undefined;
+
         if (importInfo.exists) {
-          const resolution = importInfo.conflictResolution || "rename";
-          if (resolution === "skip") {
-            skippedWordSets++;
-            processedWordSets++;
-            continue;
-          } else if (resolution === "overwrite") {
-            finalWordSetId = importInfo.existingId;
-            // 删除现有单词集中的所有单词
-            if (finalWordSetId !== undefined) {
-              const existingWords = await dbOperator.getWordsByWordSet(
-                finalWordSetId
-              );
-              for (const word of existingWords) {
-                if (word.id !== undefined) {
-                  await dbOperator.deleteWord(word.id);
+          // 如果是通过 ID 匹配的，直接使用该 ID，不进入冲突处理流程
+          if (isIdMatched && setIdFromMap !== null) {
+            finalWordSetId = setIdFromMap;
+          } else {
+            // 通过名称匹配的，才需要冲突处理
+            const resolution = importInfo.conflictResolution || "rename";
+            if (resolution === "skip") {
+              skippedWordSets++;
+              processedWordSets++;
+              continue;
+            } else if (resolution === "overwrite") {
+              finalWordSetId = importInfo.existingId;
+              // 删除现有单词集中的所有单词
+              if (finalWordSetId !== undefined) {
+                const existingWords = await dbOperator.getWordsByWordSet(
+                  finalWordSetId
+                );
+                for (const word of existingWords) {
+                  if (word.id !== undefined) {
+                    await dbOperator.deleteWord(word.id);
+                  }
                 }
               }
+            } else if (resolution === "rename") {
+              // 生成新名称
+              let newName = wordSetName;
+              let counter = 1;
+              while (wordSetMap.has(newName)) {
+                newName = `${wordSetName}_${counter}`;
+                counter++;
+              }
+              finalWordSetName = newName;
+              renamedWordSets++;
             }
-          } else if (resolution === "rename") {
-            // 生成新名称
-            let newName = wordSetName;
-            let counter = 1;
-            while (wordSetMap.has(newName)) {
-              newName = `${wordSetName}_${counter}`;
-              counter++;
-            }
-            finalWordSetName = newName;
-            renamedWordSets++;
           }
         }
 
         // 创建或获取单词集ID
         if (finalWordSetId === undefined) {
+          // 如果还没有设置 ID，检查是否是通过 ID 导入的
+          // 注意：如果之前通过 ID 匹配到了，finalWordSetId 应该已经被设置
+          // 这里处理的是：单词集不存在，但原始数据中有 ID 的情况（应该作为名称处理）
           if (finalWordSetName === DEFAULT_WORD_SET_NAME) {
             finalWordSetId = DEFAULT_WORD_SET_ID;
           } else {
+            // 通过名称查找或创建
             const existingId = wordSetMap.get(finalWordSetName);
             if (existingId !== undefined) {
               finalWordSetId = existingId;
@@ -737,8 +955,7 @@ export default function ImportDialog({
     } catch (error) {
       return {
         success: false,
-        error:
-          error instanceof Error ? error.message : "备份失败：未知错误",
+        error: error instanceof Error ? error.message : "备份失败：未知错误",
       };
     }
   };
@@ -1021,8 +1238,10 @@ export default function ImportDialog({
                                 i.name === info.name
                                   ? {
                                       ...i,
-                                      conflictResolution: e.target
-                                        .value as "overwrite" | "skip" | "rename",
+                                      conflictResolution: e.target.value as
+                                        | "overwrite"
+                                        | "skip"
+                                        | "rename",
                                     }
                                   : i
                               );
@@ -1123,7 +1342,9 @@ export default function ImportDialog({
                 style={{
                   width: "100%",
                   height: isPortrait ? "2vw" : "0.5vw",
-                  background: isDark ? "rgba(255, 255, 255, 0.1)" : "rgba(0, 0, 0, 0.1)",
+                  background: isDark
+                    ? "rgba(255, 255, 255, 0.1)"
+                    : "rgba(0, 0, 0, 0.1)",
                   borderRadius: isPortrait ? "1vw" : "0.25vw",
                   overflow: "hidden",
                   marginBottom: isPortrait ? "2vw" : "1vw",
@@ -1137,7 +1358,8 @@ export default function ImportDialog({
                         : 0
                     }%`,
                     height: "100%",
-                    background: "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
+                    background:
+                      "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)",
                     transition: "width 0.3s ease",
                   }}
                 />

@@ -57,6 +57,7 @@ function AddWordSetsAction(
 ) {
   return ComponentAsModel(
     <AddWordSets
+      data-test-id="manage-add-word-sets-test"
       closePopup={() => dispatch({ type: "CLOSE_POPUP" })}
       addWordSet={setWordSets}
     />
@@ -69,6 +70,7 @@ function ImportWordsAction(
 ) {
   return ComponentAsModel(
     <ImportDialog
+      data-test-id="manage-import-dialog-test"
       closePopup={() => dispatch({ type: "CLOSE_POPUP" })}
       onImportComplete={async () => {
         // 导入完成后刷新单词集列表（包含单词数量）
@@ -93,6 +95,7 @@ function ImportWordsAction(
 function ExportWordsAction(dispatch: (action: Action) => void) {
   return ComponentAsModel(
     <ExportDialog
+      data-test-id="manage-export-dialog-test"
       closePopup={() => dispatch({ type: "CLOSE_POPUP" })}
       onExportComplete={() => {
         // 导出完成后的回调（可选）
@@ -144,6 +147,7 @@ const ClearDataConfirmWidget = ({
   const { t } = useTranslation();
   return (
     <ConfirmWidget
+      data-test-id="manage-confirm-widget-test"
       title={t("clearData")}
       message={t("clearDataMessage")}
       onConfirm={async () => {
@@ -434,6 +438,7 @@ export default function Manage() {
                   {t("dailyGoal")}
                   {(isGoalLoading || isGoalSaving) && (
                     <span
+                      data-test-id="manage-span-test"
                       role="status"
                       aria-live="polite"
                       style={{

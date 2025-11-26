@@ -11,6 +11,7 @@ function ModalWrapper({ children }: ModalWrapperProps) {
 
   return createPortal(
     <div
+      data-test-id="component-as-model-div-test-1"
       style={{
         position: "fixed",
         top: 0,
@@ -28,6 +29,7 @@ function ModalWrapper({ children }: ModalWrapperProps) {
       data-testid="component-as-model"
     >
       <div
+        data-test-id="component-as-model-div-test"
         onClick={(e) => e.stopPropagation()}
         data-testid="component-as-model-content"
         style={{

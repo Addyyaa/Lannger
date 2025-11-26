@@ -113,10 +113,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
       alert(`${t("meaning")} ${t("isRequired")}`);
       return;
     }
-    if (!word.example || word.example.trim() === "") {
-      alert(`${t("example")} ${t("isRequired")}`);
-      return;
-    }
+    // example 是可选的，不需要验证
 
     // 将 difficultyCoefficient 转换为 review.difficulty
     // 处理 setId：如果未选择，则使用默认单词集ID

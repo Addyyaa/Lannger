@@ -865,32 +865,104 @@ async function restoreFromBackupFormat(
       const originalSetId =
         typeof cloned.setId === "number" ? cloned.setId : undefined;
 
-      // 优先通过单词集名称查找（如果文件中有 wordSetName 或 wordSet 字段）
-      const wordSetName =
+      // 优先通过 wordSet 字段查找（支持 ID 或名称）
+      const wordSetValue =
         (rawWord as any)?.wordSetName || (rawWord as any)?.wordSet;
 
-      if (typeof wordSetName === "string" && wordSetName.trim() !== "") {
-        const setName = wordSetName.trim();
-        if (wordSetNameMap.has(setName)) {
-          setId = wordSetNameMap.get(setName)!;
+      if (wordSetValue !== undefined && wordSetValue !== null) {
+        let setIdFromValue: number | null = null;
+        let isNumericId = false;
+
+        // 尝试将值转换为数字（支持数字类型和数字字符串）
+        if (typeof wordSetValue === "number") {
+          setIdFromValue = Number(wordSetValue);
+          isNumericId = !Number.isNaN(setIdFromValue) && setIdFromValue > 0;
+        } else if (
+          typeof wordSetValue === "string" &&
+          wordSetValue.trim() !== ""
+        ) {
+          // 字符串类型：先尝试转换为数字
+          const trimmedValue = wordSetValue.trim();
+          const numericValue = Number(trimmedValue);
+          // 如果字符串可以完全转换为数字（不是 "3abc" 这样的混合字符串）
+          if (
+            !Number.isNaN(numericValue) &&
+            numericValue > 0 &&
+            String(numericValue) === trimmedValue
+          ) {
+            setIdFromValue = numericValue;
+            isNumericId = true;
+          }
+        }
+
+        // 如果是数字 ID，先检查数据库中是否存在
+        if (isNumericId && setIdFromValue !== null) {
+          const existingSet = await getWordSet(setIdFromValue);
+          if (existingSet) {
+            // ID 存在，直接使用
+            setId = setIdFromValue;
+            // 更新映射关系
+            if (originalSetId !== undefined) {
+              wordSetIdMap.set(originalSetId, setIdFromValue);
+            }
+          } else {
+            // ID 不存在，作为名称处理（将数字转换为字符串）
+            const setName = String(setIdFromValue);
+            if (wordSetNameMap.has(setName)) {
+              setId = wordSetNameMap.get(setName)!;
+            } else {
+              // 如果单词集不存在，创建它
+              try {
+                const newSetId = await createWordSet({
+                  name: setName,
+                  mark: "",
+                });
+                wordSetNameMap.set(setName, newSetId);
+                wordSetIdMap.set(newSetId, newSetId);
+                setId = newSetId;
+              } catch (error) {
+                console.error(
+                  "restoreFromBackupFormat: 创建单词集失败",
+                  setName,
+                  error
+                );
+                setId = DEFAULT_WORD_SET_ID;
+              }
+            }
+          }
         } else {
-          // 如果单词集不存在，创建它
-          try {
-            const newSetId = await createWordSet({ name: setName, mark: "" });
-            wordSetNameMap.set(setName, newSetId);
-            wordSetIdMap.set(newSetId, newSetId);
-            setId = newSetId;
-          } catch (error) {
-            console.error(
-              "restoreFromBackupFormat: 创建单词集失败",
-              setName,
-              error
-            );
-            setId = DEFAULT_WORD_SET_ID;
+          // 不是数字或数字 ID 不存在，作为名称处理
+          const setName =
+            typeof wordSetValue === "string"
+              ? wordSetValue.trim()
+              : String(wordSetValue);
+
+          if (setName !== "") {
+            if (wordSetNameMap.has(setName)) {
+              setId = wordSetNameMap.get(setName)!;
+            } else {
+              // 如果单词集不存在，创建它
+              try {
+                const newSetId = await createWordSet({
+                  name: setName,
+                  mark: "",
+                });
+                wordSetNameMap.set(setName, newSetId);
+                wordSetIdMap.set(newSetId, newSetId);
+                setId = newSetId;
+              } catch (error) {
+                console.error(
+                  "restoreFromBackupFormat: 创建单词集失败",
+                  setName,
+                  error
+                );
+                setId = DEFAULT_WORD_SET_ID;
+              }
+            }
           }
         }
       } else if (originalSetId !== undefined) {
-        // 如果没有名称，通过旧的 ID 映射
+        // 如果没有 wordSet 字段，通过旧的 ID 映射
         if (wordSetIdMap.has(originalSetId)) {
           setId = wordSetIdMap.get(originalSetId)!;
         } else {
@@ -907,11 +979,11 @@ async function restoreFromBackupFormat(
       cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
       cloned.example = typeof cloned.example === "string" ? cloned.example : "";
 
+      // example 是可选的，不在必填字段验证中
       if (
         cloned.kana.trim() === "" ||
         cloned.kanji.trim() === "" ||
-        cloned.meaning.trim() === "" ||
-        cloned.example.trim() === ""
+        cloned.meaning.trim() === ""
       ) {
         console.warn("restoreFromBackupFormat: 跳过缺少必填字段的单词", cloned);
         continue;
@@ -979,7 +1051,8 @@ async function restoreFromWordList(words: unknown[]): Promise<boolean> {
       }
 
       const wordData = raw as Record<string, unknown>;
-      const requiredFields = ["kana", "kanji", "meaning", "example"];
+      // example 是可选的，不在必填字段列表中
+      const requiredFields = ["kana", "kanji", "meaning"];
       const missingFields = requiredFields.filter((field) => {
         const value = wordData[field];
         return typeof value !== "string" || value.trim() === "";
@@ -995,25 +1068,89 @@ async function restoreFromWordList(words: unknown[]): Promise<boolean> {
       }
 
       let setId = DEFAULT_WORD_SET_ID;
-      if (
-        typeof wordData.wordSet === "string" &&
-        wordData.wordSet.trim() !== ""
-      ) {
-        const setName = wordData.wordSet.trim();
-        if (!wordSetMap.has(setName)) {
-          try {
-            const newSetId = await createWordSet({ name: setName, mark: "" });
-            wordSetMap.set(setName, newSetId);
-          } catch (error) {
-            console.error(
-              "restoreFromWordList: 创建单词集失败",
-              setName,
-              error
-            );
-            continue;
+
+      // 处理 wordSet 字段：支持 ID 或名称
+      if (wordData.wordSet !== undefined && wordData.wordSet !== null) {
+        const wordSetValue = wordData.wordSet;
+        let setIdFromValue: number | null = null;
+        let isNumericId = false;
+
+        // 尝试将值转换为数字（支持数字类型和数字字符串）
+        if (typeof wordSetValue === "number") {
+          setIdFromValue = Number(wordSetValue);
+          isNumericId = !Number.isNaN(setIdFromValue) && setIdFromValue > 0;
+        } else if (
+          typeof wordSetValue === "string" &&
+          wordSetValue.trim() !== ""
+        ) {
+          // 字符串类型：先尝试转换为数字
+          const trimmedValue = wordSetValue.trim();
+          const numericValue = Number(trimmedValue);
+          // 如果字符串可以完全转换为数字（不是 "3abc" 这样的混合字符串）
+          if (
+            !Number.isNaN(numericValue) &&
+            numericValue > 0 &&
+            String(numericValue) === trimmedValue
+          ) {
+            setIdFromValue = numericValue;
+            isNumericId = true;
           }
         }
-        setId = wordSetMap.get(setName) ?? DEFAULT_WORD_SET_ID;
+
+        // 如果是数字 ID，先检查数据库中是否存在
+        if (isNumericId && setIdFromValue !== null) {
+          const existingSet = await getWordSet(setIdFromValue);
+          if (existingSet) {
+            // ID 存在，直接使用
+            setId = setIdFromValue;
+          } else {
+            // ID 不存在，作为名称处理（将数字转换为字符串）
+            const setName = String(setIdFromValue);
+            if (!wordSetMap.has(setName)) {
+              try {
+                const newSetId = await createWordSet({
+                  name: setName,
+                  mark: "",
+                });
+                wordSetMap.set(setName, newSetId);
+              } catch (error) {
+                console.error(
+                  "restoreFromWordList: 创建单词集失败",
+                  setName,
+                  error
+                );
+                continue;
+              }
+            }
+            setId = wordSetMap.get(setName) ?? DEFAULT_WORD_SET_ID;
+          }
+        } else {
+          // 不是数字或数字 ID 不存在，作为名称处理
+          const setName =
+            typeof wordSetValue === "string"
+              ? wordSetValue.trim()
+              : String(wordSetValue);
+
+          if (setName !== "") {
+            if (!wordSetMap.has(setName)) {
+              try {
+                const newSetId = await createWordSet({
+                  name: setName,
+                  mark: "",
+                });
+                wordSetMap.set(setName, newSetId);
+              } catch (error) {
+                console.error(
+                  "restoreFromWordList: 创建单词集失败",
+                  setName,
+                  error
+                );
+                continue;
+              }
+            }
+            setId = wordSetMap.get(setName) ?? DEFAULT_WORD_SET_ID;
+          }
+        }
       }
 
       const difficultyRaw =

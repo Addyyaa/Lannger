@@ -958,11 +958,11 @@ async function restoreFromBackupFormat(
       cloned.meaning = typeof cloned.meaning === "string" ? cloned.meaning : "";
       cloned.example = typeof cloned.example === "string" ? cloned.example : "";
 
+      // example 是可选的，不在必填字段验证中
       if (
         cloned.kana.trim() === "" ||
         cloned.kanji.trim() === "" ||
-        cloned.meaning.trim() === "" ||
-        cloned.example.trim() === ""
+        cloned.meaning.trim() === ""
       ) {
         console.warn("restoreFromBackupFormat: 跳过缺少必填字段的单词", cloned);
         continue;
