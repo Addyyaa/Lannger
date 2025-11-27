@@ -321,29 +321,22 @@ export default function Manage() {
             data-test-id="h1-test"
             style={{
               ...titleStyle,
-              cursor:
-                process.env.NODE_ENV === "development" ? "pointer" : "default",
+              cursor: "pointer", // 始终允许点击，支持正式环境
               userSelect: "none",
               WebkitUserSelect: "none",
               MozUserSelect: "none",
               msUserSelect: "none",
             }}
             onClick={(e) => {
-              if (process.env.NODE_ENV === "development") {
-                e.preventDefault();
-                e.stopPropagation();
-                handleManagementTitleClick();
-              }
+              e.preventDefault();
+              e.stopPropagation();
+              handleManagementTitleClick();
             }}
             onMouseDown={(e) => {
-              if (process.env.NODE_ENV === "development") {
-                e.preventDefault();
-              }
+              e.preventDefault();
             }}
             onDragStart={(e) => {
-              if (process.env.NODE_ENV === "development") {
-                e.preventDefault();
-              }
+              e.preventDefault();
             }}
           >
             {t("manage")}

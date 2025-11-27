@@ -13,7 +13,7 @@ import {
   getErrorStatistics,
 } from "../utils/logger";
 import { ErrorLog } from "../utils/errorHandler";
-import { useTheme } from "../main";
+import { useTheme, useOrientation } from "../main";
 import {
   isErrorMonitorVisible,
   setErrorMonitorVisible,
@@ -22,6 +22,7 @@ import {
 export function ErrorMonitor() {
   const { t } = useTranslation();
   const { isDark } = useTheme();
+  const { isPortrait } = useOrientation();
   const [logs, setLogs] = useState<ErrorLog[]>([]);
   const [stats, setStats] = useState(getErrorStatistics([]));
   const [visible, setVisible] = useState(false);
@@ -61,87 +62,114 @@ export function ErrorMonitor() {
     setVisible(false);
   };
 
-  // 只在开发环境显示，且需要可见状态
-  if (process.env.NODE_ENV !== "development" || !visible) {
+  // 需要可见状态才显示（支持开发环境和正式环境）
+  if (!visible) {
     return null;
   }
 
   const containerStyle: React.CSSProperties = {
     position: "fixed",
-    bottom: "20px",
-    right: "20px",
-    width: "400px",
-    maxHeight: "600px",
-    background: isDark ? "rgba(28, 28, 30, 0.95)" : "rgba(255, 255, 255, 0.95)",
+    bottom: isPortrait ? "2vw" : "1.5vh",
+    right: isPortrait ? "2vw" : "1.5vw",
+    left: isPortrait ? "2vw" : "auto", // 竖屏时左右都有边距，确保居中
+    width: isPortrait ? "calc(100vw - 4vw)" : "min(40vw, 500px)", // 竖屏时减去左右边距
+    maxWidth: isPortrait ? "calc(100vw - 4vw)" : "500px",
+    maxHeight: isPortrait ? "75vh" : "85vh",
+    minHeight: isPortrait ? "50vh" : "350px",
+    background: isDark ? "rgba(28, 28, 30, 0.98)" : "rgba(255, 255, 255, 0.98)",
+    backdropFilter: "blur(10px)",
+    WebkitBackdropFilter: "blur(10px)",
     border: `1px solid ${
-      isDark ? "rgba(118, 118, 128, 0.35)" : "rgba(141, 153, 174, 0.25)"
+      isDark ? "rgba(118, 118, 128, 0.4)" : "rgba(141, 153, 174, 0.3)"
     }`,
-    borderRadius: "8px",
-    padding: "16px",
+    borderRadius: isPortrait ? "2.5vw" : "0.8vw",
+    padding: isPortrait ? "4vw 3vw" : "1.5vw",
     fontFamily: "monospace",
-    fontSize: "12px",
+    fontSize: isPortrait ? "3.2vw" : "clamp(0.75vw, 0.75rem, 1vw)",
     boxShadow: isDark
-      ? "0 4px 12px rgba(0, 0, 0, 0.5)"
-      : "0 4px 12px rgba(0, 0, 0, 0.15)",
+      ? isPortrait
+        ? "0 1.5vw 4vw rgba(0, 0, 0, 0.6)"
+        : "0 0.3vw 1vw rgba(0, 0, 0, 0.5)"
+      : isPortrait
+      ? "0 1.5vw 4vw rgba(0, 0, 0, 0.2)"
+      : "0 0.3vw 1vw rgba(0, 0, 0, 0.15)",
     zIndex: 10000,
     overflowY: "auto",
+    overflowX: "hidden",
     color: isDark ? "#fff" : "#333",
+    boxSizing: "border-box",
+    // 添加滚动条样式优化
+    scrollbarWidth: "thin",
+    scrollbarColor: isDark
+      ? "rgba(255, 255, 255, 0.3) rgba(255, 255, 255, 0.1)"
+      : "rgba(0, 0, 0, 0.3) rgba(0, 0, 0, 0.1)",
   };
 
   const headerStyle: React.CSSProperties = {
     display: "flex",
     justifyContent: "space-between",
     alignItems: "center",
-    marginBottom: "12px",
-    paddingBottom: "8px",
+    marginBottom: isPortrait ? "3vw" : "1.2vh",
+    paddingBottom: isPortrait ? "2vw" : "0.8vh",
     borderBottom: `1px solid ${
       isDark ? "rgba(118, 118, 128, 0.35)" : "rgba(141, 153, 174, 0.25)"
     }`,
   };
 
   const titleStyle: React.CSSProperties = {
-    fontSize: "16px",
+    fontSize: isPortrait ? "4vw" : "clamp(1vw, 1rem, 1.4vw)",
     fontWeight: "bold",
     color: isDark ? "#fff" : "#333",
+    lineHeight: 1.2,
   };
 
   const buttonStyle: React.CSSProperties = {
-    padding: "4px 12px",
-    fontSize: "12px",
+    padding: isPortrait ? "2.5vw 5vw" : "0.6vh 1.5vw",
+    fontSize: isPortrait ? "3.2vw" : "clamp(0.75vw, 0.75rem, 1vw)",
     background: isDark ? "rgba(255, 59, 48, 0.2)" : "rgba(255, 59, 48, 0.1)",
     color: isDark ? "#ff3b30" : "#d70015",
     border: `1px solid ${
       isDark ? "rgba(255, 59, 48, 0.3)" : "rgba(255, 59, 48, 0.2)"
     }`,
-    borderRadius: "4px",
+    borderRadius: isPortrait ? "1.5vw" : "0.4vw",
     cursor: "pointer",
     transition: "all 0.2s ease",
-    marginLeft: "8px",
+    marginLeft: isPortrait ? "2vw" : "0.8vw",
+    minHeight: isPortrait ? "9vw" : "3.2vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    whiteSpace: "nowrap",
   };
 
   const closeButtonStyle: React.CSSProperties = {
-    padding: "4px 8px",
-    fontSize: "16px",
+    padding: isPortrait ? "2.5vw" : "0.6vh 1vw",
+    fontSize: isPortrait ? "5.5vw" : "clamp(1.2vw, 1.2rem, 1.6vw)",
     background: "transparent",
     color: isDark ? "#fff" : "#333",
     border: "none",
-    borderRadius: "4px",
+    borderRadius: isPortrait ? "1.5vw" : "0.4vw",
     cursor: "pointer",
     transition: "all 0.2s ease",
     lineHeight: "1",
     fontWeight: "bold",
+    minWidth: isPortrait ? "9vw" : "3.2vh",
+    minHeight: isPortrait ? "9vw" : "3.2vh",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
   };
 
   const statItemStyle: React.CSSProperties = {
-    marginBottom: "8px",
-    fontSize: "12px",
+    marginBottom: isPortrait ? "2vw" : "0.8vh",
+    fontSize: isPortrait ? "3.2vw" : "clamp(0.8vw, 0.8rem, 1.1vw)",
   };
 
   const logItemStyle: React.CSSProperties = {
-    marginBottom: "12px",
-    padding: "8px",
+    marginBottom: isPortrait ? "3vw" : "1.2vh",
+    padding: isPortrait ? "3vw" : "1.2vh",
     background: isDark ? "rgba(255, 255, 255, 0.05)" : "rgba(0, 0, 0, 0.02)",
-    borderRadius: "4px",
+    borderRadius: isPortrait ? "1.5vw" : "0.4vw",
     border: `1px solid ${
       isDark ? "rgba(118, 118, 128, 0.2)" : "rgba(141, 153, 174, 0.15)"
     }`,
@@ -163,13 +191,21 @@ export function ErrorMonitor() {
   };
 
   return (
-    <div style={containerStyle}>
-      <div style={headerStyle}>
-        <h2 style={titleStyle}>
+    <div data-test-id="error-monitor-div-test-14" style={containerStyle}>
+      <div data-test-id="error-monitor-div-test-13" style={headerStyle}>
+        <h2 data-test-id="error-monitor-h2-test" style={titleStyle}>
           {t("errorMonitorTitle") || "错误监控 Dashboard"}
         </h2>
-        <div style={{ display: "flex", alignItems: "center", gap: "4px" }}>
+        <div
+          data-test-id="error-monitor-div-test-12"
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: isPortrait ? "2vw" : "0.5vw",
+          }}
+        >
           <button
+            data-test-id="error-monitor-button-test-1"
             onClick={handleClear}
             style={buttonStyle}
             onMouseEnter={(e) => {
@@ -186,6 +222,7 @@ export function ErrorMonitor() {
             {t("clearLogs") || "清除日志"}
           </button>
           <button
+            data-test-id="error-monitor-button-test"
             onClick={handleClose}
             style={closeButtonStyle}
             title={t("close") || "关闭"}
@@ -203,43 +240,95 @@ export function ErrorMonitor() {
         </div>
       </div>
 
-      <div style={{ marginBottom: "16px" }}>
-        <div style={statItemStyle}>
-          <strong>{t("totalErrors") || "总错误数"}:</strong> {stats.total}
+      <div
+        data-test-id="error-monitor-div-test-11"
+        style={{ marginBottom: isPortrait ? "4vw" : "1.6vh" }}
+      >
+        <div data-test-id="error-monitor-div-test-10" style={statItemStyle}>
+          <strong data-test-id="error-monitor-strong-test-7">
+            {t("totalErrors") || "总错误数"}:
+          </strong>{" "}
+          {stats.total}
         </div>
-        <div style={statItemStyle}>
-          <strong>{t("criticalErrors") || "严重错误"}:</strong>{" "}
-          <span style={{ color: severityColor("critical") }}>
+        <div data-test-id="error-monitor-div-test-9" style={statItemStyle}>
+          <strong data-test-id="error-monitor-strong-test-6">
+            {t("criticalErrors") || "严重错误"}:
+          </strong>{" "}
+          <span
+            data-test-id="error-monitor-span-test-2"
+            style={{ color: severityColor("critical") }}
+          >
             {stats.critical}
           </span>
         </div>
-        <div style={statItemStyle}>
-          <strong>{t("highErrors") || "高级错误"}:</strong>{" "}
-          <span style={{ color: severityColor("high") }}>{stats.high}</span>
+        <div data-test-id="error-monitor-div-test-8" style={statItemStyle}>
+          <strong data-test-id="error-monitor-strong-test-5">
+            {t("highErrors") || "高级错误"}:
+          </strong>{" "}
+          <span
+            data-test-id="error-monitor-span-test-1"
+            style={{ color: severityColor("high") }}
+          >
+            {stats.high}
+          </span>
         </div>
-        <div style={statItemStyle}>
-          <strong>{t("last24Hours") || "最近 24 小时"}:</strong>{" "}
+        <div data-test-id="error-monitor-div-test-7" style={statItemStyle}>
+          <strong data-test-id="error-monitor-strong-test-4">
+            {t("last24Hours") || "最近 24 小时"}:
+          </strong>{" "}
           {stats.last24Hours}
         </div>
       </div>
 
-      <div>
-        <h3 style={{ fontSize: "14px", marginBottom: "8px" }}>
+      <div data-test-id="error-monitor-div-test-6">
+        <h3
+          data-test-id="error-monitor-h3-test"
+          style={{
+            fontSize: isPortrait ? "3.8vw" : "clamp(0.9vw, 0.9rem, 1.2vw)",
+            marginBottom: isPortrait ? "2vw" : "0.8vh",
+          }}
+        >
           {t("errorList") || "错误列表"}
         </h3>
         {logs.length === 0 ? (
-          <div style={{ color: isDark ? "#8e8e93" : "#666" }}>
+          <div
+            data-test-id="error-monitor-div-test-5"
+            style={{
+              color: isDark ? "#8e8e93" : "#666",
+              fontSize: isPortrait ? "3.2vw" : "clamp(0.8vw, 0.8rem, 1.1vw)",
+            }}
+          >
             {t("noErrorLogs") || "暂无错误日志"}
           </div>
         ) : (
           logs.map((log, index) => (
-            <div key={log.id || index} style={logItemStyle}>
-              <div style={{ marginBottom: "4px" }}>
-                <strong>{t("time") || "时间"}:</strong>{" "}
+            <div
+              data-test-id="error-monitor-div-test-4"
+              key={log.id || index}
+              style={logItemStyle}
+            >
+              <div
+                data-test-id="error-monitor-div-test-3"
+                style={{
+                  marginBottom: isPortrait ? "1.5vw" : "0.4vh",
+                  fontSize: isPortrait ? "3vw" : "clamp(0.75vw, 0.75rem, 1vw)",
+                }}
+              >
+                <strong data-test-id="error-monitor-strong-test-3">
+                  {t("time") || "时间"}:
+                </strong>{" "}
                 {new Date(log.timestamp).toLocaleString()}
               </div>
-              <div style={{ marginBottom: "4px" }}>
-                <strong>{t("message") || "消息"}:</strong>{" "}
+              <div
+                data-test-id="error-monitor-div-test-2"
+                style={{
+                  marginBottom: isPortrait ? "1.5vw" : "0.4vh",
+                  fontSize: isPortrait ? "3vw" : "clamp(0.75vw, 0.75rem, 1vw)",
+                }}
+              >
+                <strong data-test-id="error-monitor-strong-test-2">
+                  {t("message") || "消息"}:
+                </strong>{" "}
                 {(() => {
                   const error = log.error;
                   if (error instanceof Error) {
@@ -282,35 +371,62 @@ export function ErrorMonitor() {
                   return String(error);
                 })()}
               </div>
-              <div style={{ marginBottom: "4px" }}>
-                <strong>{t("severity") || "严重程度"}:</strong>{" "}
-                <span style={{ color: severityColor(log.severity) }}>
+              <div
+                data-test-id="error-monitor-div-test-1"
+                style={{
+                  marginBottom: isPortrait ? "1.5vw" : "0.4vh",
+                  fontSize: isPortrait ? "3vw" : "clamp(0.75vw, 0.75rem, 1vw)",
+                }}
+              >
+                <strong data-test-id="error-monitor-strong-test-1">
+                  {t("severity") || "严重程度"}:
+                </strong>{" "}
+                <span
+                  data-test-id="error-monitor-span-test"
+                  style={{ color: severityColor(log.severity) }}
+                >
                   {log.severity}
                 </span>
               </div>
-              <div style={{ marginBottom: "4px" }}>
-                <strong>{t("category") || "类别"}:</strong> {log.category}
+              <div
+                data-test-id="error-monitor-div-test"
+                style={{
+                  marginBottom: isPortrait ? "1.5vw" : "0.4vh",
+                  fontSize: isPortrait ? "3vw" : "clamp(0.75vw, 0.75rem, 1vw)",
+                }}
+              >
+                <strong data-test-id="error-monitor-strong-test">
+                  {t("category") || "类别"}:
+                </strong>{" "}
+                {log.category}
               </div>
               {log.error instanceof Error && log.error.stack && (
-                <details>
+                <details data-test-id="error-monitor-details-test">
                   <summary
+                    data-test-id="error-monitor-summary-test"
                     style={{
                       cursor: "pointer",
                       color: isDark ? "#8e8e93" : "#666",
-                      marginTop: "4px",
+                      marginTop: isPortrait ? "1.5vw" : "0.4vh",
+                      fontSize: isPortrait
+                        ? "2.8vw"
+                        : "clamp(0.7vw, 0.7rem, 0.95vw)",
                     }}
                   >
                     {t("stackTrace") || "堆栈跟踪"}
                   </summary>
                   <pre
+                    data-test-id="error-monitor-pre-test"
                     style={{
-                      marginTop: "4px",
-                      padding: "4px",
+                      marginTop: isPortrait ? "1.5vw" : "0.4vh",
+                      padding: isPortrait ? "2vw" : "0.5vh",
                       background: isDark
                         ? "rgba(0, 0, 0, 0.3)"
                         : "rgba(0, 0, 0, 0.05)",
-                      borderRadius: "4px",
-                      fontSize: "10px",
+                      borderRadius: isPortrait ? "1.5vw" : "0.4vw",
+                      fontSize: isPortrait
+                        ? "2.5vw"
+                        : "clamp(0.65vw, 0.65rem, 0.9vw)",
                       overflowX: "auto",
                       whiteSpace: "pre-wrap",
                       wordBreak: "break-word",

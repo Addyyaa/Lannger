@@ -9,34 +9,27 @@ const REQUIRED_CLICKS = 10; // 需要连续点击10次
 
 /**
  * 检查错误监控面板是否应该显示
+ * 支持开发环境和正式环境（通过连续点击激活）
  */
 export function isErrorMonitorVisible(): boolean {
-  if (process.env.NODE_ENV !== "development") {
-    return false;
-  }
   const stored = localStorage.getItem(STORAGE_KEY);
   return stored === "true";
 }
 
 /**
  * 设置错误监控面板的显示状态
+ * 支持开发环境和正式环境
  */
 export function setErrorMonitorVisible(visible: boolean): void {
-  if (process.env.NODE_ENV !== "development") {
-    return;
-  }
   localStorage.setItem(STORAGE_KEY, visible ? "true" : "false");
 }
 
 /**
  * 处理管理标题的点击事件
  * 连续点击10次后显示错误监控面板
+ * 支持开发环境和正式环境
  */
 export function handleManagementTitleClick(): void {
-  if (process.env.NODE_ENV !== "development") {
-    return;
-  }
-
   const now = Date.now();
   const stored = localStorage.getItem(CLICK_COUNT_KEY);
   let clickData: { count: number; lastClickTime: number } = {

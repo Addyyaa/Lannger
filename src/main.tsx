@@ -1,8 +1,8 @@
+// 确保 React Compiler 运行时最先初始化
+import "react-compiler-runtime";
 import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
-// 确保 React Compiler 运行时正确初始化
-import "react-compiler-runtime";
 import "./index.css";
 import "./i18n/i18n";
 
@@ -465,8 +465,8 @@ function RootLayout() {
           <Layout globalComponents={<GlobalHeader />}>
             <Outlet />
           </Layout>
-          {/* 开发环境错误监控 Dashboard */}
-          {process.env.NODE_ENV === "development" && <ErrorMonitor />}
+          {/* 错误监控 Dashboard（支持开发环境和正式环境，通过连续点击管理页面标题激活） */}
+          <ErrorMonitor />
           {/* 通告管理器：自动检查并显示通告 */}
           <AnnouncementManager />
         </ThemeProvider>
