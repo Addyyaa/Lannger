@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { ReviewPlan } from "../db";
@@ -7,6 +7,14 @@ import { getWordSet } from "../store/wordStore";
 import { getReviewStageDescription } from "../utils/ebbinghausCurve";
 import { canStartReview } from "../utils/reviewLock";
 import { handleErrorSync } from "../utils/errorHandler";
+import {
+  isNotificationSupported,
+  getNotificationPermission,
+  requestNotificationPermission,
+  showNotification,
+} from "../services/notificationService";
+import { getReviewLock } from "../utils/reviewLock";
+import { getFlashcardSessionState } from "../store/wordStore";
 
 interface ReviewNotificationProps {
   onStartReview: (wordSetId: number, reviewStage: number) => void;
@@ -36,6 +44,7 @@ export default function ReviewNotification({
     >
   >([]);
   const [loading, setLoading] = useState(true);
+  const lastNotificationTimeRef = useRef<Map<number, number>>(new Map()); // 记录上次发送通知的时间，避免重复通知
 
   /**
    * 检查复习通知
@@ -92,12 +101,146 @@ export default function ReviewNotification({
       );
 
       setNotifications(validNotifications);
+
+      // 发送系统通知（仅对当前可复习的通知）
+      validNotifications.forEach((notification) => {
+        if (notification.isCurrent && notification.canStart) {
+          sendSystemNotification(notification);
+        }
+      });
     } catch (error) {
       handleErrorSync(error, { operation: "checkReviewNotifications" });
     } finally {
       setLoading(false);
     }
   };
+
+  /**
+   * 检查是否正在学习（闪卡或复习模式）
+   */
+  const isCurrentlyStudying = async (): Promise<boolean> => {
+    try {
+      // 检查是否有复习锁定（如果有，说明正在复习）
+      const reviewLock = await getReviewLock();
+      if (reviewLock) {
+        return true;
+      }
+
+      // 检查是否有闪卡会话状态（如果有，说明正在闪卡学习）
+      const flashcardSession = await getFlashcardSessionState();
+      if (flashcardSession && flashcardSession.wordIds.length > 0) {
+        return true;
+      }
+
+      return false;
+    } catch (error) {
+      console.error("检查学习状态失败:", error);
+      // 如果检查失败，为了安全起见，不发送通知
+      return true;
+    }
+  };
+
+  /**
+   * 发送系统通知
+   */
+  const sendSystemNotification = async (
+    notification: ReviewPlan & {
+      wordSetName: string;
+      actualDueWords: number;
+      isCurrent?: boolean;
+    }
+  ) => {
+    // 检查是否支持通知
+    if (!isNotificationSupported()) {
+      return;
+    }
+
+    // 检查是否正在学习，如果正在学习则不发送通知
+    const studying = await isCurrentlyStudying();
+    if (studying) {
+      console.log("正在学习中，跳过系统通知");
+      return;
+    }
+
+    // 检查权限
+    const permission = getNotificationPermission();
+    if (permission !== "granted") {
+      // 如果权限未授予，尝试请求权限（仅在第一次）
+      if (permission === "default") {
+        const granted = await requestNotificationPermission();
+        if (!granted) {
+          return;
+        }
+      } else {
+        return;
+      }
+    }
+
+    // 避免重复通知：同一单词集在 5 分钟内只通知一次
+    const now = Date.now();
+    const lastTime = lastNotificationTimeRef.current.get(
+      notification.wordSetId
+    );
+    if (lastTime && now - lastTime < 5 * 60 * 1000) {
+      return;
+    }
+
+    // 只对当前可复习的通知发送系统通知
+    if (!notification.isCurrent) {
+      return;
+    }
+
+    try {
+      const stageDescription = getReviewStageDescription(
+        notification.reviewStage,
+        t
+      );
+      const title = t("reviewNotification") || "复习提醒";
+      const body = `${notification.wordSetName} - ${stageDescription}\n${
+        t("reviewWordsCount") || "需要复习的单词"
+      }: ${notification.actualDueWords}`;
+
+      await showNotification({
+        title,
+        body,
+        tag: `review-${notification.wordSetId}-${notification.reviewStage}`, // 相同单词集和阶段的通知会被替换
+        data: {
+          wordSetId: notification.wordSetId,
+          reviewStage: notification.reviewStage,
+          url: "/study",
+        },
+      });
+
+      // 记录通知时间
+      lastNotificationTimeRef.current.set(notification.wordSetId, now);
+    } catch (error) {
+      console.error("发送系统通知失败:", error);
+    }
+  };
+
+  useEffect(() => {
+    // 监听 Service Worker 消息（处理通知点击）
+    const handleMessage = (event: MessageEvent) => {
+      if (event.data?.type === "NOTIFICATION_CLICK") {
+        if (event.data.action === "startReview") {
+          onStartReview(event.data.wordSetId, event.data.reviewStage);
+          if (onDismiss) {
+            onDismiss();
+          }
+        }
+      }
+    };
+
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.addEventListener("message", handleMessage);
+    }
+
+    return () => {
+      if ("serviceWorker" in navigator) {
+        navigator.serviceWorker.removeEventListener("message", handleMessage);
+      }
+    };
+  }, [onStartReview, onDismiss]);
 
   useEffect(() => {
     // 初始检查

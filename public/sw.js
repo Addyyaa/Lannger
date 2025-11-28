@@ -1,6 +1,6 @@
 // PWA Service Worker：负责缓存核心资源并检测新版本
-const CACHE_NAME = 'langger-cache-0.0.33'
-const CORE_ASSETS = ['index.html', 'manifest.webmanifest']
+const CACHE_NAME = "langger-cache-0.0.34";
+const CORE_ASSETS = ["index.html", "manifest.webmanifest"];
 
 const BASE_PATH = (() => {
   const scope = self.registration.scope;
@@ -50,6 +50,51 @@ self.addEventListener("message", async (event) => {
     await Promise.all(keys.map((key) => caches.delete(key)));
     console.log("所有缓存已清空");
     event.source?.postMessage?.({ type: "CACHE_CLEARED" });
+  }
+});
+
+// 处理通知点击事件
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+
+  const action = event.action;
+  const data = event.notification.data || {};
+
+  // 处理不同的操作
+  if (action === "open" || action === "") {
+    // 打开应用并导航到复习页面
+    event.waitUntil(
+      (async () => {
+        const clients = await self.clients.matchAll({
+          type: "window",
+          includeUncontrolled: true,
+        });
+
+        // 如果已经有打开的窗口，聚焦它并导航到复习页面
+        if (clients.length > 0) {
+          const client = clients[0];
+          if (data.wordSetId !== undefined && data.reviewStage !== undefined) {
+            // 发送消息给客户端，触发开始复习
+            client.postMessage({
+              type: "NOTIFICATION_CLICK",
+              action: "startReview",
+              wordSetId: data.wordSetId,
+              reviewStage: data.reviewStage,
+            });
+          }
+          await client.focus();
+          if (data.url) {
+            await client.navigate(data.url);
+          }
+        } else {
+          // 如果没有打开的窗口，打开新窗口
+          await self.clients.openWindow(data.url || "/study");
+        }
+      })()
+    );
+  } else if (action === "dismiss") {
+    // 稍后提醒：关闭通知即可
+    console.log("用户选择稍后提醒");
   }
 });
 
