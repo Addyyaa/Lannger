@@ -399,6 +399,10 @@ export default function FlashcardStudy({
     minHeight: 0, // 允许 flex 子元素缩小
   };
 
+  // 追踪翻转动画状态
+  const [isFlipping, setIsFlipping] = useState(false);
+  const flipTimeoutRef = useRef<number | null>(null);
+
   // 3D卡片容器
   const card3DContainerStyle: React.CSSProperties = {
     position: "relative",
@@ -406,10 +410,26 @@ export default function FlashcardStudy({
     height: "100%",
     transformStyle: "preserve-3d",
     WebkitTransformStyle: "preserve-3d",
-    transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
+    transition: "transform 0.7s cubic-bezier(0.4, 0.2, 0.2, 1)",
     transform: showAnswer ? "rotateY(180deg)" : "rotateY(0deg)",
     overflow: "visible",
   };
+
+  // 监听 showAnswer 变化来触发翻转动画
+  useEffect(() => {
+    if (flipTimeoutRef.current) {
+      window.clearTimeout(flipTimeoutRef.current);
+    }
+    setIsFlipping(true);
+    flipTimeoutRef.current = window.setTimeout(() => {
+      setIsFlipping(false);
+    }, 700);
+    return () => {
+      if (flipTimeoutRef.current) {
+        window.clearTimeout(flipTimeoutRef.current);
+      }
+    };
+  }, [showAnswer]);
 
   // 卡片正面和背面的共同样式
   const cardFaceBaseStyle: React.CSSProperties = {
@@ -913,11 +933,18 @@ export default function FlashcardStudy({
           </div>
         </div>
         {/* 3D卡片容器 */}
-        <div data-test-id="div-test-17" style={card3DContainerStyle}>
+        <div
+          data-test-id="div-test-17"
+          style={card3DContainerStyle}
+          className={`flashcard-3d-container ${showAnswer ? "flipped" : ""} ${
+            isFlipping ? "flipping" : ""
+          }`}
+        >
           {/* 卡片正面（问题面） */}
           <div
             data-test-id="div-test-16"
             style={cardFaceStyle}
+            className="flashcard-face-front"
             data-testid="FlashcardStudy-5"
           >
             <div
@@ -1023,7 +1050,7 @@ export default function FlashcardStudy({
             return (
               <div
                 data-test-id="div-test-14"
-                className="flashcard-back-container"
+                className="flashcard-back-container flashcard-face-back"
                 style={{
                   ...cardBackStyle,
                   justifyContent: showOptionalContent ? "flex-start" : "center",

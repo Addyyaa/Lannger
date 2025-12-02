@@ -156,7 +156,13 @@ export async function updateWordProgress(
       const sm2Result = calculateSM2(progress, adjustedGrade);
       progress.easeFactor = sm2Result.easeFactor;
       progress.intervalDays = sm2Result.intervalDays;
-      progress.repetitions = sm2Result.repetitions;
+
+      // 重要：当用户点击"需要复习"时，完全重置掌握状态
+      // 这确保单词不再被标记为"易掌握"，会重新进入学习队列
+      // 掌握条件是 repetitions >= 3 || correctStreak >= 3
+      // 所以我们需要确保 repetitions < 3
+      progress.repetitions = Math.min(sm2Result.repetitions, 1);
+
       progress.nextReviewAt = calculateNextReviewDate(sm2Result.intervalDays);
     }
 
