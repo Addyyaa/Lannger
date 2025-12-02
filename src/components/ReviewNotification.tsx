@@ -170,14 +170,9 @@ export default function ReviewNotification({
       const duePlans = await getDueReviewPlans();
 
       // 检查当前是否有复习锁定
-      const firstPlan = duePlans[0];
-      let currentLockedWordSetId: number | null = null;
-      if (firstPlan) {
-        const canReview = await canStartReview(firstPlan.wordSetId);
-        if (!canReview.allowed && canReview.lockInfo) {
-          currentLockedWordSetId = canReview.lockInfo.wordSetId;
-        }
-      }
+      const reviewLock = await getReviewLock();
+      const currentLockedWordSetId: number | null =
+        reviewLock?.wordSetId ?? null;
 
       // 获取每个计划的单词集名称和队列状态
       const notificationsWithNames = await Promise.all(
@@ -185,10 +180,17 @@ export default function ReviewNotification({
           const wordSet = await getWordSet(plan.wordSetId);
           const canReview = await canStartReview(plan.wordSetId);
 
-          // 判断是否为当前需要复习的（第一个且未被锁定，或者被锁定的是这个）
-          const isCurrent =
-            index === 0 &&
-            (canReview.allowed || currentLockedWordSetId === plan.wordSetId);
+          // 判断是否为当前需要复习的：
+          // 1. 如果有锁定，锁定的计划是当前的
+          // 2. 如果没有锁定，第一个计划是当前的（无论 canReview.allowed 状态）
+          let isCurrent = false;
+          if (currentLockedWordSetId !== null) {
+            // 有锁定，检查是否是锁定的计划
+            isCurrent = plan.wordSetId === currentLockedWordSetId;
+          } else {
+            // 没有锁定，第一个计划是当前的
+            isCurrent = index === 0;
+          }
 
           // 计算实际到期的单词数
           let actualDueWords = 0;
@@ -222,20 +224,26 @@ export default function ReviewNotification({
             wordSetName: wordSet?.name || `单词集 #${plan.wordSetId}`,
             isCurrent, // 是否为当前需要复习的
             isQueued: !isCurrent, // 是否为排队中的
-            // 修复：只要有到期单词且没有锁定或锁定的是当前计划，就可以开始
-            canStart:
-              (canReview.allowed ||
-                currentLockedWordSetId === plan.wordSetId) &&
-              actualDueWords > 0,
+            // 修复：当前计划且有到期单词且可以开始复习时可以开始
+            canStart: isCurrent && actualDueWords > 0 && canReview.allowed,
             actualDueWords, // 实际到期的单词数
           };
         })
       );
 
       // 过滤掉没有到期单词的通知，以及被延后的通知
-      const validNotifications = notificationsWithNames.filter(
-        (n) => n.actualDueWords > 0 && shouldShowNotification(n.wordSetId)
-      );
+      // 同时去重：每个单词集只保留一个通知（保留第一个，通常是最早到期的）
+      const seenWordSetIds = new Set<number>();
+      const validNotifications = notificationsWithNames.filter((n) => {
+        if (n.actualDueWords <= 0 || !shouldShowNotification(n.wordSetId)) {
+          return false;
+        }
+        if (seenWordSetIds.has(n.wordSetId)) {
+          return false; // 跳过重复的单词集
+        }
+        seenWordSetIds.add(n.wordSetId);
+        return true;
+      });
 
       setNotifications(validNotifications);
 
@@ -474,8 +482,55 @@ export default function ReviewNotification({
         return (
           <div
             key={notification.id}
-            style={getNotificationStyle(isCurrent, isQueued)}
+            style={{
+              ...getNotificationStyle(isCurrent, isQueued),
+              position: "relative",
+            }}
           >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => {
+                // 延后当天不显示
+                setSnooze(notification.wordSetId, SNOOZE_OPTIONS.TODAY);
+                checkNotifications();
+              }}
+              style={{
+                position: "absolute",
+                top: isPortrait ? "2vw" : "0.5vw",
+                right: isPortrait ? "2vw" : "0.5vw",
+                width: isPortrait ? "6vw" : "1.5vw",
+                height: isPortrait ? "6vw" : "1.5vw",
+                borderRadius: "50%",
+                border: "none",
+                background: isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.05)",
+                color: isDark ? "#888" : "#999",
+                fontSize: isPortrait ? "3.5vw" : "1vw",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                padding: 0,
+                lineHeight: 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark
+                  ? "rgba(255, 255, 255, 0.2)"
+                  : "rgba(0, 0, 0, 0.1)";
+                e.currentTarget.style.color = isDark ? "#fff" : "#333";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.05)";
+                e.currentTarget.style.color = isDark ? "#888" : "#999";
+              }}
+              aria-label={t("dismiss") || "关闭"}
+            >
+              ×
+            </button>
             <div style={titleStyle}>
               {isCurrent ? "🔔" : "⏳"}{" "}
               {isCurrent
