@@ -282,5 +282,12 @@
   "snooze5Min": "5分钟后提醒",
   "snooze30Min": "30分钟后提醒",
   "snooze2Hours": "2小时后提醒",
-  "snoozeToday": "今天不再提醒"
+  "snoozeToday": "今天不再提醒",
+  "includeProgress": "包含学习进度",
+  "includeProgressDesc": "导出单词掌握程度、复习计划等数据",
+  "exportWithProgress": "（含学习进度）",
+  "pleaseSelectWordSet": "请至少选择一个单词集",
+  "exportComplete": "导出完成！",
+  "exporting": "导出中...",
+  "deselectAll": "取消全选"
 }

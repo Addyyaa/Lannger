@@ -190,20 +190,31 @@ export default function ReviewNotification({
             index === 0 &&
             (canReview.allowed || currentLockedWordSetId === plan.wordSetId);
 
-          // 计算实际到期的单词数 - 使用复习计划中的 learnedWordIds
+          // 计算实际到期的单词数
           let actualDueWords = 0;
           if (plan.learnedWordIds && plan.learnedWordIds.length > 0) {
             // 使用复习计划中记录的单词ID列表
             actualDueWords = plan.learnedWordIds.length;
+          } else if (plan.totalWords && plan.totalWords > 0) {
+            // 如果没有 learnedWordIds 但有 totalWords，使用 totalWords
+            actualDueWords = plan.totalWords;
           } else {
-            // 如果没有 learnedWordIds，使用调度算法计算
-            const { scheduleReviewWords } = await import("../algorithm");
-            const reviewResult = await scheduleReviewWords({
-              wordSetId: plan.wordSetId,
-              onlyDue: true,
-              limit: 1000, // 获取所有到期的单词
-            });
-            actualDueWords = reviewResult.dueCount;
+            // 最后尝试使用调度算法计算
+            try {
+              const { scheduleReviewWords } = await import("../algorithm");
+              const reviewResult = await scheduleReviewWords({
+                wordSetId: plan.wordSetId,
+                onlyDue: false, // 不只是到期的，获取所有已学习的
+                limit: 1000,
+              });
+              actualDueWords =
+                reviewResult.totalAvailable > 0
+                  ? reviewResult.totalAvailable
+                  : reviewResult.dueCount;
+            } catch (error) {
+              console.error("计算到期单词数失败:", error);
+              actualDueWords = 1; // 默认至少有1个，避免按钮灰色
+            }
           }
 
           return {
