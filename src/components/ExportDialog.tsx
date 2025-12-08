@@ -28,12 +28,17 @@ export default function ExportDialog({
   );
   const [exporting, setExporting] = useState(false);
 
+  const wordStore = useWordStore();
+  const { setUILoading } = useUIStore();
+
   // 加载单词集列表
   useEffect(() => {
     const loadWordSets = async () => {
       try {
         setLoading(true);
-        const sets = await dbOperator.getAllWordSets();
+        setUILoading(true);
+        await wordStore.loadWordSets();
+        const sets = wordStore.wordSets;
         // 排除默认单词集
         const filteredSets = sets.filter(
           (set) => set.id !== DEFAULT_WORD_SET_ID
@@ -42,9 +47,10 @@ export default function ExportDialog({
         // 默认全选
         setSelectedWordSetIds(new Set(filteredSets.map((set) => set.id)));
       } catch (error) {
-        console.error("加载单词集失败:", error);
+        handleErrorSync(error, { operation: "loadWordSets" });
       } finally {
         setLoading(false);
+        setUILoading(false);
       }
     };
 

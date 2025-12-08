@@ -11,6 +11,7 @@ import ReviewStudy from "../components/ReviewStudy";
 import ReviewNotification from "../components/ReviewNotification";
 import { canStartReview } from "../utils/reviewLock";
 import { getReviewPlan } from "../store/reviewStore";
+import { handleErrorSync } from "../utils/errorHandler";
 
 export default function Study() {
   const { t } = useTranslation();
@@ -105,7 +106,7 @@ export default function Study() {
         }
       }
     } catch (error) {
-      console.error("检查复习通知失败:", error);
+      handleErrorSync(error, { operation: "checkReviewNotifications" });
     }
   };
 
@@ -192,7 +193,7 @@ export default function Study() {
         goalProgress,
       });
     } catch (error) {
-      console.error("加载学习统计失败:", error);
+      handleErrorSync(error, { operation: "loadStudyStats" });
     }
   };
 
@@ -354,7 +355,7 @@ export default function Study() {
               });
             }
           } catch (error) {
-            console.error("创建复习计划失败:", error);
+            handleErrorSync(error, { operation: "createReviewPlan", silent: true });
             // 不阻止主流程，只记录错误
           }
         }

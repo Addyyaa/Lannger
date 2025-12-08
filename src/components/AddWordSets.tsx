@@ -1,5 +1,6 @@
 import { useTheme, useOrientation } from "../main";
-import * as dbOperator from "../store/wordStore";
+import { useWordStore, useUIStore } from "../store/hooks";
+import { handleErrorSync } from "../utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useState, Dispatch, SetStateAction } from "react";
 
@@ -17,19 +18,30 @@ export default function AddWordSets({
         name: "",
         mark: "",
     });
+    const wordStore = useWordStore();
+    const { showToast } = useUIStore();
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         if (wordSet.name.trim() === "") {
             return;
         }
-        await dbOperator.createWordSet({
-            name: wordSet.name,
-            mark: wordSet.mark,
-        });
-        const wordSets = await dbOperator.getAllWordSets();
-        addWordSet(wordSets);
-        console.log("wordSet\t", wordSet);
-        closePopup();
+        try {
+            await wordStore.createWordSet({
+                name: wordSet.name,
+                mark: wordSet.mark,
+            });
+            await wordStore.loadWordSets();
+            addWordSet(wordStore.wordSets);
+            showToast({
+                type: "success",
+                messageKey: "wordSetCreated",
+                messageParams: { name: wordSet.name },
+            });
+            closePopup();
+        } catch (error) {
+            handleErrorSync(error, { operation: "createWordSet" });
+        }
     }
     return (
         <div

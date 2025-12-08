@@ -8,6 +8,7 @@ import { persist } from "zustand/middleware";
 import { Word, WordSet, WordProgress } from "../db";
 import { db, ensureDBOpen } from "../db";
 import * as wordService from "../services/wordService";
+import { queryCache } from "../utils/queryCache";
 
 /**
  * Word Store 接口
@@ -72,7 +73,20 @@ export const useWordStore = create<WordStore>()(
       loadWordSets: async () => {
         set({ loading: true, error: null });
         try {
+          // 尝试从缓存获取
+          const cacheKey = "wordStore:wordSets";
+          const cached = queryCache.get<WordSet[]>(cacheKey);
+          if (cached !== null) {
+            set({ wordSets: cached, loading: false });
+            return;
+          }
+
+          // 缓存未命中，从服务层加载（服务层内部也会使用缓存）
           const wordSets = await wordService.getAllWordSets();
+          
+          // 存入 Store 缓存（10 分钟过期）
+          queryCache.set(cacheKey, wordSets, 10 * 60 * 1000);
+          
           set({ wordSets, loading: false });
         } catch (error) {
           const errorMessage =
@@ -84,7 +98,29 @@ export const useWordStore = create<WordStore>()(
       loadWords: async (wordSetId: number) => {
         set({ loading: true, error: null });
         try {
+          // 尝试从缓存获取
+          const cacheKey = `wordStore:words:${wordSetId}`;
+          const cached = queryCache.get<Word[]>(cacheKey);
+          if (cached !== null) {
+            const wordsMap = cached.reduce((acc, word) => {
+              if (word.id !== undefined) {
+                acc[word.id] = word;
+              }
+              return acc;
+            }, {} as Record<number, Word>);
+            set((state) => ({
+              words: { ...state.words, ...wordsMap },
+              loading: false,
+            }));
+            return;
+          }
+
+          // 缓存未命中，从服务层加载
           const words = await wordService.getWordsByWordSet(wordSetId);
+          
+          // 存入 Store 缓存（5 分钟过期）
+          queryCache.set(cacheKey, words, 5 * 60 * 1000);
+          
           const wordsMap = words.reduce((acc, word) => {
             if (word.id !== undefined) {
               acc[word.id] = word;
@@ -150,6 +186,9 @@ export const useWordStore = create<WordStore>()(
         set({ loading: true, error: null });
         try {
           const id = await wordService.createWordSet(wordSet);
+          // 清除相关缓存
+          queryCache.invalidate("wordStore:wordSets");
+          queryCache.invalidate("wordSets:*");
           // 重新加载单词集列表
           await get().loadWordSets();
           set({ loading: false });
@@ -166,6 +205,11 @@ export const useWordStore = create<WordStore>()(
         set({ loading: true, error: null });
         try {
           const id = await wordService.createWord(word);
+          // 清除相关缓存
+          if (word.setId !== undefined) {
+            queryCache.invalidate(`wordStore:words:${word.setId}`);
+            queryCache.invalidate(`words:${word.setId}:*`);
+          }
           // 如果创建成功，重新加载对应单词集的单词
           if (word.setId !== undefined) {
             await get().loadWords(word.setId);
@@ -184,6 +228,9 @@ export const useWordStore = create<WordStore>()(
         set({ loading: true, error: null });
         try {
           await wordService.updateWordSet(wordSet);
+          // 清除相关缓存
+          queryCache.invalidate("wordStore:wordSets");
+          queryCache.invalidate("wordSets:*");
           // 更新本地状态
           set((state) => ({
             wordSets: state.wordSets.map((ws) =>
@@ -203,6 +250,11 @@ export const useWordStore = create<WordStore>()(
         set({ loading: true, error: null });
         try {
           await wordService.updateWord(word);
+          // 清除相关缓存
+          if (word.setId !== undefined) {
+            queryCache.invalidate(`wordStore:words:${word.setId}`);
+            queryCache.invalidate(`words:${word.setId}:*`);
+          }
           // 更新本地状态
           if (word.id !== undefined) {
             set((state) => ({
@@ -223,6 +275,11 @@ export const useWordStore = create<WordStore>()(
         try {
           const success = await wordService.deleteWordSet(id);
           if (success) {
+            // 清除相关缓存
+            queryCache.invalidate("wordStore:wordSets");
+            queryCache.invalidate("wordSets:*");
+            queryCache.invalidate(`wordStore:words:${id}`);
+            queryCache.invalidate(`words:${id}:*`);
             // 重新加载单词集列表
             await get().loadWordSets();
             // 如果删除的是当前选中的单词集，清空选择
@@ -245,6 +302,12 @@ export const useWordStore = create<WordStore>()(
         try {
           const success = await wordService.deleteWord(id);
           if (success) {
+            // 获取单词的 setId 以清除相关缓存
+            const word = get().words[id];
+            if (word?.setId !== undefined) {
+              queryCache.invalidate(`wordStore:words:${word.setId}`);
+              queryCache.invalidate(`words:${word.setId}:*`);
+            }
             // 从本地状态中移除
             set((state) => {
               const { [id]: deleted, ...words } = state.words;

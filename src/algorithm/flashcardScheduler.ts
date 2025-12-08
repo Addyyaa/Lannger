@@ -1,5 +1,6 @@
 import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight } from "./weightCalculator";
+import { sortWordsByWeightWithWorker } from "../utils/weightCalculatorWorker";
 import { ensureWordProgressExistsBatch } from "./progressUpdater";
 
 /**
@@ -110,8 +111,12 @@ export async function scheduleFlashcardWords(
     progresses.push(progress);
   }
 
-  // 使用权重算法排序
-  const sortedWordIds = sortWordsByWeight(progresses, "flashcard", limit);
+  // 使用权重算法排序（使用 Worker 优化性能）
+  const sortedWordIds = await sortWordsByWeightWithWorker(
+    progresses,
+    "flashcard",
+    limit
+  );
 
   return {
     wordIds: sortedWordIds,

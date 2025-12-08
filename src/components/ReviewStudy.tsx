@@ -17,6 +17,7 @@ import { getReviewStageDescription } from "../utils/ebbinghausCurve";
 import CloseButton from "./CloseButton";
 import { handleErrorSync } from "../utils/errorHandler";
 import { performanceMonitor } from "../utils/performanceMonitor";
+import LoadingIndicator from "./LoadingIndicator";
 import {
   getThemeTokens,
   getContainerStyle,
@@ -364,7 +365,7 @@ export default function ReviewStudy({
         setNotificationMessage(null);
       }, 3000);
     } catch (error) {
-      console.error("重新复习失败:", error);
+      handleErrorSync(error, { operation: "restartReview" });
       isRestartingRef.current = false; // 重置标记
       handleErrorSync(error, { operation: "restartCurrentStage" });
       // 确保即使出错也重置加载状态
@@ -589,15 +590,13 @@ export default function ReviewStudy({
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <div
+          <LoadingIndicator
+            size="medium"
+            message={t("loading")}
             style={{
-              textAlign: "center",
-              fontSize: isPortrait ? "4vw" : "1.5vw",
-              color: isDark ? "#ccc" : "#666",
+              padding: "4vh 4vw",
             }}
-          >
-            {t("loading")}
-          </div>
+          />
         </div>
       </div>
     );

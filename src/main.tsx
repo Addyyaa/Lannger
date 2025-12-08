@@ -4,6 +4,7 @@ import { createContext, useContext, useState, useEffect, useRef } from "react";
 import { createRoot } from "react-dom/client";
 import { RouterProvider, createBrowserRouter, Outlet } from "react-router-dom";
 import "./index.css";
+import "./styles/responsive.css";
 import "./i18n/i18n";
 
 import Home from "./pages/Home";
@@ -22,6 +23,8 @@ import { handleError } from "./utils/errorHandler";
 import { ErrorMonitor } from "./components/ErrorMonitor";
 import { shouldRunArchive, runFullArchive } from "./services/archiveService";
 import AnnouncementManager from "./components/AnnouncementManager";
+import ErrorToast from "./components/ErrorToast";
+import Toast from "./components/Toast";
 
 declare global {
   interface Window {
@@ -463,10 +466,16 @@ function RootLayout() {
           {/* 樱花飘落特效 */}
           <SakuraEffect />
           <Layout globalComponents={<GlobalHeader />}>
-            <Outlet />
+            <PageTransition>
+              <Outlet />
+            </PageTransition>
           </Layout>
           {/* 错误监控 Dashboard（支持开发环境和正式环境，通过连续点击管理页面标题激活） */}
           <ErrorMonitor />
+          {/* 错误提示组件：显示 UI Store 中的错误 */}
+          <ErrorToast />
+          {/* Toast 通知组件：显示成功、信息等提示 */}
+          <Toast />
           {/* 通告管理器：自动检查并显示通告 */}
           <AnnouncementManager />
         </ThemeProvider>

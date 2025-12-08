@@ -16,6 +16,7 @@ import ExportDialog from "../components/ExportDialog";
 import ConfirmWidget from "../components/ConfirmWidget";
 import RestoreData from "../components/RestoreData";
 import { handleManagementTitleClick } from "../utils/errorMonitorToggle";
+import { handleErrorSync } from "../utils/errorHandler";
 
 export interface ManageState {
   popup: Action["type"];
@@ -85,7 +86,7 @@ function ImportWordsAction(
           );
           setWordSets(setsWithWords);
         } catch (error) {
-          console.error("刷新单词集列表失败:", error);
+          handleErrorSync(error, { operation: "refreshWordSets" });
         }
       }}
     />
@@ -262,7 +263,7 @@ export default function Manage() {
         setDailyGoalValue(settings.dailyGoal);
         setDailyGoalInput(String(settings.dailyGoal));
       } catch (error) {
-        console.error("加载每日学习目标失败:", error);
+        handleErrorSync(error, { operation: "loadDailyGoal" });
       } finally {
         if (mounted) {
           setIsGoalLoading(false);
@@ -302,7 +303,7 @@ export default function Manage() {
       setDailyGoalValue(updatedSettings.dailyGoal);
       setDailyGoalInput(String(updatedSettings.dailyGoal));
     } catch (error) {
-      console.error("更新每日学习目标失败:", error);
+      handleErrorSync(error, { operation: "updateDailyGoal" });
       setDailyGoalInput(String(dailyGoalValue));
     } finally {
       setIsGoalSaving(false);

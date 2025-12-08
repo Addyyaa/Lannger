@@ -2,8 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { ReviewPlan } from "../db";
-import { getDueReviewPlans } from "../store/reviewStore";
-import { getWordSet } from "../store/wordStore";
+import { useReviewStore, useWordStore } from "../store/hooks";
 import { getReviewStageDescription } from "../utils/ebbinghausCurve";
 import { canStartReview } from "../utils/reviewLock";
 import { handleErrorSync } from "../utils/errorHandler";
@@ -15,6 +14,9 @@ import {
 } from "../services/notificationService";
 import { getReviewLock } from "../utils/reviewLock";
 import { getFlashcardSessionState } from "../store/wordStore";
+import { useUIStore } from "../store/hooks";
+import LoadingIndicator from "./LoadingIndicator";
+import { db, ensureDBOpen } from "../db";
 
 interface ReviewNotificationProps {
   onStartReview: (wordSetId: number, reviewStage: number) => void;
@@ -32,6 +34,17 @@ export default function ReviewNotification({
   const { t } = useTranslation();
   const { isDark } = useTheme();
   const { isPortrait } = useOrientation();
+
+  // 使用 Zustand Store
+  const reviewStore = useReviewStore();
+  const wordStore = useWordStore();
+
+  // 使用 UI Store 管理加载状态
+  const setUILoading = useUIStore((state) => state.setLoading);
+  const isLoading = useUIStore(
+    (state) => state.loading["reviewNotifications"] || false
+  );
+
   const [notifications, setNotifications] = useState<
     Array<
       ReviewPlan & {
@@ -43,7 +56,6 @@ export default function ReviewNotification({
       }
     >
   >([]);
-  const [loading, setLoading] = useState(true);
   const lastNotificationTimeRef = useRef<Map<number, number>>(new Map()); // 记录上次发送通知的时间，避免重复通知
 
   /**
@@ -51,8 +63,10 @@ export default function ReviewNotification({
    */
   const checkNotifications = async () => {
     try {
-      setLoading(true);
-      const duePlans = await getDueReviewPlans();
+      setUILoading("reviewNotifications", true);
+      // 使用 Zustand Store 加载到期复习计划
+      await reviewStore.loadDueReviewPlans();
+      const duePlans = reviewStore.dueReviewPlans;
 
       // 检查当前是否有复习锁定
       const firstPlan = duePlans[0];
@@ -67,7 +81,14 @@ export default function ReviewNotification({
       // 获取每个计划的单词集名称和队列状态
       const notificationsWithNames = await Promise.all(
         duePlans.map(async (plan, index) => {
-          const wordSet = await getWordSet(plan.wordSetId);
+          // 从 Store 中获取单词集，如果不存在则从数据库查询
+          let wordSet = wordStore.wordSets.find(
+            (ws) => ws.id === plan.wordSetId
+          );
+          if (!wordSet) {
+            await ensureDBOpen();
+            wordSet = (await db.wordSets.get(plan.wordSetId)) || undefined;
+          }
           const canReview = await canStartReview(plan.wordSetId);
 
           // 判断是否为当前需要复习的（第一个且未被锁定，或者被锁定的是这个）
@@ -111,7 +132,7 @@ export default function ReviewNotification({
     } catch (error) {
       handleErrorSync(error, { operation: "checkReviewNotifications" });
     } finally {
-      setLoading(false);
+      setUILoading("reviewNotifications", false);
     }
   };
 
@@ -134,7 +155,7 @@ export default function ReviewNotification({
 
       return false;
     } catch (error) {
-      console.error("检查学习状态失败:", error);
+      handleErrorSync(error, { operation: "isCurrentlyStudying" });
       // 如果检查失败，为了安全起见，不发送通知
       return true;
     }
@@ -214,7 +235,7 @@ export default function ReviewNotification({
       // 记录通知时间
       lastNotificationTimeRef.current.set(notification.wordSetId, now);
     } catch (error) {
-      console.error("发送系统通知失败:", error);
+      handleErrorSync(error, { operation: "sendSystemNotification" });
     }
   };
 
@@ -252,8 +273,24 @@ export default function ReviewNotification({
     return () => clearInterval(interval);
   }, []);
 
+  // 如果正在加载，显示加载指示器
+  if (isLoading) {
+    return (
+      <div
+        style={{
+          position: "fixed",
+          top: isPortrait ? "10vw" : "2vw",
+          right: isPortrait ? "5vw" : "2vw",
+          zIndex: 10000,
+        }}
+      >
+        <LoadingIndicator size="small" />
+      </div>
+    );
+  }
+
   // 如果没有通知，不显示
-  if (loading || notifications.length === 0) {
+  if (notifications.length === 0) {
     return null;
   }
 

@@ -8,6 +8,7 @@ import CloseButton from "./CloseButton";
 import * as dbOperator from "../store/wordStore";
 import { WordSet } from "../db";
 import { DEFAULT_WORD_SET_ID } from "../db";
+import { handleErrorSync } from "../utils/errorHandler";
 
 // localStorage 键名
 const STORAGE_KEY_LAST_SET_ID = "lannger_last_word_set_id";
@@ -24,7 +25,7 @@ function loadLastSelections() {
       difficultyCoefficient: lastDifficulty || "5",
     };
   } catch (error) {
-    console.error("读取上次选择失败:", error);
+    handleErrorSync(error, { operation: "loadLastSelections" });
     return {
       setId: undefined,
       difficultyCoefficient: "5",
@@ -43,7 +44,7 @@ function saveSelections(
     }
     localStorage.setItem(STORAGE_KEY_LAST_DIFFICULTY, difficultyCoefficient);
   } catch (error) {
-    console.error("保存选择失败:", error);
+    handleErrorSync(error, { operation: "saveSelections" });
   }
 }
 
@@ -91,7 +92,7 @@ export default function AddWord({ closePopup }: { closePopup: () => void }) {
           return prev;
         });
       } catch (error) {
-        console.error(t("fetchWordSetsError"), error);
+        handleErrorSync(error, { operation: "fetchWordSets" });
       }
     };
     fetchWordSets();

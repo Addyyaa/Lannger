@@ -15,6 +15,9 @@ export type { ReviewStore } from "./reviewStore.zustand";
 export { useUIStore } from "./uiStore";
 export type { UIStore, Toast } from "./uiStore";
 
+// 统一的 Store Hooks（推荐使用）
+export * from "./hooks";
+
 // 兼容性导出：保持旧的 wordStore 和 reviewStore 导出，内部调用新 Store
 // 注意：这些是临时兼容层，后续会逐步迁移组件使用新的 Zustand Store
 export * from "./wordStore"; // 旧的 wordStore（作为 wordService 的别名）

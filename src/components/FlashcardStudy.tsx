@@ -13,6 +13,8 @@ import { scheduleFlashcardWords } from "../algorithm";
 import { updateWordProgress } from "../algorithm";
 import CloseButton from "./CloseButton";
 import { getThemeTokens } from "../utils/themeTokens";
+import LoadingIndicator from "./LoadingIndicator";
+import { handleErrorSync } from "../utils/errorHandler";
 
 interface FlashcardStudyProps {
   closePopup: () => void;
@@ -69,7 +71,7 @@ export default function FlashcardStudy({
     try {
       await dbOperator.clearFlashcardSessionState();
     } catch (error) {
-      console.error("清除闪卡会话失败:", error);
+      handleErrorSync(error, { operation: "clearFlashcardSessionState" });
     }
   }, []);
 
@@ -79,7 +81,7 @@ export default function FlashcardStudy({
       const parsed = Number.parseInt(String(settings.dailyGoal ?? 20), 10);
       return Number.isFinite(parsed) && parsed > 0 ? parsed : 20;
     } catch (error) {
-      console.error("获取每日学习目标失败，使用默认值 20:", error);
+      handleErrorSync(error, { operation: "resolveSessionLimit" });
       return 20;
     }
   }, []);
@@ -114,7 +116,7 @@ export default function FlashcardStudy({
         setWordIds(result.wordIds);
         setCurrentIndex(0);
       } catch (error) {
-        console.error("加载单词失败:", error);
+        handleErrorSync(error, { operation: "loadWords" });
       } finally {
         startTimeRef.current = Date.now();
         setLoading(false);
@@ -191,7 +193,7 @@ export default function FlashcardStudy({
 
         await loadWords(sessionLimit);
       } catch (error) {
-        console.error("恢复闪卡会话失败:", error);
+        handleErrorSync(error, { operation: "restoreFlashcardSession" });
         const fallbackLimit = await resolveSessionLimit();
         await loadWords(fallbackLimit);
       }
@@ -220,7 +222,7 @@ export default function FlashcardStudy({
     };
 
     dbOperator.saveFlashcardSessionState(state).catch((error) => {
-      console.error("保存闪卡会话失败:", error);
+      handleErrorSync(error, { operation: "saveFlashcardSessionState" });
     });
   }, [wordIds, currentIndex, sessionStats, showAnswer, wordSetId, loading]);
 
@@ -357,7 +359,7 @@ export default function FlashcardStudy({
       await loadWords(limit);
       window.alert(t("resetProgressSuccess", { count: resetCount }));
     } catch (error) {
-      console.error("重置学习进度失败:", error);
+      handleErrorSync(error, { operation: "resetProgress" });
       setResetFeedback(t("resetProgressError"));
     } finally {
       setIsResetting(false);
@@ -701,15 +703,13 @@ export default function FlashcardStudy({
           onClick={closePopup}
           iconColor={isDark ? "#fff" : "#333"}
         />
-        <div
+        <LoadingIndicator
+          size="medium"
+          message={t("loading")}
           style={{
-            textAlign: "center",
             padding: "4vh 4vw",
-            color: isDark ? "#ccc" : "#666",
           }}
-        >
-          {t("loading")}
-        </div>
+        />
       </div>
     );
   }
@@ -1183,6 +1183,13 @@ export default function FlashcardStudy({
               data-test-id="button-test-4"
               style={{ ...buttonGroupItemStyle, backgroundColor: "green" }}
               onClick={() => handleResult("correct")}
+              aria-label={t("learned") || "已掌握"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleResult("correct");
+                }
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-0.2vh)";
                 e.currentTarget.style.boxShadow = isDark
@@ -1204,6 +1211,14 @@ export default function FlashcardStudy({
                 backgroundColor: "rgb(197, 150, 241)",
               }}
               onClick={handleShowAnswer}
+              aria-label={t("showAnswer") || "显示答案"}
+              aria-expanded={showAnswer}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleShowAnswer();
+                }
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-0.2vh)";
                 e.currentTarget.style.boxShadow = isDark
@@ -1228,6 +1243,13 @@ export default function FlashcardStudy({
                 backgroundColor: "rgb(52, 199, 89)",
               }}
               onClick={() => handleResult("correct")}
+              aria-label={t("correct") || "正确"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleResult("correct");
+                }
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-0.2vh)";
                 e.currentTarget.style.boxShadow = isDark
@@ -1249,6 +1271,13 @@ export default function FlashcardStudy({
                 backgroundColor: "rgb(255, 59, 48)",
               }}
               onClick={() => handleResult("wrong")}
+              aria-label={t("wrong") || "错误"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleResult("wrong");
+                }
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-0.2vh)";
                 e.currentTarget.style.boxShadow = isDark
@@ -1267,6 +1296,13 @@ export default function FlashcardStudy({
               data-test-id="button-test"
               style={buttonGroupItemStyle}
               onClick={() => handleResult("skip")}
+              aria-label={t("skip") || "跳过"}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  handleResult("skip");
+                }
+              }}
               onMouseEnter={(e) => {
                 e.currentTarget.style.transform = "translateY(-0.2vh)";
                 e.currentTarget.style.boxShadow = isDark

@@ -19,6 +19,7 @@ import {
   getContainerStyle,
   getCardStyle,
 } from "../utils/themeTokens";
+import LoadingIndicator from "./LoadingIndicator";
 
 interface TestStudyProps {
   closePopup: () => void;
@@ -531,15 +532,13 @@ export default function TestStudy({
     return (
       <div style={containerStyle}>
         <div style={cardStyle}>
-          <div
+          <LoadingIndicator
+            size="medium"
+            message={t("loading")}
             style={{
-              textAlign: "center",
-              fontSize: isPortrait ? "4vw" : "1.5vw",
-              color: isDark ? "#ccc" : "#666",
+              padding: "4vh 4vw",
             }}
-          >
-            {t("loading")}
-          </div>
+          />
         </div>
       </div>
     );

@@ -77,14 +77,20 @@ export default function HomeStatsCard({
 
   const statLabelStyle: React.CSSProperties = {
     fontSize: isPortrait ? "3vw" : "0.9vw",
-    color: isDark ? "#999" : "#666",
+    // 确保对比度符合 WCAG AA（4.5:1）
+    // #999 on dark background: 对比度约 3.8:1，需要调整
+    // #666 on light background: 对比度约 5.7:1，符合标准
+    color: isDark ? "#b3b3b3" : "#666", // 调整暗色主题为更亮的灰色
     fontWeight: 500,
   };
 
   const statValueStyle: React.CSSProperties = {
     fontSize: isPortrait ? "5vw" : "1.8vw",
     fontWeight: 700,
-    color: isDark ? "#fff" : "#333",
+    // 确保对比度符合 WCAG AA
+    // #fff on dark background: 对比度约 12.6:1，符合标准
+    // #333 on light background: 对比度约 12.6:1，符合标准
+    color: isDark ? "#ffffff" : "#212121", // 使用更深的文本颜色确保对比度
   };
 
   const progressBarContainerStyle: React.CSSProperties = {

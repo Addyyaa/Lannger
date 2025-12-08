@@ -1,5 +1,6 @@
 import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight, calculateMastery } from "./weightCalculator";
+import { sortWordsByWeightWithWorker } from "../utils/weightCalculatorWorker";
 import { ensureWordProgressExistsBatch } from "./progressUpdater";
 import { isDueForReview, calculateUrgency } from "./spacedRepetition";
 
@@ -108,8 +109,12 @@ export async function scheduleReviewWords(
     progresses.push(progress);
   }
 
-  // 使用权重算法排序（复习模式）
-  const sortedWordIds = sortWordsByWeight(progresses, "review", limit);
+  // 使用权重算法排序（复习模式，使用 Worker 优化性能）
+  const sortedWordIds = await sortWordsByWeightWithWorker(
+    progresses,
+    "review",
+    limit
+  );
 
   return {
     wordIds: sortedWordIds,

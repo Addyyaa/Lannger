@@ -1,5 +1,6 @@
 import { useOrientation, useTheme } from "../main";
-import * as dbOperator from "../store/wordStore";
+import { useWordStore, useUIStore } from "../store/hooks";
+import { handleErrorSync } from "../utils/errorHandler";
 import { useTranslation } from "react-i18next";
 import { useState } from "react";
 import { useManageContext } from "../pages/Manage";
@@ -27,6 +28,9 @@ export default function EditWordSets({
     name: "",
     mark: "",
   });
+  const wordStore = useWordStore();
+  const { showToast } = useUIStore();
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     // 如果字段没有输入 则用之前的内容
@@ -37,14 +41,23 @@ export default function EditWordSets({
       wordSet.mark = outterWordSetList[index].mark;
     }
     try {
-      await dbOperator.updateWordSet({
+      await wordStore.updateWordSet({
         id: outterWordSetList[index].id,
         name: wordSet.name,
         mark: wordSet.mark,
         createdAt: outterWordSetList[index].createdAt,
       });
+      showToast({
+        type: "success",
+        messageKey: "wordSetUpdated",
+        messageParams: { name: wordSet.name },
+      });
     } catch (error) {
-      alert(t("updateWordSetFailed"));
+      handleErrorSync(error, { operation: "updateWordSet" });
+      showToast({
+        type: "error",
+        messageKey: "updateWordSetFailed",
+      });
     } finally {
       setLoading(false);
     }

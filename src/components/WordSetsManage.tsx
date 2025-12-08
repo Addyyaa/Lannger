@@ -5,8 +5,8 @@ import ComponentAsModel from "../utils/componentAsModel";
 import AddWordSets from "../components/AddWordSets";
 import { useTheme, useOrientation } from "../main";
 import WordSetsTable from "../components/WordSetsTable";
-import * as dbOperator from "../store/wordStore";
-import { getReviewPlan } from "../store/reviewStore";
+import { useWordStore, useReviewStore, useUIStore } from "../store/hooks";
+import { handleErrorSync } from "../utils/errorHandler";
 import AddWord from "../components/AddWord";
 import { useNavigate } from "react-router-dom";
 import { APP_BUILD_TIME, APP_VERSION } from "../version";
@@ -41,22 +41,31 @@ export default function WordSetsManage({
   const handleShowAllWords = () => {
     navigate("/wordsList");
   };
+  const wordStore = useWordStore();
+  const reviewStore = useReviewStore();
+  const { setUILoading } = useUIStore();
+
   const loadWordSets = async () => {
     try {
-      const sets = await dbOperator.getAllWordSets();
+      setUILoading(true);
+      await wordStore.loadWordSets();
+      const sets = wordStore.wordSets;
       // 为每个单词集获取单词数量和复习计划
       const setsWithWords = await Promise.all(
         sets.map(async (set) => {
-          const words = await dbOperator.getWordsByWordSet(set.id);
-          const reviewPlan = await getReviewPlan(set.id);
+          await wordStore.loadWords(set.id);
+          const words = wordStore.words.filter(w => w.wordSetId === set.id);
+          await reviewStore.loadReviewPlan(set.id);
+          const reviewPlan = reviewStore.reviewPlans.find(rp => rp.wordSetId === set.id) || null;
           return { ...set, words, reviewPlan };
         })
       );
       setWordSets(setsWithWords);
     } catch (error) {
-      console.error("加载单词集失败:", error);
+      handleErrorSync(error, { operation: "loadWordSets" });
     } finally {
       setLoading(false);
+      setUILoading(false);
     }
   };
 

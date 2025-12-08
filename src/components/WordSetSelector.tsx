@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { WordSet } from "../db";
-import * as dbOperator from "../store/wordStore";
+import { useWordStore, useUIStore } from "../store/hooks";
+import { handleErrorSync } from "../utils/errorHandler";
 import CloseButton from "./CloseButton";
 
 interface WordSetSelectorProps {
@@ -23,13 +24,18 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
     const [retryCount, setRetryCount] = useState(0);
     const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
+    const wordStore = useWordStore();
+    const { setUILoading } = useUIStore();
+
     const loadWordSets = React.useCallback(async () => {
         try {
             setLoading(true);
+            setUILoading(true);
             setError(null);
             
             // 获取单词集
-            const sets = await dbOperator.getAllWordSets();
+            await wordStore.loadWordSets();
+            const sets = wordStore.wordSets;
             
             // 验证返回的数据
             if (!Array.isArray(sets)) {
@@ -50,7 +56,7 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
             setRetryCount(0); // 重置重试计数
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "加载单词集失败，请重试";
-            console.error("加载单词集失败:", error);
+            handleErrorSync(error, { operation: "loadWordSets" });
             setError(errorMessage);
             
             // 如果重试次数少于3次，自动重试一次
@@ -70,8 +76,9 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
             });
         } finally {
             setLoading(false);
+            setUILoading(false);
         }
-    }, []);
+    }, [wordStore, setUILoading]);
 
     useEffect(() => {
         loadWordSets();

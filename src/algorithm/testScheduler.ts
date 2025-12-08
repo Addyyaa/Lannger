@@ -1,5 +1,6 @@
 import { db, WordProgress, ensureDBOpen } from "../db";
 import { sortWordsByWeight, calculateMastery } from "./weightCalculator";
+import { sortWordsByWeightWithWorker } from "../utils/weightCalculatorWorker";
 import {
   ensureWordProgressExists,
   ensureWordProgressExistsBatch,
@@ -186,8 +187,12 @@ export async function scheduleTestWords(
     finalLimit = calculateDynamicTestLimit(progresses, 30);
   }
 
-  // 使用权重算法排序（测试模式）
-  const sortedWordIds = sortWordsByWeight(progresses, "test", finalLimit);
+  // 使用权重算法排序（测试模式，使用 Worker 优化性能）
+  const sortedWordIds = await sortWordsByWeightWithWorker(
+    progresses,
+    "test",
+    finalLimit
+  );
 
   // 计算平均值
   const averageDifficulty =

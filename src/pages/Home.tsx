@@ -5,12 +5,14 @@ import { useTranslation } from "react-i18next";
 import { db, ensureDBOpen, StudyMode } from "../db";
 import { usePWAInstallPrompt } from "../hooks/usePWAInstallPrompt";
 import { useServiceWorkerUpdate } from "../hooks/useServiceWorkerUpdate";
+import { useWordStore, useReviewStore, useDueReviewPlans } from "../store/hooks";
 import { getUserSettings } from "../store/wordStore";
-import { getDueReviewPlans } from "../store/reviewStore";
-import { getAllWordSets } from "../store/wordStore";
+import { queryCache } from "../utils/queryCache";
+import { handleErrorSync } from "../utils/errorHandler";
 import HomeStatsCard from "../components/HomeStatsCard";
 import StudyModeCard from "../components/StudyModeCard";
 import ReviewNotificationCard from "../components/ReviewNotificationCard";
+import LoadingIndicator from "../components/LoadingIndicator";
 import type { ReviewPlan } from "../db";
 
 export default function Home() {
@@ -30,6 +32,11 @@ export default function Home() {
   const shouldShowInstallPrompt =
     isInstallable && !isInstalled && isPromptVisible;
 
+  // 使用 Zustand Store
+  const wordStore = useWordStore();
+  const reviewStore = useReviewStore();
+  const dueReviewPlans = useDueReviewPlans();
+
   // 统计数据
   const [stats, setStats] = useState({
     dailyGoal: 20,
@@ -39,8 +46,6 @@ export default function Home() {
     masteredWords: 0,
   });
 
-  // 到期复习计划
-  const [dueReviewPlans, setDueReviewPlans] = useState<ReviewPlan[]>([]);
   const [wordSetMap, setWordSetMap] = useState<Map<number, string>>(new Map());
 
   // 加载状态
@@ -49,13 +54,13 @@ export default function Home() {
   // 加载数据
   useEffect(() => {
     loadHomeData().catch((error) => {
-      console.error("加载首页数据失败:", error);
+      handleErrorSync(error, { operation: "loadHomeData" });
     });
 
     // 监听窗口焦点，刷新数据
     const handleFocus = () => {
       loadHomeData().catch((error) => {
-        console.error("刷新首页数据失败:", error);
+        handleErrorSync(error, { operation: "refreshHomeData" });
       });
     };
     window.addEventListener("focus", handleFocus);
@@ -69,24 +74,48 @@ export default function Home() {
       setIsLoading(true);
       await ensureDBOpen();
 
-      // 1. 获取用户设置
+      // 1. 获取用户设置（不缓存，因为可能频繁变化）
       const userSettings = await getUserSettings();
       const dailyGoal = userSettings.dailyGoal || 20;
       const currentStreak = userSettings.currentStreak || 0;
 
-      // 2. 获取今日统计
+      // 2. 获取今日统计（使用缓存，1 分钟过期）
       const today = new Date().toISOString().split("T")[0];
-      const dailyStat = await db.dailyStats.get(today);
-      const learnedToday = dailyStat?.learnedCount || 0;
+      const statsCacheKey = `home:stats:${today}`;
+      const cachedStats = queryCache.get<{
+        learnedToday: number;
+        totalWords: number;
+        masteredWords: number;
+      }>(statsCacheKey);
+      
+      let learnedToday: number;
+      let totalWords: number;
+      let masteredWords: number;
+      
+      if (cachedStats !== null) {
+        learnedToday = cachedStats.learnedToday;
+        totalWords = cachedStats.totalWords;
+        masteredWords = cachedStats.masteredWords;
+      } else {
+        const dailyStat = await db.dailyStats.get(today);
+        learnedToday = dailyStat?.learnedCount || 0;
 
-      // 3. 获取总单词数和已掌握单词数
-      const totalWords = await db.words.count();
+        // 3. 获取总单词数和已掌握单词数
+        totalWords = await db.words.count();
 
-      // 计算已掌握单词数（repetitions >= 3 或 correctStreak >= 3）
-      const allProgress = await db.wordProgress.toArray();
-      const masteredWords = allProgress.filter(
-        (p) => (p.repetitions >= 3 || p.correctStreak >= 3) && p.timesSeen > 0
-      ).length;
+        // 计算已掌握单词数（repetitions >= 3 或 correctStreak >= 3）
+        const allProgress = await db.wordProgress.toArray();
+        masteredWords = allProgress.filter(
+          (p) => (p.repetitions >= 3 || p.correctStreak >= 3) && p.timesSeen > 0
+        ).length;
+        
+        // 存入缓存（1 分钟过期）
+        queryCache.set(
+          statsCacheKey,
+          { learnedToday, totalWords, masteredWords },
+          1 * 60 * 1000
+        );
+      }
 
       setStats({
         dailyGoal,
@@ -96,12 +125,14 @@ export default function Home() {
         masteredWords,
       });
 
-      // 4. 获取到期复习计划
-      const duePlans = await getDueReviewPlans();
-      setDueReviewPlans(duePlans);
+      // 4. 加载到期复习计划（使用 Zustand Store）
+      await reviewStore.loadDueReviewPlans();
 
-      // 5. 获取单词集映射（用于显示复习提醒中的单词集名称）
-      const wordSets = await getAllWordSets();
+      // 5. 加载单词集列表（使用 Zustand Store）
+      await wordStore.loadWordSets();
+      
+      // 获取单词集映射（用于显示复习提醒中的单词集名称）
+      const wordSets = wordStore.wordSets;
       const map = new Map<number, string>();
       wordSets.forEach((ws) => {
         map.set(ws.id!, ws.name);
@@ -116,7 +147,7 @@ export default function Home() {
       }
       setWordSetMap(map);
     } catch (error) {
-      console.error("加载首页数据失败:", error);
+      handleErrorSync(error, { operation: "loadHomeData" });
     } finally {
       setIsLoading(false);
     }
@@ -257,18 +288,13 @@ export default function Home() {
   if (isLoading) {
     return (
       <div style={containerStyle}>
-        <div
+        <LoadingIndicator
+          size="large"
+          message={t("loading")}
           style={{
-            display: "flex",
-            justifyContent: "center",
-            alignItems: "center",
             height: "50vh",
-            fontSize: isPortrait ? "4vw" : "1.5vw",
-            color: isDark ? "#999" : "#666",
           }}
-        >
-          {t("loading")}
-        </div>
+        />
       </div>
     );
   }

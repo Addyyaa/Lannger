@@ -9,6 +9,7 @@ import { useTheme, useOrientation } from "../main";
 import BackButton from "../components/BackButton";
 import ConfirmWidget from "../components/ConfirmWidget";
 import EditWordDialog from "../components/EditWordDialog";
+import { handleErrorSync } from "../utils/errorHandler";
 
 /**
  * 单词列表页面组件
@@ -69,7 +70,7 @@ export default function WordsList() {
                 setWords(fetchedWords);
             }
         } catch (error) {
-            console.error(t("fetchWordsError"), error);
+            handleErrorSync(error, { operation: "fetchWords" });
         } finally {
             setLoading(false);
         }
@@ -166,7 +167,7 @@ export default function WordsList() {
 
                 setSearchResults(sortedResults);
             } catch (error) {
-                console.error("搜索失败:", error);
+                handleErrorSync(error, { operation: "searchWords" });
                 setSearchResults([]);
             } finally {
                 setIsSearching(false);
@@ -366,7 +367,7 @@ export default function WordsList() {
                 // 刷新列表
                 fetchData();
             } catch (error) {
-                console.error(t("deleteWordFailed"), error);
+                handleErrorSync(error, { operation: "deleteWord" });
                 alert(t("deleteWordFailed"));
             }
         }
@@ -387,7 +388,7 @@ export default function WordsList() {
             // 刷新列表
             fetchData();
         } catch (error) {
-            console.error(t("deleteWordFailed"), error);
+            handleErrorSync(error, { operation: "batchDeleteWords" });
             alert(t("deleteWordFailed"));
         }
     }, [selectedWordIds, fetchData, t]);

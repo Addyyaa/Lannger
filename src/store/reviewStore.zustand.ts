@@ -6,6 +6,7 @@
 import { create } from "zustand";
 import { ReviewPlan } from "../db";
 import * as reviewService from "../services/reviewService";
+import { queryCache } from "../utils/queryCache";
 
 /**
  * Review Store 接口
@@ -55,8 +56,22 @@ export const useReviewStore = create<ReviewStore>((set) => ({
   loadReviewPlan: async (wordSetId: number) => {
     set({ loading: true, error: null });
     try {
+      // 尝试从缓存获取
+      const cacheKey = `reviewStore:plan:${wordSetId}`;
+      const cached = queryCache.get<ReviewPlan>(cacheKey);
+      if (cached !== null) {
+        set((state) => ({
+          reviewPlans: { ...state.reviewPlans, [wordSetId]: cached },
+          loading: false,
+        }));
+        return cached;
+      }
+
+      // 缓存未命中，从服务层加载
       const plan = await reviewService.getReviewPlan(wordSetId);
       if (plan) {
+        // 存入缓存（10 分钟过期）
+        queryCache.set(cacheKey, plan, 10 * 60 * 1000);
         set((state) => ({
           reviewPlans: { ...state.reviewPlans, [wordSetId]: plan },
           loading: false,
@@ -76,7 +91,26 @@ export const useReviewStore = create<ReviewStore>((set) => ({
   loadAllReviewPlans: async () => {
     set({ loading: true, error: null });
     try {
+      // 尝试从缓存获取
+      const cacheKey = "reviewStore:plans:all";
+      const cached = queryCache.get<ReviewPlan[]>(cacheKey);
+      if (cached !== null) {
+        const plansMap = cached.reduce((acc, plan) => {
+          if (plan.wordSetId !== undefined) {
+            acc[plan.wordSetId] = plan;
+          }
+          return acc;
+        }, {} as Record<number, ReviewPlan>);
+        set({ reviewPlans: plansMap, loading: false });
+        return;
+      }
+
+      // 缓存未命中，从服务层加载
       const plans = await reviewService.getAllReviewPlans();
+      
+      // 存入缓存（10 分钟过期）
+      queryCache.set(cacheKey, plans, 10 * 60 * 1000);
+      
       const plansMap = plans.reduce((acc, plan) => {
         if (plan.wordSetId !== undefined) {
           acc[plan.wordSetId] = plan;
@@ -94,7 +128,20 @@ export const useReviewStore = create<ReviewStore>((set) => ({
   loadDueReviewPlans: async () => {
     set({ loading: true, error: null });
     try {
+      // 尝试从缓存获取（到期计划缓存时间较短，1 分钟）
+      const cacheKey = "reviewStore:duePlans";
+      const cached = queryCache.get<ReviewPlan[]>(cacheKey);
+      if (cached !== null) {
+        set({ dueReviewPlans: cached, loading: false });
+        return;
+      }
+
+      // 缓存未命中，从服务层加载
       const duePlans = await reviewService.getDueReviewPlans();
+      
+      // 存入缓存（1 分钟过期，因为到期计划会频繁变化）
+      queryCache.set(cacheKey, duePlans, 1 * 60 * 1000);
+      
       set({ dueReviewPlans: duePlans, loading: false });
     } catch (error) {
       const errorMessage =
@@ -116,6 +163,13 @@ export const useReviewStore = create<ReviewStore>((set) => ({
         totalWords,
         learnedWordIds
       );
+      // 清除相关缓存
+      queryCache.invalidate(`reviewStore:plan:${wordSetId}`);
+      queryCache.invalidate("reviewStore:plans:all");
+      queryCache.invalidate("reviewStore:duePlans");
+      queryCache.invalidate("reviewPlans:*");
+      // 存入缓存
+      queryCache.set(`reviewStore:plan:${wordSetId}`, plan, 10 * 60 * 1000);
       set((state) => ({
         reviewPlans: { ...state.reviewPlans, [wordSetId]: plan },
         loading: false,
@@ -133,6 +187,13 @@ export const useReviewStore = create<ReviewStore>((set) => ({
     set({ loading: true, error: null });
     try {
       await reviewService.updateReviewPlan(plan);
+      // 清除相关缓存
+      queryCache.invalidate(`reviewStore:plan:${plan.wordSetId}`);
+      queryCache.invalidate("reviewStore:plans:all");
+      queryCache.invalidate("reviewStore:duePlans");
+      queryCache.invalidate("reviewPlans:*");
+      // 更新缓存
+      queryCache.set(`reviewStore:plan:${plan.wordSetId}`, plan, 10 * 60 * 1000);
       set((state) => ({
         reviewPlans: {
           ...state.reviewPlans,
@@ -160,6 +221,13 @@ export const useReviewStore = create<ReviewStore>((set) => ({
         completedAt,
         reviewPlanId
       );
+      // 清除相关缓存
+      queryCache.invalidate(`reviewStore:plan:${wordSetId}`);
+      queryCache.invalidate("reviewStore:plans:all");
+      queryCache.invalidate("reviewStore:duePlans");
+      queryCache.invalidate("reviewPlans:*");
+      // 更新缓存
+      queryCache.set(`reviewStore:plan:${wordSetId}`, updatedPlan, 10 * 60 * 1000);
       set((state) => ({
         reviewPlans: {
           ...state.reviewPlans,
@@ -180,6 +248,11 @@ export const useReviewStore = create<ReviewStore>((set) => ({
     set({ loading: true, error: null });
     try {
       await reviewService.deleteReviewPlan(wordSetId);
+      // 清除相关缓存
+      queryCache.invalidate(`reviewStore:plan:${wordSetId}`);
+      queryCache.invalidate("reviewStore:plans:all");
+      queryCache.invalidate("reviewStore:duePlans");
+      queryCache.invalidate("reviewPlans:*");
       set((state) => {
         const { [wordSetId]: deleted, ...reviewPlans } = state.reviewPlans;
         return { reviewPlans, loading: false };
