@@ -25,6 +25,7 @@ import { shouldRunArchive, runFullArchive } from "./services/archiveService";
 import AnnouncementManager from "./components/AnnouncementManager";
 import ErrorToast from "./components/ErrorToast";
 import Toast from "./components/Toast";
+import PageTransition from "./components/PageTransition";
 
 declare global {
   interface Window {
