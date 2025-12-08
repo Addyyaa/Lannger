@@ -30,7 +30,7 @@ export default function ExportDialog({
   const [includeProgress, setIncludeProgress] = useState(false); // 是否包含学习进度
 
   const wordStore = useWordStore();
-  const { setUILoading } = useUIStore();
+  const setUILoading = useUIStore((state) => state.setLoading);
 
   // 加载单词集列表
   useEffect(() => {

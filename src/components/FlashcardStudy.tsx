@@ -428,7 +428,7 @@ export default function FlashcardStudy({
     };
   }, [showAnswer]);
 
-  // 卡片正面和背面的共同样式
+  // 卡片正面和背面的共同样式 - 完全无边框，与按钮区域无缝融合
   const cardFaceBaseStyle: React.CSSProperties = {
     position: "absolute",
     width: "100%",
@@ -437,14 +437,11 @@ export default function FlashcardStudy({
     left: 0,
     backfaceVisibility: "hidden",
     WebkitBackfaceVisibility: "hidden",
-    background: themeTokens.cardSurface,
-    borderRadius: isPortrait ? "3.5vw" : "1.4vw",
-    border: isPortrait
-      ? `0.3vw solid ${themeTokens.cardBorderColor}`
-      : `0.12vw solid ${themeTokens.cardBorderColor}`,
-    boxShadow: isPortrait
-      ? themeTokens.cardShadowPortrait
-      : themeTokens.cardShadowLandscape,
+    // 使用透明背景，让容器背景透出
+    background: "transparent",
+    borderRadius: 0,
+    border: "none",
+    boxShadow: "none",
   };
 
   const cardFaceStyle: React.CSSProperties = {
@@ -584,9 +581,13 @@ export default function FlashcardStudy({
     gap: isPortrait ? "2.5vw" : "2vw",
     justifyContent: "center",
     alignItems: "center",
-    padding: isPortrait ? "2vh 2vw" : "1vh 2vw",
+    padding: isPortrait ? "2.5vh 4vw 3vh" : "1.8vh 3vw 2vh",
     boxSizing: "border-box",
-    flexShrink: 0, // 防止按钮区域被压缩
+    flexShrink: 0,
+    // 无边框无背景，与容器融合
+    background: "transparent",
+    borderRadius: 0,
+    border: "none",
   };
 
   const buttonStyle: React.CSSProperties = {
@@ -614,13 +615,6 @@ export default function FlashcardStudy({
     alignItems: "center",
     padding: isPortrait ? "2.8vh 6vw" : "1.4vh 3vw",
     minWidth: isPortrait ? "40vw" : "18vw",
-  };
-
-  const progressStyle: React.CSSProperties = {
-    fontSize: isPortrait ? "calc(2vw + 2vh)" : "calc(0.7vw + 0.7vh)",
-    color: isDark ? "#ccc" : "#666",
-    textAlign: "center",
-    marginBottom: isPortrait ? "4vh" : "2vh",
   };
 
   const emptyStateContentStyle: React.CSSProperties = {
@@ -796,6 +790,7 @@ export default function FlashcardStudy({
   return (
     <div
       data-test-id="div-test-21"
+      className="flashcard-container"
       style={outerContainerStyle}
       data-testid="FlashcardStudy-0"
     >
@@ -818,15 +813,17 @@ export default function FlashcardStudy({
       </div>
       <div
         data-test-id="div-test-19"
+        className="flashcard-progress"
         style={{
           position: "absolute",
           top: isPortrait ? "1.5vh" : "1vh",
           left: isPortrait ? "4vw" : "2vw",
           zIndex: 10,
-          ...progressStyle,
+          fontSize: isPortrait ? "calc(1.8vw + 1.8vh)" : "calc(0.7vw + 0.7vh)",
         }}
         data-testid="FlashcardStudy-2"
       >
+        <span style={{ opacity: 0.7 }}>📚</span>
         {currentIndex + 1} / {wordIds.length}
       </div>
       {/* 卡片容器包装 */}
@@ -837,6 +834,7 @@ export default function FlashcardStudy({
         >
           <div
             data-test-id="flashcard-study-div-test-8"
+            className="flashcard-mode-toggle-wrapper"
             style={frontModeToggleWrapperStyle}
             data-testid="FlashcardStudy-toggleMode"
           >
@@ -945,7 +943,7 @@ export default function FlashcardStudy({
           <div
             data-test-id="div-test-16"
             style={cardFaceStyle}
-            className="flashcard-face-front"
+            className="flashcard-face-front flashcard-card"
             data-testid="FlashcardStudy-5"
           >
             <div
@@ -973,6 +971,7 @@ export default function FlashcardStudy({
                     ? "flashcard-study-div-test-4"
                     : "flashcard-study-div-test-2"
                 }
+                className="flashcard-word-main"
                 style={frontDisplayStyle}
               >
                 {frontDisplayText}
@@ -1208,6 +1207,7 @@ export default function FlashcardStudy({
       {/* 按钮组 - 根据 showAnswer 状态显示不同按钮 */}
       <div
         data-test-id="div-test"
+        className="flashcard-btn-group"
         style={buttonGroupStyle}
         data-testid="FlashcardStudy-buttonGroup"
       >
@@ -1215,54 +1215,21 @@ export default function FlashcardStudy({
           <>
             <button
               data-test-id="button-test-4"
-              style={{ ...buttonGroupItemStyle, backgroundColor: "green" }}
+              className="flashcard-action-btn flashcard-action-btn--correct"
+              style={buttonGroupItemStyle}
               onClick={() => handleResult("correct")}
               aria-label={t("learned") || "已掌握"}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleResult("correct");
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-0.2vh)";
-                e.currentTarget.style.boxShadow = isDark
-                  ? "0 0.4vh 1.2vh rgba(52, 199, 89, 0.5)"
-                  : "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
               data-testid="FlashcardStudy-learned"
             >
               {t("learned")}
             </button>
             <button
               data-test-id="button-test-3"
-              style={{
-                ...buttonGroupItemStyle,
-                backgroundColor: "rgb(197, 150, 241)",
-              }}
+              className="flashcard-action-btn flashcard-action-btn--show"
+              style={buttonGroupItemStyle}
               onClick={handleShowAnswer}
               aria-label={t("showAnswer") || "显示答案"}
               aria-expanded={showAnswer}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleShowAnswer();
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-0.2vh)";
-                e.currentTarget.style.boxShadow = isDark
-                  ? "0 0.4vh 1.2vh rgba(10, 132, 255, 0.5)"
-                  : "0 0.4vh 1.2vh rgba(0, 180, 255, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
               data-testid="FlashcardStudy-showAnswer"
             >
               {t("showAnswer")}
@@ -1272,81 +1239,30 @@ export default function FlashcardStudy({
           <>
             <button
               data-test-id="button-test-2"
-              style={{
-                ...buttonGroupItemStyle,
-                backgroundColor: "rgb(52, 199, 89)",
-              }}
+              className="flashcard-action-btn flashcard-action-btn--correct"
+              style={buttonGroupItemStyle}
               onClick={() => handleResult("correct")}
               aria-label={t("correct") || "正确"}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleResult("correct");
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-0.2vh)";
-                e.currentTarget.style.boxShadow = isDark
-                  ? "0 0.4vh 1.2vh rgba(52, 199, 89, 0.5)"
-                  : "0 0.4vh 1.2vh rgba(76, 175, 80, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
               data-testid="FlashcardStudy-22"
             >
               {t("correct")}
             </button>
             <button
               data-test-id="button-test-1"
-              style={{
-                ...buttonGroupItemStyle,
-                backgroundColor: "rgb(255, 59, 48)",
-              }}
+              className="flashcard-action-btn flashcard-action-btn--wrong"
+              style={buttonGroupItemStyle}
               onClick={() => handleResult("wrong")}
               aria-label={t("wrong") || "错误"}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleResult("wrong");
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-0.2vh)";
-                e.currentTarget.style.boxShadow = isDark
-                  ? "0 0.4vh 1.2vh rgba(255, 59, 48, 0.5)"
-                  : "0 0.4vh 1.2vh rgba(244, 67, 54, 0.4)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
               data-testid="FlashcardStudy-23"
             >
               {t("wrong")}
             </button>
             <button
               data-test-id="button-test"
+              className="flashcard-action-btn flashcard-action-btn--skip"
               style={buttonGroupItemStyle}
               onClick={() => handleResult("skip")}
               aria-label={t("skip") || "跳过"}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  handleResult("skip");
-                }
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-0.2vh)";
-                e.currentTarget.style.boxShadow = isDark
-                  ? "0 0.4vh 1.2vh rgba(0, 0, 0, 0.3)"
-                  : "0 0.4vh 1.2vh rgba(0, 0, 0, 0.2)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "none";
-              }}
               data-testid="FlashcardStudy-24"
             >
               {t("skip")}

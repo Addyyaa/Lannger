@@ -24,36 +24,19 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
     const [retryCount, setRetryCount] = useState(0);
     const retryTimeoutRef = React.useRef<NodeJS.Timeout | null>(null);
 
-    const wordStore = useWordStore();
-    const { setUILoading } = useUIStore();
+    // 只选择需要的函数，避免整个 store 对象变化导致重渲染
+    const loadWordSetsFromStore = useWordStore((state) => state.loadWordSets);
+    const wordSetsFromStore = useWordStore((state) => state.wordSets);
+    const setUILoading = useUIStore((state) => state.setLoading);
 
     const loadWordSets = React.useCallback(async () => {
         try {
             setLoading(true);
-            setUILoading(true);
+            setUILoading("wordSetSelector", true);
             setError(null);
             
             // 获取单词集
-            await wordStore.loadWordSets();
-            const sets = wordStore.wordSets;
-            
-            // 验证返回的数据
-            if (!Array.isArray(sets)) {
-                throw new Error("获取单词集失败：返回的数据格式不正确");
-            }
-            
-            // 过滤掉无效的单词集
-            const validSets = sets.filter(set => set && typeof set.id === 'number' && set.name);
-            
-            if (validSets.length === 0 && sets.length > 0) {
-                console.warn("所有单词集数据无效，但原始数据存在", sets);
-                // 即使数据无效，也尝试显示原始数据
-                setWordSets(sets);
-            } else {
-                setWordSets(validSets);
-            }
-            
-            setRetryCount(0); // 重置重试计数
+            await loadWordSetsFromStore();
         } catch (error) {
             const errorMessage = error instanceof Error ? error.message : "加载单词集失败，请重试";
             handleErrorSync(error, { operation: "loadWordSets" });
@@ -76,9 +59,32 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
             });
         } finally {
             setLoading(false);
-            setUILoading(false);
+            setUILoading("wordSetSelector", false);
         }
-    }, [wordStore, setUILoading]);
+    }, [loadWordSetsFromStore, setUILoading]);
+
+    // 当 store 中的 wordSets 变化时，更新本地状态
+    React.useEffect(() => {
+        if (wordSetsFromStore) {
+            // 验证返回的数据
+            if (!Array.isArray(wordSetsFromStore)) {
+                return;
+            }
+            
+            // 过滤掉无效的单词集
+            const validSets = wordSetsFromStore.filter(set => set && typeof set.id === 'number' && set.name);
+            
+            if (validSets.length === 0 && wordSetsFromStore.length > 0) {
+                console.warn("所有单词集数据无效，但原始数据存在", wordSetsFromStore);
+                // 即使数据无效，也尝试显示原始数据
+                setWordSets(wordSetsFromStore);
+            } else {
+                setWordSets(validSets);
+            }
+            
+            setRetryCount(0); // 重置重试计数
+        }
+    }, [wordSetsFromStore]);
 
     useEffect(() => {
         loadWordSets();

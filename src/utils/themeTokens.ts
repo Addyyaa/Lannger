@@ -51,16 +51,18 @@ export interface ThemeTokens {
 export function getThemeTokens(isDark: boolean): ThemeTokens {
   if (isDark) {
     return {
+      // 更丰富的暗色渐变背景，带紫色调
       containerGradient:
-        "linear-gradient(135deg, rgba(28, 28, 30, 0.96) 0%, rgba(44, 44, 46, 0.92) 100%)",
-      containerBorderColor: "rgba(118, 118, 128, 0.35)",
-      containerShadowPortrait: "0 4vw 8vw rgba(0, 0, 0, 0.55)",
-      containerShadowLandscape: "0 1.5vw 3vw rgba(0, 0, 0, 0.55)",
+        "linear-gradient(135deg, rgba(15, 23, 42, 0.98) 0%, rgba(30, 27, 75, 0.95) 50%, rgba(20, 20, 35, 0.98) 100%)",
+      containerBorderColor: "rgba(139, 92, 246, 0.25)",
+      containerShadowPortrait: "0 4vw 8vw rgba(0, 0, 0, 0.6), 0 0 40vw rgba(139, 92, 246, 0.1)",
+      containerShadowLandscape: "0 1.5vw 3vw rgba(0, 0, 0, 0.5), 0 0 20vw rgba(139, 92, 246, 0.08)",
+      // 更有质感的卡片表面
       cardSurface:
-        "linear-gradient(160deg, rgba(50, 50, 52, 0.7) 0%, rgba(30, 30, 32, 0.5) 100%)",
-      cardBorderColor: "rgba(255, 255, 255, 0.08)",
-      cardShadowPortrait: "0 2.5vw 6vw rgba(0, 0, 0, 0.45)",
-      cardShadowLandscape: "0 1vw 2.5vw rgba(0, 0, 0, 0.45)",
+        "linear-gradient(160deg, rgba(51, 65, 85, 0.85) 0%, rgba(30, 41, 59, 0.75) 50%, rgba(15, 23, 42, 0.8) 100%)",
+      cardBorderColor: "rgba(148, 163, 184, 0.15)",
+      cardShadowPortrait: "0 2.5vw 6vw rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
+      cardShadowLandscape: "0 1vw 2.5vw rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.05)",
       glassBackground:
         "linear-gradient(135deg, rgba(44, 44, 46, 0.65) 0%, rgba(22, 22, 24, 0.4) 100%)",
       glassBorder: "1px solid rgba(255, 255, 255, 0.16)",
@@ -81,16 +83,18 @@ export function getThemeTokens(isDark: boolean): ThemeTokens {
   }
 
   return {
+    // 更优雅的浅色渐变，带淡紫色调
     containerGradient:
-      "linear-gradient(135deg, rgba(255, 255, 255, 0.92) 0%, rgba(243, 246, 255, 0.92) 100%)",
-    containerBorderColor: "rgba(141, 153, 174, 0.25)",
-    containerShadowPortrait: "0 4vw 8vw rgba(15, 23, 42, 0.15)",
-    containerShadowLandscape: "0 1.5vw 3vw rgba(15, 23, 42, 0.12)",
+      "linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(245, 243, 255, 0.95) 50%, rgba(240, 245, 255, 0.95) 100%)",
+    containerBorderColor: "rgba(139, 92, 246, 0.2)",
+    containerShadowPortrait: "0 4vw 8vw rgba(15, 23, 42, 0.12), 0 0 40vw rgba(139, 92, 246, 0.08)",
+    containerShadowLandscape: "0 1.5vw 3vw rgba(15, 23, 42, 0.1), 0 0 20vw rgba(139, 92, 246, 0.05)",
+    // 更柔和的卡片表面
     cardSurface:
-      "linear-gradient(160deg, rgba(255, 255, 255, 0.88) 0%, rgba(235, 242, 255, 0.6) 100%)",
-    cardBorderColor: "rgba(120, 144, 156, 0.16)",
-    cardShadowPortrait: "0 2.5vw 6vw rgba(15, 23, 42, 0.12)",
-    cardShadowLandscape: "0 1vw 2.5vw rgba(15, 23, 42, 0.1)",
+      "linear-gradient(160deg, rgba(255, 255, 255, 0.95) 0%, rgba(248, 250, 252, 0.9) 50%, rgba(241, 245, 249, 0.85) 100%)",
+    cardBorderColor: "rgba(99, 102, 241, 0.12)",
+    cardShadowPortrait: "0 2.5vw 6vw rgba(15, 23, 42, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
+    cardShadowLandscape: "0 1vw 2.5vw rgba(15, 23, 42, 0.08), inset 0 1px 0 rgba(255, 255, 255, 0.8)",
     glassBackground:
       "linear-gradient(135deg, rgba(255, 255, 255, 0.78) 0%, rgba(232, 237, 255, 0.35) 100%)",
     glassBorder: "1px solid rgba(255, 255, 255, 0.65)",

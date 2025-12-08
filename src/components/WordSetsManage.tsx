@@ -43,7 +43,7 @@ export default function WordSetsManage({
   };
   const wordStore = useWordStore();
   const reviewStore = useReviewStore();
-  const { setUILoading } = useUIStore();
+  const setUILoading = useUIStore((state) => state.setLoading);
 
   const loadWordSets = async () => {
     try {
