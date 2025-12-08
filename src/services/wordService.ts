@@ -698,14 +698,45 @@ export async function deleteDatabase() {
 
 // 备份数据库
 /**
- * 备份数据库（支持选择性导出单词集）
- * @param selectedWordSetIds 可选的单词集ID列表，如果未指定则导出所有单词集（排除默认单词集）
- * @returns 导出的数据对象（包含 wordSets 和 words）
+ * 备份选项
+ */
+export interface BackupOptions {
+  selectedWordSetIds?: number[]; // 可选的单词集ID列表
+  includeProgress?: boolean; // 是否包含学习进度
+}
+
+/**
+ * 备份数据结构
+ */
+export interface BackupData {
+  wordSets: WordSet[];
+  words: any[];
+  // 学习进度相关（可选）
+  wordProgress?: any[];
+  reviewPlans?: any[];
+  dailyStats?: any[];
+}
+
+/**
+ * 备份数据库（支持选择性导出单词集和学习进度）
+ * @param options 备份选项
+ * @returns 导出的数据对象
  */
 export async function backupDatabase(
-  selectedWordSetIds?: number[]
-): Promise<{ wordSets: WordSet[]; words: any[] }> {
+  options?: number[] | BackupOptions
+): Promise<BackupData> {
   await ensureDBOpen();
+
+  // 兼容旧的调用方式（直接传入 wordSetIds 数组）
+  let selectedWordSetIds: number[] | undefined;
+  let includeProgress = false;
+
+  if (Array.isArray(options)) {
+    selectedWordSetIds = options;
+  } else if (options) {
+    selectedWordSetIds = options.selectedWordSetIds;
+    includeProgress = options.includeProgress || false;
+  }
 
   // 获取所有单词集
   const allWordSets = await db.wordSets.toArray();
@@ -716,7 +747,7 @@ export async function backupDatabase(
     // 只导出选中的单词集（排除默认单词集）
     wordSets = allWordSets.filter(
       (set) =>
-        selectedWordSetIds.includes(set.id) &&
+        selectedWordSetIds!.includes(set.id) &&
         set.id !== DEFAULT_WORD_SET_ID &&
         set.name !== DEFAULT_WORD_SET_NAME
     );
@@ -733,49 +764,82 @@ export async function backupDatabase(
 
   // 获取所有单词，但只保留属于选中单词集的单词
   const allWords = await db.words.toArray();
-  const words = allWords
-    .filter((word) => {
-      // 如果单词属于选中的单词集，或者属于默认单词集（如果默认单词集被选中）
-      if (word.setId === undefined || word.setId === null) {
-        return false; // 没有单词集的单词不导出
-      }
-      return (
-        selectedSetIds.has(word.setId) ||
-        (word.setId === DEFAULT_WORD_SET_ID &&
-          (!selectedWordSetIds ||
-            selectedWordSetIds.includes(DEFAULT_WORD_SET_ID)))
-      );
-    })
-    .map((word) => {
-      if (word.setId === DEFAULT_WORD_SET_ID) {
-        // 属于默认单词集的单词，添加 wordSet 字段，移除 setId（恢复时会通过名称映射）
-        const { setId, ...wordWithoutSetId } = word;
-        return {
-          ...wordWithoutSetId,
-          wordSet: DEFAULT_WORD_SET_NAME,
-        };
-      }
-      // 不属于默认单词集的单词，保持原样（但需要找到对应的单词集名称）
-      const wordSet = allWordSets.find((set) => set.id === word.setId);
-      if (wordSet) {
-        const { setId, ...wordWithoutSetId } = word;
-        return {
-          ...wordWithoutSetId,
-          wordSet: wordSet.name,
-        };
-      }
-      // 如果找不到对应的单词集，也添加 wordSet 字段（使用默认名称）
+  const filteredWords = allWords.filter((word) => {
+    if (word.setId === undefined || word.setId === null) {
+      return false;
+    }
+    return (
+      selectedSetIds.has(word.setId) ||
+      (word.setId === DEFAULT_WORD_SET_ID &&
+        (!selectedWordSetIds ||
+          selectedWordSetIds.includes(DEFAULT_WORD_SET_ID)))
+    );
+  });
+
+  // 获取单词ID集合（用于过滤进度）
+  const wordIds = new Set(filteredWords.map((w) => w.id));
+
+  const words = filteredWords.map((word) => {
+    if (word.setId === DEFAULT_WORD_SET_ID) {
       const { setId, ...wordWithoutSetId } = word;
       return {
         ...wordWithoutSetId,
         wordSet: DEFAULT_WORD_SET_NAME,
       };
-    });
+    }
+    const wordSet = allWordSets.find((set) => set.id === word.setId);
+    if (wordSet) {
+      const { setId, ...wordWithoutSetId } = word;
+      return {
+        ...wordWithoutSetId,
+        wordSet: wordSet.name,
+      };
+    }
+    const { setId, ...wordWithoutSetId } = word;
+    return {
+      ...wordWithoutSetId,
+      wordSet: DEFAULT_WORD_SET_NAME,
+    };
+  });
 
-  const langggerDB = {
+  const langggerDB: BackupData = {
     wordSets,
     words,
   };
+
+  // 如果需要导出学习进度
+  if (includeProgress) {
+    // 导出单词进度（只导出选中单词集的单词进度）
+    const allProgress = await db.wordProgress.toArray();
+    langggerDB.wordProgress = allProgress
+      .filter((p) => wordIds.has(p.wordId))
+      .map((p) => {
+        // 将 wordId 转换为单词名称，以便恢复时匹配
+        const word = filteredWords.find((w) => w.id === p.wordId);
+        return {
+          ...p,
+          wordKanji: word?.kanji,
+          wordKana: word?.kana,
+        };
+      });
+
+    // 导出复习计划（只导出选中单词集的复习计划）
+    const allReviewPlans = await db.reviewPlans.toArray();
+    langggerDB.reviewPlans = allReviewPlans
+      .filter((p) => selectedSetIds.has(p.wordSetId))
+      .map((p) => {
+        // 将 wordSetId 转换为单词集名称
+        const wordSet = allWordSets.find((s) => s.id === p.wordSetId);
+        return {
+          ...p,
+          wordSetName: wordSet?.name,
+        };
+      });
+
+    // 导出每日统计
+    const allDailyStats = await db.dailyStats.toArray();
+    langggerDB.dailyStats = allDailyStats;
+  }
 
   // 如果未指定 selectedWordSetIds，直接下载文件（保持向后兼容）
   if (!selectedWordSetIds || selectedWordSetIds.length === 0) {

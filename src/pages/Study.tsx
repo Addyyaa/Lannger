@@ -771,6 +771,7 @@ export default function Study() {
         <ReviewNotification
           onStartReview={handleStartReview}
           onDismiss={() => setShowReviewNotification(false)}
+          isStudying={showFlashcardStudy || showTestStudy || showReviewStudy}
         />
       )}
     </>

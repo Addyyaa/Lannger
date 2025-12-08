@@ -12,7 +12,7 @@ interface ExportDialogProps {
 
 /**
  * 数据导出对话框组件
- * 支持选择性导出单词集
+ * 支持选择性导出单词集和学习进度
  */
 export default function ExportDialog({
   closePopup,
@@ -27,6 +27,7 @@ export default function ExportDialog({
     new Set()
   );
   const [exporting, setExporting] = useState(false);
+  const [includeProgress, setIncludeProgress] = useState(false); // 是否包含学习进度
 
   const wordStore = useWordStore();
   const { setUILoading } = useUIStore();
@@ -87,7 +88,10 @@ export default function ExportDialog({
     try {
       setExporting(true);
       const selectedIds = Array.from(selectedWordSetIds);
-      const data = await dbOperator.backupDatabase(selectedIds);
+      const data = await dbOperator.backupDatabase({
+        selectedWordSetIds: selectedIds,
+        includeProgress,
+      });
 
       // 创建下载
       const langggerDBString = JSON.stringify(data, null, 2);
@@ -99,12 +103,17 @@ export default function ExportDialog({
         .toISOString()
         .replace(/[:.]/g, "-")
         .slice(0, 19);
-      a.download = `langggerDB_${timestamp}.json`;
+      const suffix = includeProgress ? "_with_progress" : "";
+      a.download = `langggerDB_${timestamp}${suffix}.json`;
       a.click();
       URL.revokeObjectURL(url);
 
+      const progressInfo = includeProgress
+        ? t("exportWithProgress") || "（含学习进度）"
+        : "";
       alert(
-        t("exportComplete") || `导出完成！已导出 ${selectedIds.length} 个单词集`
+        (t("exportComplete") ||
+          `导出完成！已导出 ${selectedIds.length} 个单词集`) + progressInfo
       );
       onExportComplete?.();
       closePopup();
@@ -314,6 +323,58 @@ export default function ExportDialog({
           >
             {t("selectedCount") || "已选择"}：{selectedWordSetIds.size} /{" "}
             {wordSets.length}
+          </div>
+
+          {/* 导出学习进度选项 */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              gap: isPortrait ? "2vw" : "0.75vw",
+              padding: isPortrait ? "2.5vw" : "0.75vw",
+              marginBottom: isPortrait ? "2vw" : "1vw",
+              background: isDark
+                ? "rgba(0, 180, 255, 0.1)"
+                : "rgba(0, 180, 255, 0.05)",
+              borderRadius: isPortrait ? "1.5vw" : "0.4vw",
+              border: includeProgress
+                ? "1px solid #00b4ff"
+                : `1px solid ${isDark ? "#444" : "#e0e0e0"}`,
+              cursor: "pointer",
+              transition: "all 0.2s ease",
+            }}
+            onClick={() => setIncludeProgress(!includeProgress)}
+          >
+            <input
+              type="checkbox"
+              checked={includeProgress}
+              onChange={() => setIncludeProgress(!includeProgress)}
+              style={{
+                width: isPortrait ? "4vw" : "1.2vw",
+                height: isPortrait ? "4vw" : "1.2vw",
+                cursor: "pointer",
+              }}
+            />
+            <div style={{ flex: 1 }}>
+              <div
+                style={{
+                  fontSize: isPortrait ? "3.5vw" : "1vw",
+                  color: isDark ? "#fff" : "#333",
+                  fontWeight: 500,
+                }}
+              >
+                {t("includeProgress") || "包含学习进度"}
+              </div>
+              <div
+                style={{
+                  fontSize: isPortrait ? "2.5vw" : "0.8vw",
+                  color: isDark ? "#888" : "#999",
+                  marginTop: isPortrait ? "0.5vw" : "0.2vw",
+                }}
+              >
+                {t("includeProgressDesc") || "导出单词掌握程度、复习计划等数据"}
+              </div>
+            </div>
           </div>
 
           {/* 操作按钮 */}

@@ -397,21 +397,36 @@ export default function FlashcardStudy({
     position: "relative",
     perspective: isPortrait ? "200vw" : "100vw",
     WebkitPerspective: isPortrait ? "200vw" : "100vw",
-    overflow: "hidden",
+    // 注意：不要设置 overflow: hidden，因为它会破坏 3D transform 效果
     minHeight: 0, // 允许 flex 子元素缩小
   };
 
-  // 3D卡片容器
+  // 追踪翻转动画状态
+  const [isFlipping, setIsFlipping] = useState(false);
+  const flipTimeoutRef = useRef<number | null>(null);
+
+  // 3D卡片容器 - 简化实现，不使用 3D 翻转
   const card3DContainerStyle: React.CSSProperties = {
     position: "relative",
     width: "100%",
     height: "100%",
-    transformStyle: "preserve-3d",
-    WebkitTransformStyle: "preserve-3d",
-    transition: "transform 0.6s cubic-bezier(0.16, 1, 0.3, 1)",
-    transform: showAnswer ? "rotateY(180deg)" : "rotateY(0deg)",
-    overflow: "visible",
   };
+
+  // 监听 showAnswer 变化来触发翻转动画
+  useEffect(() => {
+    if (flipTimeoutRef.current) {
+      window.clearTimeout(flipTimeoutRef.current);
+    }
+    setIsFlipping(true);
+    flipTimeoutRef.current = window.setTimeout(() => {
+      setIsFlipping(false);
+    }, 700);
+    return () => {
+      if (flipTimeoutRef.current) {
+        window.clearTimeout(flipTimeoutRef.current);
+      }
+    };
+  }, [showAnswer]);
 
   // 卡片正面和背面的共同样式
   const cardFaceBaseStyle: React.CSSProperties = {
@@ -434,14 +449,13 @@ export default function FlashcardStudy({
 
   const cardFaceStyle: React.CSSProperties = {
     ...cardFaceBaseStyle,
-    display: "flex",
+    display: showAnswer ? "none" : "flex", // 显示答案时隐藏正面
     width: "100%",
     height: "100%",
     flexDirection: "column",
     justifyContent: "center",
     alignItems: "center",
     cursor: "default",
-    transform: "rotateY(0deg)",
   };
 
   const cardFaceContentStyle: React.CSSProperties = {
@@ -467,7 +481,7 @@ export default function FlashcardStudy({
 
   const cardBackStyle: React.CSSProperties = {
     ...cardFaceBaseStyle,
-    display: "flex",
+    display: showAnswer ? "flex" : "none", // 显示答案时显示背面
     flexDirection: "column",
     overflowY: "auto",
     overflowX: "hidden",
@@ -477,11 +491,18 @@ export default function FlashcardStudy({
     width: "100%",
     justifyContent: "flex-start",
     top: 0,
-    transform: "rotateY(180deg)",
     boxSizing: "border-box",
     scrollbarWidth: "none", // Firefox: 隐藏滚动条
     msOverflowStyle: "none", // IE/Edge: 隐藏滚动条
     paddingBottom: isPortrait ? "12vh" : "8vh", // 预留底部空间，避免内容被按钮遮挡
+  };
+
+  // 卡片背面内容的样式 - 不设置 height: 100%，让内容自然撑开以支持滚动
+  const cardBackContentStyle: React.CSSProperties = {
+    width: "100%",
+    display: "flex",
+    flexDirection: "column",
+    alignItems: "center",
   };
 
   const isMeaningFront = cardFrontMode === "meaning";
@@ -913,11 +934,18 @@ export default function FlashcardStudy({
           </div>
         </div>
         {/* 3D卡片容器 */}
-        <div data-test-id="div-test-17" style={card3DContainerStyle}>
+        <div
+          data-test-id="div-test-17"
+          style={card3DContainerStyle}
+          className={`flashcard-3d-container ${showAnswer ? "flipped" : ""} ${
+            isFlipping ? "flipping" : ""
+          }`}
+        >
           {/* 卡片正面（问题面） */}
           <div
             data-test-id="div-test-16"
             style={cardFaceStyle}
+            className="flashcard-face-front"
             data-testid="FlashcardStudy-5"
           >
             <div
@@ -984,7 +1012,7 @@ export default function FlashcardStudy({
               alignItems: "center",
               gap: isPortrait ? "1vh" : "0.5vh",
               boxSizing: "border-box",
-              marginTop: isPortrait ? "12%" : "0",
+              marginTop: isPortrait ? "12%" : "8%", // 为切换按钮预留空间
             };
 
             // 可滚动的例句容器样式
@@ -1023,148 +1051,154 @@ export default function FlashcardStudy({
             return (
               <div
                 data-test-id="div-test-14"
-                className="flashcard-back-container"
+                className="flashcard-back-container flashcard-face-back"
                 style={{
                   ...cardBackStyle,
                   justifyContent: showOptionalContent ? "flex-start" : "center",
                 }}
                 data-testid="FlashcardStudy-answer"
               >
-                {/* 固定内容区域 */}
-                <div
-                  data-test-id="div-test-13"
-                  style={fixedContentContainerStyle}
-                >
-                  {currentWord.kanji && (
+                {/* 内容包装器 - 防止内容被镜像 */}
+                <div style={cardBackContentStyle}>
+                  {/* 固定内容区域 */}
+                  <div
+                    data-test-id="div-test-13"
+                    style={fixedContentContainerStyle}
+                  >
+                    {currentWord.kanji && (
+                      <div
+                        data-test-id="div-test-12"
+                        style={fixedContentItemStyle}
+                      >
+                        <div data-test-id="div-test-11" style={labelStyle}>
+                          {t("kanji")}
+                        </div>
+                        <div
+                          data-test-id="div-test-10"
+                          style={{
+                            fontSize: isPortrait
+                              ? "calc(2.2vw + 2.2vh)"
+                              : "calc(2.3vw + 2vh)",
+                            fontWeight: "bold",
+                            color: isDark ? "#fff" : "#333",
+                            marginTop: isPortrait ? 0 : "0.5vh",
+                            wordBreak: "break-all",
+                          }}
+                        >
+                          {currentWord.kanji}
+                        </div>
+                      </div>
+                    )}
                     <div
-                      data-test-id="div-test-12"
+                      data-test-id="div-test-9"
                       style={fixedContentItemStyle}
                     >
-                      <div data-test-id="div-test-11" style={labelStyle}>
-                        {t("kanji")}
+                      <div data-test-id="div-test-8" style={labelStyle}>
+                        {t("kana")}
                       </div>
                       <div
-                        data-test-id="div-test-10"
+                        data-test-id="div-test-7"
                         style={{
                           fontSize: isPortrait
                             ? "calc(2.2vw + 2.2vh)"
-                            : "calc(2.3vw + 2vh)",
-                          fontWeight: "bold",
+                            : "calc(1.6vw + 1.6vh)",
                           color: isDark ? "#fff" : "#333",
+                          fontWeight: "500",
                           marginTop: isPortrait ? 0 : "0.5vh",
                           wordBreak: "break-all",
                         }}
                       >
-                        {currentWord.kanji}
+                        {currentWord.kana}
                       </div>
                     </div>
-                  )}
-                  <div data-test-id="div-test-9" style={fixedContentItemStyle}>
-                    <div data-test-id="div-test-8" style={labelStyle}>
-                      {t("kana")}
-                    </div>
-                    <div
-                      data-test-id="div-test-7"
-                      style={{
-                        fontSize: isPortrait
-                          ? "calc(2.2vw + 2.2vh)"
-                          : "calc(1.6vw + 1.6vh)",
-                        color: isDark ? "#fff" : "#333",
-                        fontWeight: "500",
-                        marginTop: isPortrait ? 0 : "0.5vh",
-                        wordBreak: "break-all",
-                      }}
-                    >
-                      {currentWord.kana}
-                    </div>
-                  </div>
-                  {!isMeaningFront && (
-                    <div
-                      data-test-id="div-test-6"
-                      style={fixedContentItemStyle}
-                    >
-                      <div data-test-id="div-test-5" style={labelStyle}>
-                        {t("meaning")}
-                      </div>
+                    {!isMeaningFront && (
                       <div
-                        data-test-id="div-test-4"
-                        style={{
-                          fontSize: isPortrait
-                            ? "calc(1.2vw + 1.2vh)"
-                            : "calc(1.1vw + 1.1vh)",
-                          color: isDark ? "#ccc" : "#666",
-                          marginTop: isPortrait ? 0 : "0.5vh",
-                          lineHeight: "1.5",
-                          textAlign: "center",
-                          padding: isPortrait ? "0 3vw" : "0 2vw",
-                          wordBreak: "break-word",
-                        }}
-                      >
-                        {currentWord.meaning}
-                      </div>
-                    </div>
-                  )}
-                </div>
-                {showOptionalContent && (
-                  <div
-                    data-test-id="flashcard-study-div-test"
-                    style={optionalContentStyle}
-                  >
-                    {currentWord.example && (
-                      <div
-                        data-test-id="div-test-2"
-                        style={{ ...labelStyle, margin: 0 }}
-                      >
-                        {t("example")}
-                      </div>
-                    )}
-                    {/* 可滚动的例句区域 */}
-                    {currentWord.example && (
-                      <div
-                        data-test-id="div-test-3"
-                        style={exampleContainerStyle}
-                        className="example-scroll-container"
-                      >
-                        <div
-                          data-test-id="div-test-1"
-                          style={exampleContentStyle}
-                        >
-                          {currentWord.example}
-                        </div>
-                      </div>
-                    )}
-                    {currentWord.mark && (
-                      <div
-                        data-test-id="div-test-mark"
+                        data-test-id="div-test-6"
                         style={fixedContentItemStyle}
                       >
-                        <div
-                          data-test-id="div-test-mark-label"
-                          style={labelStyle}
-                        >
-                          {t("mark")}
+                        <div data-test-id="div-test-5" style={labelStyle}>
+                          {t("meaning")}
                         </div>
                         <div
-                          data-test-id="div-test-mark-content"
+                          data-test-id="div-test-4"
                           style={{
                             fontSize: isPortrait
-                              ? "calc(2vw + 2vh)"
-                              : "calc(1vw + 1vh)",
-                            color: isDark ? "#aaa" : "#777",
+                              ? "calc(1.2vw + 1.2vh)"
+                              : "calc(1.1vw + 1.1vh)",
+                            color: isDark ? "#ccc" : "#666",
                             marginTop: isPortrait ? 0 : "0.5vh",
                             lineHeight: "1.5",
                             textAlign: "center",
                             padding: isPortrait ? "0 3vw" : "0 2vw",
                             wordBreak: "break-word",
-                            whiteSpace: "pre-wrap",
                           }}
                         >
-                          {currentWord.mark}
+                          {currentWord.meaning}
                         </div>
                       </div>
                     )}
                   </div>
-                )}
+                  {showOptionalContent && (
+                    <div
+                      data-test-id="flashcard-study-div-test"
+                      style={optionalContentStyle}
+                    >
+                      {currentWord.example && (
+                        <div
+                          data-test-id="div-test-2"
+                          style={{ ...labelStyle, margin: 0 }}
+                        >
+                          {t("example")}
+                        </div>
+                      )}
+                      {/* 可滚动的例句区域 */}
+                      {currentWord.example && (
+                        <div
+                          data-test-id="div-test-3"
+                          style={exampleContainerStyle}
+                          className="example-scroll-container"
+                        >
+                          <div
+                            data-test-id="div-test-1"
+                            style={exampleContentStyle}
+                          >
+                            {currentWord.example}
+                          </div>
+                        </div>
+                      )}
+                      {currentWord.mark && (
+                        <div
+                          data-test-id="div-test-mark"
+                          style={fixedContentItemStyle}
+                        >
+                          <div
+                            data-test-id="div-test-mark-label"
+                            style={labelStyle}
+                          >
+                            {t("mark")}
+                          </div>
+                          <div
+                            data-test-id="div-test-mark-content"
+                            style={{
+                              fontSize: isPortrait
+                                ? "calc(2vw + 2vh)"
+                                : "calc(1vw + 1vh)",
+                              color: isDark ? "#aaa" : "#777",
+                              marginTop: isPortrait ? 0 : "0.5vh",
+                              lineHeight: "1.5",
+                              textAlign: "center",
+                              padding: isPortrait ? "0 3vw" : "0 2vw",
+                              wordBreak: "break-word",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {currentWord.mark}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
             );
           })()}

@@ -18,9 +18,111 @@ import { useUIStore } from "../store/hooks";
 import LoadingIndicator from "./LoadingIndicator";
 import { db, ensureDBOpen } from "../db";
 
+// 延后提示的时间选项（毫秒）
+const SNOOZE_OPTIONS = {
+  FIVE_MINUTES: 5 * 60 * 1000,
+  THIRTY_MINUTES: 30 * 60 * 1000,
+  TWO_HOURS: 2 * 60 * 60 * 1000,
+  TODAY: -1, // 特殊值，表示当天不再显示
+};
+
+// 存储延后信息的 localStorage key
+const SNOOZE_STORAGE_KEY = "lannger:reviewSnooze";
+
+interface SnoozeInfo {
+  wordSetId: number;
+  snoozeUntil: number; // 时间戳，-1 表示当天不显示
+  snoozeDate?: string; // 当天不显示时记录的日期
+}
+
 interface ReviewNotificationProps {
   onStartReview: (wordSetId: number, reviewStage: number) => void;
   onDismiss?: () => void;
+  isStudying?: boolean; // 是否正在学习中（闪卡/复习/测验）
+}
+
+/**
+ * 获取延后信息
+ */
+function getSnoozeInfo(): SnoozeInfo[] {
+  try {
+    const stored = localStorage.getItem(SNOOZE_STORAGE_KEY);
+    if (!stored) return [];
+    return JSON.parse(stored) as SnoozeInfo[];
+  } catch {
+    return [];
+  }
+}
+
+/**
+ * 保存延后信息
+ */
+function saveSnoozeInfo(info: SnoozeInfo[]): void {
+  try {
+    localStorage.setItem(SNOOZE_STORAGE_KEY, JSON.stringify(info));
+  } catch {
+    // 忽略存储错误
+  }
+}
+
+/**
+ * 检查是否应该显示通知（根据延后设置）
+ */
+function shouldShowNotification(wordSetId: number): boolean {
+  const snoozeList = getSnoozeInfo();
+  const snooze = snoozeList.find((s) => s.wordSetId === wordSetId);
+
+  if (!snooze) return true;
+
+  const now = Date.now();
+  const today = new Date().toISOString().split("T")[0];
+
+  // 当天不显示
+  if (snooze.snoozeUntil === -1) {
+    if (snooze.snoozeDate === today) {
+      return false;
+    }
+    // 如果是新的一天，清除延后设置
+    return true;
+  }
+
+  // 检查延后时间是否已过
+  return now >= snooze.snoozeUntil;
+}
+
+/**
+ * 设置延后
+ */
+function setSnooze(wordSetId: number, duration: number): void {
+  const snoozeList = getSnoozeInfo().filter((s) => s.wordSetId !== wordSetId);
+
+  const newSnooze: SnoozeInfo = {
+    wordSetId,
+    snoozeUntil: duration === -1 ? -1 : Date.now() + duration,
+    snoozeDate:
+      duration === -1 ? new Date().toISOString().split("T")[0] : undefined,
+  };
+
+  snoozeList.push(newSnooze);
+  saveSnoozeInfo(snoozeList);
+}
+
+/**
+ * 清除过期的延后设置
+ */
+function cleanupExpiredSnooze(): void {
+  const snoozeList = getSnoozeInfo();
+  const now = Date.now();
+  const today = new Date().toISOString().split("T")[0];
+
+  const validSnooze = snoozeList.filter((s) => {
+    if (s.snoozeUntil === -1) {
+      return s.snoozeDate === today;
+    }
+    return s.snoozeUntil > now;
+  });
+
+  saveSnoozeInfo(validSnooze);
 }
 
 /**
@@ -30,6 +132,7 @@ interface ReviewNotificationProps {
 export default function ReviewNotification({
   onStartReview,
   onDismiss,
+  isStudying = false,
 }: ReviewNotificationProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -56,27 +159,34 @@ export default function ReviewNotification({
       }
     >
   >([]);
+  const [showSnoozeMenu, setShowSnoozeMenu] = useState<number | null>(null); // 显示延后菜单的通知ID
   const lastNotificationTimeRef = useRef<Map<number, number>>(new Map()); // 记录上次发送通知的时间，避免重复通知
 
   /**
    * 检查复习通知
    */
   const checkNotifications = async () => {
+    // 如果正在学习中，不显示通知
+    if (isStudying) {
+      setNotifications([]);
+      setUILoading("reviewNotifications", false);
+      return;
+    }
+
     try {
       setUILoading("reviewNotifications", true);
+
+      // 清理过期的延后设置
+      cleanupExpiredSnooze();
+
       // 使用 Zustand Store 加载到期复习计划
       await reviewStore.loadDueReviewPlans();
       const duePlans = reviewStore.dueReviewPlans;
 
       // 检查当前是否有复习锁定
-      const firstPlan = duePlans[0];
-      let currentLockedWordSetId: number | null = null;
-      if (firstPlan) {
-        const canReview = await canStartReview(firstPlan.wordSetId);
-        if (!canReview.allowed && canReview.lockInfo) {
-          currentLockedWordSetId = canReview.lockInfo.wordSetId;
-        }
-      }
+      const reviewLock = await getReviewLock();
+      const currentLockedWordSetId: number | null =
+        reviewLock?.wordSetId ?? null;
 
       // 获取每个计划的单词集名称和队列状态
       const notificationsWithNames = await Promise.all(
@@ -91,39 +201,74 @@ export default function ReviewNotification({
           }
           const canReview = await canStartReview(plan.wordSetId);
 
-          // 判断是否为当前需要复习的（第一个且未被锁定，或者被锁定的是这个）
-          const isCurrent =
-            index === 0 &&
-            (canReview.allowed || currentLockedWordSetId === plan.wordSetId);
+          // 判断是否为当前需要复习的：
+          // 1. 如果有锁定，锁定的计划是当前的
+          // 2. 如果没有锁定，第一个计划是当前的（无论 canReview.allowed 状态）
+          let isCurrent = false;
+          if (currentLockedWordSetId !== null) {
+            // 有锁定，检查是否是锁定的计划
+            isCurrent = plan.wordSetId === currentLockedWordSetId;
+          } else {
+            // 没有锁定，第一个计划是当前的
+            isCurrent = index === 0;
+          }
 
           // 计算实际到期的单词数
-          const { scheduleReviewWords } = await import("../algorithm");
-          const reviewResult = await scheduleReviewWords({
-            wordSetId: plan.wordSetId,
-            onlyDue: true,
-            limit: 1000, // 获取所有到期的单词
-          });
-          const actualDueWords = reviewResult.dueCount;
+          let actualDueWords = 0;
+          if (plan.learnedWordIds && plan.learnedWordIds.length > 0) {
+            // 使用复习计划中记录的单词ID列表
+            actualDueWords = plan.learnedWordIds.length;
+          } else if (plan.totalWords && plan.totalWords > 0) {
+            // 如果没有 learnedWordIds 但有 totalWords，使用 totalWords
+            actualDueWords = plan.totalWords;
+          } else {
+            // 最后尝试使用调度算法计算
+            try {
+              const { scheduleReviewWords } = await import("../algorithm");
+              const reviewResult = await scheduleReviewWords({
+                wordSetId: plan.wordSetId,
+                onlyDue: false, // 不只是到期的，获取所有已学习的
+                limit: 1000,
+              });
+              actualDueWords =
+                reviewResult.totalAvailable > 0
+                  ? reviewResult.totalAvailable
+                  : reviewResult.dueCount;
+            } catch (error) {
+              console.error("计算到期单词数失败:", error);
+              actualDueWords = 1; // 默认至少有1个，避免按钮灰色
+            }
+          }
 
           return {
             ...plan,
             wordSetName: wordSet?.name || `单词集 #${plan.wordSetId}`,
             isCurrent, // 是否为当前需要复习的
             isQueued: !isCurrent, // 是否为排队中的
-            canStart: canReview.allowed && actualDueWords > 0, // 是否可以开始复习（需要实际有到期的单词）
+            // 修复：当前计划且有到期单词且可以开始复习时可以开始
+            canStart: isCurrent && actualDueWords > 0 && canReview.allowed,
             actualDueWords, // 实际到期的单词数
           };
         })
       );
 
-      // 过滤掉没有到期单词的通知
-      const validNotifications = notificationsWithNames.filter(
-        (n) => n.actualDueWords > 0
-      );
+      // 过滤掉没有到期单词的通知，以及被延后的通知
+      // 同时去重：每个单词集只保留一个通知（保留第一个，通常是最早到期的）
+      const seenWordSetIds = new Set<number>();
+      const validNotifications = notificationsWithNames.filter((n) => {
+        if (n.actualDueWords <= 0 || !shouldShowNotification(n.wordSetId)) {
+          return false;
+        }
+        if (seenWordSetIds.has(n.wordSetId)) {
+          return false; // 跳过重复的单词集
+        }
+        seenWordSetIds.add(n.wordSetId);
+        return true;
+      });
 
       setNotifications(validNotifications);
 
-      // 发送系统通知（仅对当前可复习的通知）
+      // 发送系统通知（仅对当前可复习的通知，且未被延后）
       validNotifications.forEach((notification) => {
         if (notification.isCurrent && notification.canStart) {
           sendSystemNotification(notification);
@@ -271,7 +416,7 @@ export default function ReviewNotification({
     const interval = setInterval(checkNotifications, 60000);
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isStudying]); // 当学习状态变化时重新检查
 
   // 如果正在加载，显示加载指示器
   if (isLoading) {
@@ -374,8 +519,55 @@ export default function ReviewNotification({
         return (
           <div
             key={notification.id}
-            style={getNotificationStyle(isCurrent, isQueued)}
+            style={{
+              ...getNotificationStyle(isCurrent, isQueued),
+              position: "relative",
+            }}
           >
+            {/* 关闭按钮 */}
+            <button
+              onClick={() => {
+                // 延后当天不显示
+                setSnooze(notification.wordSetId, SNOOZE_OPTIONS.TODAY);
+                checkNotifications();
+              }}
+              style={{
+                position: "absolute",
+                top: isPortrait ? "2vw" : "0.5vw",
+                right: isPortrait ? "2vw" : "0.5vw",
+                width: isPortrait ? "6vw" : "1.5vw",
+                height: isPortrait ? "6vw" : "1.5vw",
+                borderRadius: "50%",
+                border: "none",
+                background: isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.05)",
+                color: isDark ? "#888" : "#999",
+                fontSize: isPortrait ? "3.5vw" : "1vw",
+                cursor: "pointer",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+                transition: "all 0.2s ease",
+                padding: 0,
+                lineHeight: 1,
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.background = isDark
+                  ? "rgba(255, 255, 255, 0.2)"
+                  : "rgba(0, 0, 0, 0.1)";
+                e.currentTarget.style.color = isDark ? "#fff" : "#333";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = isDark
+                  ? "rgba(255, 255, 255, 0.1)"
+                  : "rgba(0, 0, 0, 0.05)";
+                e.currentTarget.style.color = isDark ? "#888" : "#999";
+              }}
+              aria-label={t("dismiss") || "关闭"}
+            >
+              ×
+            </button>
             <div style={titleStyle}>
               {isCurrent ? "🔔" : "⏳"}{" "}
               {isCurrent
@@ -442,29 +634,111 @@ export default function ReviewNotification({
                   : t("inQueue") || "排队中"}
               </button>
               {isCurrent && (
-                <button
-                  style={{
-                    ...buttonStyle,
-                    backgroundColor: "transparent",
-                    border: `1px solid ${isDark ? "#555" : "#e0e0e0"}`,
-                    color: isDark ? "#fff" : "#333",
-                  }}
-                  onClick={() => {
-                    if (onDismiss) {
-                      onDismiss();
-                    }
-                  }}
-                  onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = isDark
-                      ? "rgba(255, 255, 255, 0.1)"
-                      : "rgba(0, 0, 0, 0.05)";
-                  }}
-                  onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = "transparent";
-                  }}
-                >
-                  {t("remindLater") || "稍后提醒"}
-                </button>
+                <div style={{ position: "relative" }}>
+                  <button
+                    style={{
+                      ...buttonStyle,
+                      backgroundColor: "transparent",
+                      border: `1px solid ${isDark ? "#555" : "#e0e0e0"}`,
+                      color: isDark ? "#fff" : "#333",
+                    }}
+                    onClick={() => {
+                      const notificationId =
+                        notification.id ?? notification.wordSetId;
+                      setShowSnoozeMenu(
+                        showSnoozeMenu === notificationId
+                          ? null
+                          : notificationId
+                      );
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = isDark
+                        ? "rgba(255, 255, 255, 0.1)"
+                        : "rgba(0, 0, 0, 0.05)";
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = "transparent";
+                    }}
+                  >
+                    {t("remindLater") || "稍后提醒"} ▾
+                  </button>
+
+                  {/* 延后选项菜单 */}
+                  {showSnoozeMenu ===
+                    (notification.id ?? notification.wordSetId) && (
+                    <div
+                      style={{
+                        position: "absolute",
+                        bottom: "100%",
+                        left: 0,
+                        marginBottom: isPortrait ? "1vw" : "0.3vw",
+                        background: isDark
+                          ? "rgba(45, 45, 45, 0.98)"
+                          : "rgba(255, 255, 255, 0.98)",
+                        borderRadius: isPortrait ? "2vw" : "0.5vw",
+                        boxShadow: isDark
+                          ? "0 2vw 8vw rgba(0, 0, 0, 0.5)"
+                          : "0 1vw 4vw rgba(0, 0, 0, 0.15)",
+                        border: isDark ? "1px solid #444" : "1px solid #e0e0e0",
+                        overflow: "hidden",
+                        minWidth: isPortrait ? "35vw" : "120px",
+                        zIndex: 1000,
+                      }}
+                    >
+                      {[
+                        {
+                          label: t("snooze5Min") || "5分钟后",
+                          duration: SNOOZE_OPTIONS.FIVE_MINUTES,
+                        },
+                        {
+                          label: t("snooze30Min") || "30分钟后",
+                          duration: SNOOZE_OPTIONS.THIRTY_MINUTES,
+                        },
+                        {
+                          label: t("snooze2Hours") || "2小时后",
+                          duration: SNOOZE_OPTIONS.TWO_HOURS,
+                        },
+                        {
+                          label: t("snoozeToday") || "今天不再提醒",
+                          duration: SNOOZE_OPTIONS.TODAY,
+                        },
+                      ].map((option, idx) => (
+                        <button
+                          key={idx}
+                          style={{
+                            display: "block",
+                            width: "100%",
+                            padding: isPortrait ? "2.5vw 3vw" : "0.6vw 1vw",
+                            fontSize: isPortrait ? "3vw" : "0.9vw",
+                            border: "none",
+                            background: "transparent",
+                            color: isDark ? "#fff" : "#333",
+                            textAlign: "left",
+                            cursor: "pointer",
+                            transition: "background 0.2s ease",
+                          }}
+                          onClick={() => {
+                            setSnooze(notification.wordSetId, option.duration);
+                            setShowSnoozeMenu(null);
+                            // 重新检查通知，移除被延后的
+                            checkNotifications();
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.backgroundColor = isDark
+                              ? "rgba(0, 180, 255, 0.2)"
+                              : "rgba(0, 180, 255, 0.1)";
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.backgroundColor =
+                              "transparent";
+                          }}
+                        >
+                          {option.label}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>

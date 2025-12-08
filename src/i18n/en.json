@@ -278,5 +278,16 @@
   "reviewReminder": "Review Reminder",
   "reviewStage": "Review Stage",
   "wordsToReview": "Words to Review",
-  "dismiss": "Dismiss"
+  "dismiss": "Dismiss",
+  "snooze5Min": "Remind in 5 minutes",
+  "snooze30Min": "Remind in 30 minutes",
+  "snooze2Hours": "Remind in 2 hours",
+  "snoozeToday": "Don't remind today",
+  "includeProgress": "Include learning progress",
+  "includeProgressDesc": "Export word mastery, review plans and other data",
+  "exportWithProgress": " (with progress)",
+  "pleaseSelectWordSet": "Please select at least one word set",
+  "exportComplete": "Export complete!",
+  "exporting": "Exporting...",
+  "deselectAll": "Deselect All"
 }

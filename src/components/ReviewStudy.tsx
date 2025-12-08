@@ -24,6 +24,81 @@ import {
   getCardStyle,
 } from "../utils/themeTokens";
 
+// 复习会话状态存储 key
+const REVIEW_SESSION_STORAGE_KEY = "lannger:reviewSession";
+
+// 复习会话状态接口
+interface ReviewSessionState {
+  wordSetId?: number;
+  reviewStage: number;
+  wordIds: number[];
+  currentIndex: number;
+  sessionStats: {
+    studiedCount: number;
+    correctCount: number;
+    wrongCount: number;
+  };
+  reviewResults: Record<number, "correct" | "wrong" | "skip">;
+  savedAt: string;
+}
+
+/**
+ * 获取保存的复习会话状态
+ */
+function getReviewSessionState(
+  wordSetId?: number,
+  reviewStage?: number
+): ReviewSessionState | null {
+  try {
+    const stored = localStorage.getItem(REVIEW_SESSION_STORAGE_KEY);
+    if (!stored) return null;
+
+    const session = JSON.parse(stored) as ReviewSessionState;
+
+    // 检查是否是同一个复习计划
+    if (
+      session.wordSetId !== wordSetId ||
+      session.reviewStage !== reviewStage
+    ) {
+      return null;
+    }
+
+    // 检查会话是否过期（超过 24 小时）
+    const savedTime = new Date(session.savedAt).getTime();
+    const now = Date.now();
+    if (now - savedTime > 24 * 60 * 60 * 1000) {
+      localStorage.removeItem(REVIEW_SESSION_STORAGE_KEY);
+      return null;
+    }
+
+    return session;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * 保存复习会话状态
+ */
+function saveReviewSessionState(state: ReviewSessionState): void {
+  try {
+    localStorage.setItem(REVIEW_SESSION_STORAGE_KEY, JSON.stringify(state));
+  } catch {
+    // 忽略存储错误
+  }
+}
+
+/**
+ * 清除复习会话状态
+ */
+function clearReviewSessionState(): void {
+  try {
+    localStorage.removeItem(REVIEW_SESSION_STORAGE_KEY);
+  } catch {
+    // 忽略错误
+  }
+}
+
 interface ReviewStudyProps {
   closePopup: () => void;
   wordSetId?: number;
@@ -100,82 +175,133 @@ export default function ReviewStudy({
   /**
    * 加载复习单词列表
    */
-  const loadWords = useCallback(async () => {
-    try {
-      setLoading(true);
-      const endMeasure = performanceMonitor.start("loadReviewWords");
+  const loadWords = useCallback(
+    async (forceReload = false) => {
+      try {
+        setLoading(true);
 
-      const result = await scheduleReviewWords({
-        wordSetId,
-        limit: 50, // 复习模式默认50个单词
-        onlyDue: true, // 只返回到期的单词和未掌握的单词
-      });
+        // 尝试恢复之前的会话状态（除非强制重新加载）
+        if (!forceReload) {
+          const savedSession = getReviewSessionState(
+            wordSetId,
+            currentReviewStage
+          );
+          if (savedSession && savedSession.wordIds.length > 0) {
+            console.log("恢复复习会话状态", savedSession);
 
-      endMeasure({ wordSetId, count: result.wordIds.length });
-
-      if (result.wordIds.length === 0) {
-        handleErrorSync(
-          new Error(t("noWordsToReview") || "没有需要复习的单词"),
-          { operation: "loadReviewWords", wordSetId },
-          false
-        );
-        closePopup();
-        return;
-      }
-
-      setWordIds(result.wordIds);
-      setCurrentIndex(0);
-      // 重置复习结果跟踪
-      reviewResultsRef.current.clear();
-      // 重置全部掌握状态
-      setAllMastered(false);
-
-      // 查找对应的复习计划（如果有多个，找到包含当前单词的复习计划）
-      if (wordSetId !== undefined) {
-        const { db } = await import("../db");
-        const { isReviewDue } = await import("../utils/ebbinghausCurve");
-        const allPlans = await db.reviewPlans
-          .where("wordSetId")
-          .equals(wordSetId)
-          .toArray();
-
-        // 如果只有一个复习计划，使用它
-        if (allPlans.length === 1) {
-          currentReviewPlanIdRef.current = allPlans[0].id;
-        } else if (allPlans.length > 1) {
-          // 如果有多个复习计划，找到包含当前单词的复习计划
-          const matchingPlan = allPlans.find((plan) => {
-            if (!plan.learnedWordIds || plan.learnedWordIds.length === 0) {
-              // 如果没有 learnedWordIds，可能是旧的复习计划，跳过
-              return false;
+            // 验证保存的单词ID是否仍然有效
+            const validWordIds: number[] = [];
+            for (const wordId of savedSession.wordIds) {
+              const word = await dbOperator.getWord(wordId);
+              if (word) {
+                validWordIds.push(wordId);
+              }
             }
-            // 检查当前单词是否在该计划的 learnedWordIds 中
-            const planWordSet = new Set(plan.learnedWordIds);
-            return result.wordIds.some((wordId) => planWordSet.has(wordId));
-          });
 
-          if (matchingPlan) {
-            currentReviewPlanIdRef.current = matchingPlan.id;
-          } else {
-            // 如果没有找到匹配的计划，使用第一个到期的计划
-            const duePlans = allPlans.filter((plan) => isReviewDue(plan));
-            if (duePlans.length > 0) {
-              currentReviewPlanIdRef.current = duePlans[0].id;
-            } else {
-              currentReviewPlanIdRef.current = allPlans[0].id;
+            if (validWordIds.length > 0) {
+              setWordIds(validWordIds);
+              // 确保 currentIndex 不超出范围
+              const safeIndex = Math.min(
+                savedSession.currentIndex,
+                validWordIds.length - 1
+              );
+              setCurrentIndex(Math.max(0, safeIndex));
+              setSessionStats(savedSession.sessionStats);
+
+              // 恢复复习结果
+              reviewResultsRef.current.clear();
+              for (const [wordIdStr, result] of Object.entries(
+                savedSession.reviewResults
+              )) {
+                reviewResultsRef.current.set(Number(wordIdStr), result);
+              }
+
+              // 设置复习锁定
+              if (wordSetId !== undefined) {
+                await setReviewLock(wordSetId, currentReviewStage);
+              }
+
+              setLoading(false);
+              return;
             }
           }
         }
 
-        // 设置复习锁定
-        await setReviewLock(wordSetId, currentReviewStage);
+        const endMeasure = performanceMonitor.start("loadReviewWords");
+
+        const result = await scheduleReviewWords({
+          wordSetId,
+          limit: 50, // 复习模式默认50个单词
+          onlyDue: true, // 只返回到期的单词和未掌握的单词
+        });
+
+        endMeasure({ wordSetId, count: result.wordIds.length });
+
+        if (result.wordIds.length === 0) {
+          handleErrorSync(
+            new Error(t("noWordsToReview") || "没有需要复习的单词"),
+            { operation: "loadReviewWords", wordSetId },
+            false
+          );
+          closePopup();
+          return;
+        }
+
+        setWordIds(result.wordIds);
+        setCurrentIndex(0);
+        // 重置复习结果跟踪
+        reviewResultsRef.current.clear();
+        // 重置全部掌握状态
+        setAllMastered(false);
+
+        // 查找对应的复习计划（如果有多个，找到包含当前单词的复习计划）
+        if (wordSetId !== undefined) {
+          const { db } = await import("../db");
+          const { isReviewDue } = await import("../utils/ebbinghausCurve");
+          const allPlans = await db.reviewPlans
+            .where("wordSetId")
+            .equals(wordSetId)
+            .toArray();
+
+          // 如果只有一个复习计划，使用它
+          if (allPlans.length === 1) {
+            currentReviewPlanIdRef.current = allPlans[0].id;
+          } else if (allPlans.length > 1) {
+            // 如果有多个复习计划，找到包含当前单词的复习计划
+            const matchingPlan = allPlans.find((plan) => {
+              if (!plan.learnedWordIds || plan.learnedWordIds.length === 0) {
+                // 如果没有 learnedWordIds，可能是旧的复习计划，跳过
+                return false;
+              }
+              // 检查当前单词是否在该计划的 learnedWordIds 中
+              const planWordSet = new Set(plan.learnedWordIds);
+              return result.wordIds.some((wordId) => planWordSet.has(wordId));
+            });
+
+            if (matchingPlan) {
+              currentReviewPlanIdRef.current = matchingPlan.id;
+            } else {
+              // 如果没有找到匹配的计划，使用第一个到期的计划
+              const duePlans = allPlans.filter((plan) => isReviewDue(plan));
+              if (duePlans.length > 0) {
+                currentReviewPlanIdRef.current = duePlans[0].id;
+              } else {
+                currentReviewPlanIdRef.current = allPlans[0].id;
+              }
+            }
+          }
+
+          // 设置复习锁定
+          await setReviewLock(wordSetId, currentReviewStage);
+        }
+      } catch (error) {
+        handleErrorSync(error, { operation: "loadReviewWords" });
+      } finally {
+        setLoading(false);
       }
-    } catch (error) {
-      handleErrorSync(error, { operation: "loadReviewWords" });
-    } finally {
-      setLoading(false);
-    }
-  }, [wordSetId, currentReviewStage, closePopup]);
+    },
+    [wordSetId, currentReviewStage, closePopup]
+  );
 
   /**
    * 加载当前单词
@@ -391,6 +517,9 @@ export default function ReviewStudy({
       // 解除复习锁定
       await clearReviewLock();
 
+      // 清除会话状态（复习完成）
+      clearReviewSessionState();
+
       // 调用完成回调
       if (onSessionComplete) {
         onSessionComplete(sessionStats);
@@ -449,6 +578,38 @@ export default function ReviewStudy({
   };
 
   /**
+   * 保存当前会话状态
+   */
+  const saveCurrentSessionState = useCallback(() => {
+    if (wordIds.length === 0) return;
+
+    // 将 Map 转换为普通对象
+    const reviewResultsObj: Record<number, "correct" | "wrong" | "skip"> = {};
+    reviewResultsRef.current.forEach((value, key) => {
+      reviewResultsObj[key] = value;
+    });
+
+    const state: ReviewSessionState = {
+      wordSetId,
+      reviewStage: currentReviewStage,
+      wordIds,
+      currentIndex,
+      sessionStats,
+      reviewResults: reviewResultsObj,
+      savedAt: new Date().toISOString(),
+    };
+
+    saveReviewSessionState(state);
+  }, [wordSetId, currentReviewStage, wordIds, currentIndex, sessionStats]);
+
+  // 当状态变化时自动保存
+  useEffect(() => {
+    if (!loading && wordIds.length > 0) {
+      saveCurrentSessionState();
+    }
+  }, [loading, wordIds, currentIndex, sessionStats, saveCurrentSessionState]);
+
+  /**
    * 处理学习结果
    */
   const handleResult = async (result: "correct" | "wrong" | "skip") => {
@@ -467,12 +628,18 @@ export default function ReviewStudy({
     reviewResultsRef.current.set(currentWord.id, result);
 
     // 更新统计
-    setSessionStats((prev) => ({
-      studiedCount: prev.studiedCount + 1,
+    const newStats = {
+      studiedCount: sessionStats.studiedCount + 1,
       correctCount:
-        result === "correct" ? prev.correctCount + 1 : prev.correctCount,
-      wrongCount: result === "wrong" ? prev.wrongCount + 1 : prev.wrongCount,
-    }));
+        result === "correct"
+          ? sessionStats.correctCount + 1
+          : sessionStats.correctCount,
+      wrongCount:
+        result === "wrong"
+          ? sessionStats.wrongCount + 1
+          : sessionStats.wrongCount,
+    };
+    setSessionStats(newStats);
 
     // 移动到下一个单词
     if (currentIndex < wordIds.length - 1) {
@@ -1003,6 +1170,7 @@ export default function ReviewStudy({
           {/* 显示答案区域 */}
           {showAnswer && (
             <div
+              className="answer-reveal"
               style={{
                 textAlign: "center",
                 marginBottom: isPortrait ? "4vw" : "1.5vw",

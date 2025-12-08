@@ -727,18 +727,32 @@ export async function deleteDatabase() {
 
 // 备份数据库
 /**
- * 备份数据库（支持选择性导出单词集）
- * @param selectedWordSetIds 可选的单词集ID列表，如果未指定则导出所有单词集（排除默认单词集）
- * @returns 导出的数据对象（包含 wordSets 和 words）
+ * 备份选项
+ */
+export interface BackupOptions {
+  selectedWordSetIds?: number[]; // 可选的单词集ID列表
+  includeProgress?: boolean; // 是否包含学习进度
+}
+
+/**
+ * 备份数据库（支持选择性导出单词集和学习进度）
+ * @param options 备份选项或单词集ID列表（向后兼容）
+ * @returns 导出的数据对象
  */
 export async function backupDatabase(
-  selectedWordSetIds?: number[]
-): Promise<{ wordSets: WordSet[]; words: any[] }> {
+  options?: number[] | BackupOptions
+): Promise<{
+  wordSets: WordSet[];
+  words: any[];
+  wordProgress?: any[];
+  reviewPlans?: any[];
+  dailyStats?: any[];
+}> {
   // 直接调用 wordService 中的实现，保持一致性
   const { backupDatabase: serviceBackupDatabase } = await import(
     "../services/wordService"
   );
-  return await serviceBackupDatabase(selectedWordSetIds);
+  return await serviceBackupDatabase(options);
 }
 
 // 恢复数据库
