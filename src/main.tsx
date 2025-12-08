@@ -25,7 +25,8 @@ import { shouldRunArchive, runFullArchive } from "./services/archiveService";
 import AnnouncementManager from "./components/AnnouncementManager";
 import ErrorToast from "./components/ErrorToast";
 import Toast from "./components/Toast";
-import PageTransition from "./components/PageTransition";
+// PageTransition 暂时禁用，与 React Router Outlet 存在兼容性问题
+// import PageTransition from "./components/PageTransition";
 
 declare global {
   interface Window {
@@ -467,9 +468,7 @@ function RootLayout() {
           {/* 樱花飘落特效 */}
           <SakuraEffect />
           <Layout globalComponents={<GlobalHeader />}>
-            <PageTransition>
-              <Outlet />
-            </PageTransition>
+            <Outlet />
           </Layout>
           {/* 错误监控 Dashboard（支持开发环境和正式环境，通过连续点击管理页面标题激活） */}
           <ErrorMonitor />
