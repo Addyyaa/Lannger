@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { ReviewPlan } from "../db";
 import { useReviewStore, useWordStore } from "../store/hooks";
-import { getReviewStageDescription } from "../utils/ebbinghausCurve";
+import { getReviewStageDescription, isReviewDue } from "../utils/ebbinghausCurve";
 import { canStartReview } from "../utils/reviewLock";
 import { handleErrorSync } from "../utils/errorHandler";
 import {
@@ -72,7 +72,9 @@ function shouldShowNotification(wordSetId: number): boolean {
   const snoozeList = getSnoozeInfo();
   const snooze = snoozeList.find((s) => s.wordSetId === wordSetId);
 
-  if (!snooze) return true;
+  if (!snooze) {
+    return true;
+  }
 
   const now = Date.now();
   const today = new Date().toISOString().split("T")[0];
@@ -170,9 +172,6 @@ export default function ReviewNotification({
     const currentReviewStore = useReviewStore.getState();
     const currentWordStore = useWordStore.getState();
     
-    // #region agent log
-    fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewNotification.tsx:checkNotifications:entry',message:'开始检查复习通知',data:{isStudying},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
-    // #endregion
     // 如果正在学习中，不显示通知
     if (isStudying) {
       setNotifications([]);
@@ -263,8 +262,14 @@ export default function ReviewNotification({
       // 过滤掉没有到期单词的通知，以及被延后的通知
       // 同时去重：每个单词集只保留一个通知（保留第一个，通常是最早到期的）
       const seenWordSetIds = new Set<number>();
+      const nowDate = new Date();
       const validNotifications = notificationsWithNames.filter((n) => {
-        if (n.actualDueWords <= 0 || !shouldShowNotification(n.wordSetId)) {
+        // 检查计划是否到期
+        const isDue = isReviewDue(n, nowDate);
+        // 检查延后设置：如果用户点击了"稍后提醒"，应该隐藏通知（不管是否到期）
+        // 但如果计划还没到期且用户没有设置延后，应该显示（让用户知道有复习计划）
+        const shouldShow = shouldShowNotification(n.wordSetId);
+        if (n.actualDueWords <= 0 || !shouldShow) {
           return false;
         }
         if (seenWordSetIds.has(n.wordSetId)) {
@@ -274,9 +279,6 @@ export default function ReviewNotification({
         return true;
       });
 
-      // #region agent log
-      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewNotification.tsx:checkNotifications:beforeSetNotifications',message:'准备设置通知列表',data:{validNotificationsCount:validNotifications.length,validNotifications:validNotifications.map(n=>({wordSetId:n.wordSetId,isCurrent:n.isCurrent,canStart:n.canStart,actualDueWords:n.actualDueWords}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
-      // #endregion
       setNotifications(validNotifications);
 
       // 发送系统通知（仅对当前可复习的通知，且未被延后）

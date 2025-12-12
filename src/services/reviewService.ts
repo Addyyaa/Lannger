@@ -182,35 +182,27 @@ export async function completeReviewStage(
 
 /**
  * 获取所有到期的复习计划（性能优化：使用索引查询）
+ * 修改：也包含未到期但存在的复习计划，以便用户能看到所有可复习的内容
  */
 export async function getDueReviewPlans(): Promise<ReviewPlan[]> {
   return safeDbOperation(
     async () => {
       await ensureDBOpen();
-      const now = new Date().toISOString();
 
-      // 性能优化：使用索引查询 nextReviewAt <= now，而不是全表扫描
-      // 先使用索引查询到期的计划（nextReviewAt <= now）
-      const plansByTime = await db.reviewPlans
-        .where("nextReviewAt")
-        .belowOrEqual(now)
+      // 获取所有未完成的复习计划（不管是否到期）
+      // 这样用户就能看到所有可以复习的内容，即使还没到期
+      const allPlans = await db.reviewPlans
+        .filter((plan) => !plan.isCompleted)
         .toArray();
 
-      // 过滤出未完成且到期的计划
-      // 注意：isCompleted 字段没有索引，但这里数据量通常较小，内存过滤可以接受
-      const nowDate = new Date(now);
-      const duePlans = plansByTime.filter(
-        (plan) => !plan.isCompleted && isReviewDue(plan, nowDate)
-      );
-
-      // 按 nextReviewAt 排序（最早到期的在前）
-      duePlans.sort((a, b) => {
+      // 按 nextReviewAt 排序（最早到期的在前，未到期的排在后面）
+      const sortedPlans = allPlans.sort((a, b) => {
         const timeA = new Date(a.nextReviewAt).getTime();
         const timeB = new Date(b.nextReviewAt).getTime();
         return timeA - timeB;
       });
 
-      return duePlans;
+      return sortedPlans;
     },
     {
       context: { operation: "getDueReviewPlans" },

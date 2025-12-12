@@ -1133,11 +1133,12 @@ export default function ReviewStudy({
               border: `${isPortrait ? "0.2vw" : "0.08vw"} solid ${
                 themeTokens.cardBorderColor
               }`,
-              minHeight: isPortrait ? "30vh" : "200px",
+              minHeight: isPortrait ? "15vh" : "120px",
               display: "flex",
               flexDirection: "column",
               justifyContent: "center",
               alignItems: "center",
+              boxSizing: "border-box",
             }}
           >
             {cardFrontMode === "writing" ? (
@@ -1195,14 +1196,38 @@ export default function ReviewStudy({
               }}
             >
               {cardFrontMode === "writing" ? (
-                <div
-                  style={{
-                    fontSize: isPortrait ? "4.5vw" : "1.8vw",
-                    color: isDark ? "#fff" : "#333",
-                    fontWeight: "500",
-                  }}
-                >
-                  {currentWord.meaning}
+                <div>
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "4.5vw" : "1.8vw",
+                      color: isDark ? "#fff" : "#333",
+                      fontWeight: "500",
+                      marginBottom: isPortrait ? "2vw" : "0.5vw",
+                    }}
+                  >
+                    {currentWord.meaning}
+                  </div>
+                  {/* 背面应该始终显示单词和假名，不受 showKana 控制 */}
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "5vw" : "2vw",
+                      fontWeight: "bold",
+                      color: "#00b4ff",
+                      marginBottom: isPortrait ? "1vw" : "0.3vw",
+                    }}
+                  >
+                    {currentWord.kanji || currentWord.kana}
+                  </div>
+                  {currentWord.kana && currentWord.kanji && (
+                    <div
+                      style={{
+                        fontSize: isPortrait ? "4vw" : "1.5vw",
+                        color: isDark ? "#999" : "#666",
+                      }}
+                    >
+                      {currentWord.kana}
+                    </div>
+                  )}
                 </div>
               ) : (
                 <div>
@@ -1216,6 +1241,7 @@ export default function ReviewStudy({
                   >
                     {currentWord.kanji || currentWord.kana}
                   </div>
+                  {/* 背面应该始终显示假名，不受 showKana 控制 */}
                   {currentWord.kana && currentWord.kanji && (
                     <div
                       style={{
