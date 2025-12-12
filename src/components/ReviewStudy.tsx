@@ -108,6 +108,7 @@ interface ReviewStudyProps {
     correctCount: number;
     wrongCount: number;
   }) => void;
+  showKana?: boolean; // 是否显示假名
 }
 
 type CardFrontMode = "writing" | "meaning";
@@ -121,6 +122,7 @@ export default function ReviewStudy({
   wordSetId,
   reviewStage,
   onSessionComplete,
+  showKana = true, // 默认显示假名
 }: ReviewStudyProps) {
   const { t } = useTranslation();
   const { isDark } = useTheme();
@@ -913,7 +915,11 @@ export default function ReviewStudy({
             style={{
               textAlign: "center",
               marginBottom: isPortrait ? "4vw" : "1.5vw",
-              marginTop: notificationMessage ? (isPortrait ? "8vw" : "3vw") : 0,
+              // 添加足够的顶部边距，避免被切换按钮遮挡
+              // 切换按钮在 top: 4% (竖屏) 或 6% (横屏)，高度约为 8vw (竖屏) 或 2vw (横屏)
+              marginTop: notificationMessage 
+                ? (isPortrait ? "8vw" : "3vw") 
+                : (isPortrait ? "12vw" : "4vw"),
               fontSize: isPortrait ? "3.5vw" : "1vw",
               color: "#00b4ff",
               fontWeight: "bold",
@@ -941,9 +947,12 @@ export default function ReviewStudy({
             style={{
               position: "absolute",
               top: isPortrait ? "4%" : "6%",
+              left: 0,
+              right: 0,
               width: "100%",
               display: "flex",
               justifyContent: "center",
+              alignItems: "center",
               pointerEvents: "none",
               zIndex: 25,
             }}
@@ -1143,7 +1152,8 @@ export default function ReviewStudy({
                 >
                   {currentWord.kanji || currentWord.kana}
                 </div>
-                {currentWord.kana && currentWord.kanji && (
+                {/* 根据 showKana prop 决定是否显示假名 */}
+                {showKana && currentWord.kana && currentWord.kanji && (
                   <div
                     style={{
                       fontSize: isPortrait ? "4vw" : "1.5vw",
@@ -1179,6 +1189,9 @@ export default function ReviewStudy({
                   ? "rgba(0, 180, 255, 0.1)"
                   : "rgba(0, 180, 255, 0.05)",
                 borderRadius: isPortrait ? "2vw" : "0.5vw",
+                display: "flex",
+                flexDirection: "column",
+                gap: isPortrait ? "3vw" : "1.5vw",
               }}
             >
               {cardFrontMode === "writing" ? (
@@ -1186,6 +1199,7 @@ export default function ReviewStudy({
                   style={{
                     fontSize: isPortrait ? "4.5vw" : "1.8vw",
                     color: isDark ? "#fff" : "#333",
+                    fontWeight: "500",
                   }}
                 >
                   {currentWord.meaning}
@@ -1212,6 +1226,86 @@ export default function ReviewStudy({
                       {currentWord.kana}
                     </div>
                   )}
+                </div>
+              )}
+
+              {/* 例句显示 */}
+              {currentWord.example && (
+                <div
+                  style={{
+                    marginTop: isPortrait ? "2vw" : "1vw",
+                    padding: isPortrait ? "2.5vw" : "1.5vw",
+                    background: isDark
+                      ? "rgba(255, 255, 255, 0.05)"
+                      : "rgba(0, 0, 0, 0.03)",
+                    borderRadius: isPortrait ? "1.5vw" : "0.5vw",
+                    borderLeft: `3px solid #00b4ff`,
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "3vw" : "1vw",
+                      color: isDark ? "#aaa" : "#666",
+                      marginBottom: isPortrait ? "1.5vw" : "0.5vw",
+                      fontWeight: "600",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {t("example")}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "3.5vw" : "1.2vw",
+                      color: isDark ? "#fff" : "#333",
+                      lineHeight: "1.6",
+                      textAlign: "left",
+                      fontStyle: "italic",
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {currentWord.example}
+                  </div>
+                </div>
+              )}
+
+              {/* 备注显示 */}
+              {currentWord.mark && (
+                <div
+                  style={{
+                    marginTop: isPortrait ? "1vw" : "0.5vw",
+                    padding: isPortrait ? "2.5vw" : "1.5vw",
+                    background: isDark
+                      ? "rgba(255, 255, 255, 0.03)"
+                      : "rgba(0, 0, 0, 0.02)",
+                    borderRadius: isPortrait ? "1.5vw" : "0.5vw",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "3vw" : "1vw",
+                      color: isDark ? "#aaa" : "#666",
+                      marginBottom: isPortrait ? "1.5vw" : "0.5vw",
+                      fontWeight: "600",
+                      textTransform: "uppercase",
+                      letterSpacing: "0.05em",
+                    }}
+                  >
+                    {t("mark")}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: isPortrait ? "3.5vw" : "1.2vw",
+                      color: isDark ? "#ccc" : "#555",
+                      lineHeight: "1.5",
+                      textAlign: "center",
+                      wordBreak: "break-word",
+                      whiteSpace: "pre-wrap",
+                    }}
+                  >
+                    {currentWord.mark}
+                  </div>
                 </div>
               )}
             </div>

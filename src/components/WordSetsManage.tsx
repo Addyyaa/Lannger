@@ -22,6 +22,11 @@ export default function WordSetsManage({
   setWordSets,
   wordSets,
 }: WordSetsManageProps) {
+  // #region agent log
+  React.useEffect(() => {
+    fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:props:wordSets',message:'接收 wordSets prop',data:{wordSetsLength:wordSets?.length,wordSets:wordSets?.map(s=>({id:s?.id,name:s?.name}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  }, [wordSets]);
+  // #endregion
   const { t } = useTranslation();
   const [state, dispatch] = useReducer(manageReducer, { popup: "CLOSE_POPUP" });
   const { dispatch: manageDispatch } = useManageContext();
@@ -31,8 +36,12 @@ export default function WordSetsManage({
   const navigate = useNavigate();
 
   useEffect(() => {
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:useEffect:entry',message:'useEffect 触发（组件挂载）',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'D'})}).catch(()=>{});
+    // #endregion
     loadWordSets();
-  }, [loading]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // 只在组件挂载时执行一次
 
   const handleImportWords = () => {
     manageDispatch({ type: "SET_IMPORT_WORDS", payload: {} });
@@ -47,25 +56,49 @@ export default function WordSetsManage({
 
   const loadWordSets = async () => {
     try {
-      setUILoading(true);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:entry',message:'开始加载单词集',data:{},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
+      setUILoading("wordSetsManage", true);
       await wordStore.loadWordSets();
       const sets = wordStore.wordSets;
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:afterLoad',message:'加载单词集完成',data:{setsCount:sets?.length,sets:sets?.map(s=>({id:s.id,name:s.name}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       // 为每个单词集获取单词数量和复习计划
       const setsWithWords = await Promise.all(
         sets.map(async (set) => {
           await wordStore.loadWords(set.id);
-          const words = wordStore.words.filter(w => w.wordSetId === set.id);
+          // wordStore.words 是 Record<number, Word>，需要转换为数组
+          const wordsArray = Object.values(wordStore.words);
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:filterWords',message:'过滤单词',data:{wordSetId:set.id,wordsArrayLength:wordsArray.length,wordsType:Array.isArray(wordsArray)?'array':'not-array'},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+          // #endregion
+          const words = wordsArray.filter(w => w.wordSetId === set.id);
           await reviewStore.loadReviewPlan(set.id);
-          const reviewPlan = reviewStore.reviewPlans.find(rp => rp.wordSetId === set.id) || null;
+          // reviewStore.reviewPlans 是 Record<number, ReviewPlan>，直接通过 wordSetId 访问
+          const reviewPlan = reviewStore.reviewPlans[set.id] || null;
+          // #region agent log
+          fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:getReviewPlan',message:'获取复习计划',data:{wordSetId:set.id,hasReviewPlan:!!reviewPlan},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'F'})}).catch(()=>{});
+          // #endregion
           return { ...set, words, reviewPlan };
         })
       );
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:beforeSetWordSets',message:'准备设置 wordSets',data:{setsWithWordsCount:setsWithWords?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
       setWordSets(setsWithWords);
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:afterSetWordSets',message:'已设置 wordSets',data:{setsWithWordsCount:setsWithWords?.length},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'C'})}).catch(()=>{});
+      // #endregion
     } catch (error) {
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsManage.tsx:loadWordSets:error',message:'加载单词集失败',data:{error:String(error),stack:error instanceof Error?error.stack:null},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'B'})}).catch(()=>{});
+      // #endregion
       handleErrorSync(error, { operation: "loadWordSets" });
     } finally {
       setLoading(false);
-      setUILoading(false);
+      setUILoading("wordSetsManage", false);
     }
   };
 

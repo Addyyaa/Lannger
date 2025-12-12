@@ -1,4 +1,4 @@
-import {
+import React, {
   useCallback,
   useMemo,
   useRef,
@@ -717,6 +717,12 @@ export default function WordSetsTable({
       </div>
     );
   };
+
+  // #region agent log
+  React.useEffect(() => {
+    fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'WordSetsTable.tsx:render:state',message:'渲染状态检查',data:{loading,wordSetsLength:wordSets.length,wordSets:wordSets.map(s=>({id:s?.id,name:s?.name}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+  }, [loading, wordSets.length]);
+  // #endregion
 
   return (
     <>

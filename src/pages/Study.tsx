@@ -47,6 +47,8 @@ export default function Study() {
   const [selectedReviewStage, setSelectedReviewStage] = useState<
     number | undefined
   >(routeState?.reviewStage);
+  // 控制复习模式中是否显示假名
+  const [showKanaInReview, setShowKanaInReview] = useState(true);
 
   useEffect(() => {
     loadStudyStats();
@@ -355,7 +357,10 @@ export default function Study() {
               });
             }
           } catch (error) {
-            handleErrorSync(error, { operation: "createReviewPlan", silent: true });
+            handleErrorSync(error, {
+              operation: "createReviewPlan",
+              silent: true,
+            });
             // 不阻止主流程，只记录错误
           }
         }
@@ -657,6 +662,7 @@ export default function Study() {
                     : `${isPortrait ? "0.3vw" : "0.06vw"} solid #e0e0e0`,
                   cursor: "pointer",
                   transition: "all 0.3s ease",
+                  position: "relative",
                 }}
                 onClick={() => handleSelectMode(modeItem.mode)}
                 onMouseEnter={(e) => {
@@ -679,13 +685,93 @@ export default function Study() {
                 }}
               >
                 <div
-                  data-test-id="div-test"
                   style={{
-                    fontSize: isPortrait ? "5vw" : "1.5vw",
+                    display: "flex",
+                    alignItems: "flex-start",
+                    justifyContent: "space-between",
                     marginBottom: isPortrait ? "1.5vw" : "0.5vw",
                   }}
                 >
-                  {modeItem.icon}
+                  <div
+                    data-test-id="div-test"
+                    style={{
+                      fontSize: isPortrait ? "5vw" : "1.5vw",
+                    }}
+                  >
+                    {modeItem.icon}
+                  </div>
+                  {/* 只在 Review Mode 显示假名开关 */}
+                  {modeItem.mode === "review" && (
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation(); // 阻止触发卡片的 onClick
+                        setShowKanaInReview(!showKanaInReview);
+                      }}
+                      style={{
+                        background: showKanaInReview
+                          ? "linear-gradient(135deg, #00b4ff 0%, #0096d4 100%)"
+                          : isDark
+                          ? "rgba(255, 255, 255, 0.1)"
+                          : "rgba(0, 0, 0, 0.1)",
+                        border: showKanaInReview
+                          ? "none"
+                          : isDark
+                          ? "1px solid rgba(255, 255, 255, 0.2)"
+                          : "1px solid rgba(0, 0, 0, 0.2)",
+                        borderRadius: isPortrait ? "1.5vw" : "0.4vw",
+                        padding: isPortrait ? "1.5vw 3vw" : "0.4vw 0.8vw",
+                        fontSize: isPortrait ? "2.5vw" : "0.7vw",
+                        color: showKanaInReview
+                          ? "#fff"
+                          : isDark
+                          ? "#ccc"
+                          : "#666",
+                        cursor: "pointer",
+                        fontWeight: "600",
+                        transition: "all 0.3s ease",
+                        whiteSpace: "nowrap",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        gap: isPortrait ? "1vw" : "0.3vw",
+                        boxShadow: showKanaInReview
+                          ? isPortrait
+                            ? "0 0.5vw 1.5vw rgba(0, 180, 255, 0.3)"
+                            : "0 0.2vw 0.5vw rgba(0, 180, 255, 0.3)"
+                          : "none",
+                      }}
+                      onMouseEnter={(e) => {
+                        if (!showKanaInReview) {
+                          e.currentTarget.style.background = isDark
+                            ? "rgba(255, 255, 255, 0.15)"
+                            : "rgba(0, 0, 0, 0.15)";
+                        } else {
+                          e.currentTarget.style.transform = "scale(1.05)";
+                        }
+                      }}
+                      onMouseLeave={(e) => {
+                        if (!showKanaInReview) {
+                          e.currentTarget.style.background = isDark
+                            ? "rgba(255, 255, 255, 0.1)"
+                            : "rgba(0, 0, 0, 0.1)";
+                        } else {
+                          e.currentTarget.style.transform = "scale(1)";
+                        }
+                      }}
+                      title={
+                        showKanaInReview
+                          ? t("hideKana") || "隐藏假名"
+                          : t("showKana") || "显示假名"
+                      }
+                      aria-label={
+                        showKanaInReview
+                          ? t("hideKana") || "隐藏假名"
+                          : t("showKana") || "显示假名"
+                      }
+                    >
+                      {showKanaInReview ? "かな ON" : "かな OFF"}
+                    </button>
+                  )}
                 </div>
                 <h3
                   data-test-id="h3-test"
@@ -764,6 +850,7 @@ export default function Study() {
             wordSetId={selectedWordSetId}
             reviewStage={selectedReviewStage}
             onSessionComplete={handleSessionComplete}
+            showKana={showKanaInReview}
           />
         )}
 

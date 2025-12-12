@@ -289,5 +289,7 @@
   "pleaseSelectWordSet": "Please select at least one word set",
   "exportComplete": "Export complete!",
   "exporting": "Exporting...",
-  "deselectAll": "Deselect All"
+  "deselectAll": "Deselect All",
+  "showKana": "Show Kana",
+  "hideKana": "Hide Kana"
 }

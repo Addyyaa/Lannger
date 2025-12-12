@@ -124,9 +124,12 @@ export default function WordSetSelector({ closePopup, onSelectWordSet }: WordSet
         fontWeight: "bold",
         color: isDark ? "#fff" : "#333",
         marginBottom: isPortrait ? "3.5vw" : "1.5vw",
-        marginTop: isPortrait ? "2vw" : "0",
+        // 增加顶部边距，避免被关闭按钮或其他元素遮挡
+        marginTop: isPortrait ? "4vw" : "0",
         textAlign: "center",
-        paddingRight: isPortrait ? "6vw" : "0",
+        // 为关闭按钮留出空间（关闭按钮在右上角）
+        paddingRight: isPortrait ? "8vw" : "0",
+        paddingLeft: isPortrait ? "2vw" : "0",
     };
 
     const wordSetListStyle: React.CSSProperties = {

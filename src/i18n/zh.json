@@ -289,5 +289,7 @@
   "pleaseSelectWordSet": "请至少选择一个单词集",
   "exportComplete": "导出完成！",
   "exporting": "导出中...",
-  "deselectAll": "取消全选"
+  "deselectAll": "取消全选",
+  "showKana": "显示假名",
+  "hideKana": "隐藏假名"
 }

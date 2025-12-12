@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { useTheme, useOrientation } from "../main";
 import { ReviewPlan } from "../db";
@@ -165,7 +165,14 @@ export default function ReviewNotification({
   /**
    * 检查复习通知
    */
-  const checkNotifications = async () => {
+  const checkNotifications = useCallback(async () => {
+    // 在函数内部获取 store，避免依赖对象引用
+    const currentReviewStore = useReviewStore.getState();
+    const currentWordStore = useWordStore.getState();
+    
+    // #region agent log
+    fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewNotification.tsx:checkNotifications:entry',message:'开始检查复习通知',data:{isStudying},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'A'})}).catch(()=>{});
+    // #endregion
     // 如果正在学习中，不显示通知
     if (isStudying) {
       setNotifications([]);
@@ -180,8 +187,8 @@ export default function ReviewNotification({
       cleanupExpiredSnooze();
 
       // 使用 Zustand Store 加载到期复习计划
-      await reviewStore.loadDueReviewPlans();
-      const duePlans = reviewStore.dueReviewPlans;
+      await currentReviewStore.loadDueReviewPlans();
+      const duePlans = currentReviewStore.dueReviewPlans;
 
       // 检查当前是否有复习锁定
       const reviewLock = await getReviewLock();
@@ -192,7 +199,7 @@ export default function ReviewNotification({
       const notificationsWithNames = await Promise.all(
         duePlans.map(async (plan, index) => {
           // 从 Store 中获取单词集，如果不存在则从数据库查询
-          let wordSet = wordStore.wordSets.find(
+          let wordSet = currentWordStore.wordSets.find(
             (ws) => ws.id === plan.wordSetId
           );
           if (!wordSet) {
@@ -240,13 +247,14 @@ export default function ReviewNotification({
             }
           }
 
+          const canStartResult = isCurrent && actualDueWords > 0 && canReview.allowed;
           return {
             ...plan,
             wordSetName: wordSet?.name || `单词集 #${plan.wordSetId}`,
             isCurrent, // 是否为当前需要复习的
             isQueued: !isCurrent, // 是否为排队中的
             // 修复：当前计划且有到期单词且可以开始复习时可以开始
-            canStart: isCurrent && actualDueWords > 0 && canReview.allowed,
+            canStart: canStartResult,
             actualDueWords, // 实际到期的单词数
           };
         })
@@ -266,6 +274,9 @@ export default function ReviewNotification({
         return true;
       });
 
+      // #region agent log
+      fetch('http://127.0.0.1:7243/ingest/3e449956-b134-4d0b-a6db-c196c3700fdb',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({location:'ReviewNotification.tsx:checkNotifications:beforeSetNotifications',message:'准备设置通知列表',data:{validNotificationsCount:validNotifications.length,validNotifications:validNotifications.map(n=>({wordSetId:n.wordSetId,isCurrent:n.isCurrent,canStart:n.canStart,actualDueWords:n.actualDueWords}))},timestamp:Date.now(),sessionId:'debug-session',hypothesisId:'E'})}).catch(()=>{});
+      // #endregion
       setNotifications(validNotifications);
 
       // 发送系统通知（仅对当前可复习的通知，且未被延后）
@@ -279,7 +290,7 @@ export default function ReviewNotification({
     } finally {
       setUILoading("reviewNotifications", false);
     }
-  };
+  }, [isStudying]); // 只依赖学习状态，store 在函数内部获取
 
   /**
    * 检查是否正在学习（闪卡或复习模式）
@@ -408,15 +419,40 @@ export default function ReviewNotification({
     };
   }, [onStartReview, onDismiss]);
 
+  // 使用 useRef 跟踪之前的学习状态
+  const prevIsStudyingRef = useRef(isStudying);
+
   useEffect(() => {
-    // 初始检查
-    checkNotifications();
-
-    // 每分钟检查一次
-    const interval = setInterval(checkNotifications, 60000);
-
-    return () => clearInterval(interval);
-  }, [isStudying]); // 当学习状态变化时重新检查
+    // 如果从学习状态变为非学习状态，延迟检查（确保数据库更新完成）
+    if (prevIsStudyingRef.current && !isStudying) {
+      // 延迟 1 秒后检查，确保数据库更新完成
+      const timeoutId = setTimeout(() => {
+        checkNotifications();
+      }, 1000);
+      
+      // 更新 ref
+      prevIsStudyingRef.current = isStudying;
+      
+      // 每分钟检查一次
+      const interval = setInterval(checkNotifications, 60000);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        clearInterval(interval);
+      };
+    } else {
+      // 初始检查或状态未变化
+      checkNotifications();
+      
+      // 更新 ref
+      prevIsStudyingRef.current = isStudying;
+      
+      // 每分钟检查一次
+      const interval = setInterval(checkNotifications, 60000);
+      
+      return () => clearInterval(interval);
+    }
+  }, [isStudying, checkNotifications]); // 当学习状态变化时重新检查
 
   // 如果正在加载，显示加载指示器
   if (isLoading) {
