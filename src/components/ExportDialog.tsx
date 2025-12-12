@@ -4,6 +4,8 @@ import { useTheme, useOrientation } from "../main";
 import * as dbOperator from "../store/wordStore";
 import { WordSet, DEFAULT_WORD_SET_ID } from "../db";
 import CloseButton from "./CloseButton";
+import { useWordStore, useUIStore } from "../store/hooks";
+import { handleErrorSync } from "../utils/errorHandler";
 
 interface ExportDialogProps {
   closePopup: () => void;
@@ -37,7 +39,7 @@ export default function ExportDialog({
     const loadWordSets = async () => {
       try {
         setLoading(true);
-        setUILoading(true);
+        setUILoading("exportDialog", true);
         await wordStore.loadWordSets();
         const sets = wordStore.wordSets;
         // 排除默认单词集
@@ -51,7 +53,7 @@ export default function ExportDialog({
         handleErrorSync(error, { operation: "loadWordSets" });
       } finally {
         setLoading(false);
-        setUILoading(false);
+        setUILoading("exportDialog", false);
       }
     };
 
